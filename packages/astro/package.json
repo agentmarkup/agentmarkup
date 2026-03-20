@@ -1,6 +1,6 @@
 {
   "name": "@agentmarkup/astro",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Build-time llms.txt, JSON-LD, and AI crawler controls for Astro",
   "type": "module",
   "license": "MIT",

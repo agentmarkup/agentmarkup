@@ -1,6 +1,6 @@
 {
   "name": "@agentmarkup/core",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Framework-agnostic llms.txt, JSON-LD, and AI crawler generation for machine-readable websites",
   "type": "module",
   "license": "MIT",
