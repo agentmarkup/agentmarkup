@@ -69,7 +69,7 @@ function Home() {
     <>
       <header>
         <h1>Make your website machine-readable for LLMs and AI agents</h1>
-        <p className="tagline">Build-time llms.txt, JSON-LD structured data, AI crawler controls, and validation for Vite and Astro websites.</p>
+        <p className="tagline">Build-time llms.txt, JSON-LD, markdown mirrors, AI crawler controls, Content-Signal headers, and validation for Vite and Astro websites.</p>
         <p className="subtitle">Zero runtime cost. Type-safe. Open source.</p>
 
         <div className="fw-tabs-hero">
@@ -82,7 +82,7 @@ function Home() {
       <main>
         <section className="about">
           <p>
-            agentmarkup makes your website understandable by LLMs and AI agents. It generates <a href="/docs/llms-txt/">llms.txt</a> files, injects <a href="/docs/json-ld/">schema.org JSON-LD</a>, manages <a href="/docs/ai-crawlers/">AI crawler robots.txt rules</a>, and validates everything at build time. Same config, same features, whether you use Vite or Astro.
+            agentmarkup makes your website understandable by LLMs and AI agents. It generates <a href="/docs/llms-txt/">llms.txt</a> files, injects <a href="/docs/json-ld/">schema.org JSON-LD</a>, generates markdown mirrors from final HTML, manages <a href="/docs/ai-crawlers/">AI crawler robots.txt rules</a>, patches <code>_headers</code> with Content-Signal directives, and validates the final output at build time. Same config, same features, whether you use Vite or Astro.
           </p>
         </section>
 
@@ -100,8 +100,16 @@ function Home() {
             <p>Allow or block AI crawlers like GPTBot, ClaudeBot, PerplexityBot, Google-Extended, and CCBot with idempotent robots.txt patching that will not break your existing rules.</p>
           </div>
           <div className="feature">
-            <h2>Build-time validation</h2>
-            <p>Catch missing required fields, incomplete schema.org schemas, AI crawler conflicts, and malformed llms.txt before you deploy, not in production.</p>
+            <h2>Markdown mirrors</h2>
+            <p>Generate a clean <code>.md</code> companion for every built HTML page so fetch-based agents can read the page content without parsing navigation, scripts, and layout noise.</p>
+          </div>
+          <div className="feature">
+            <h2>Content-Signal headers</h2>
+            <p>Patch or generate a host-friendly <code>_headers</code> file with <code>Content-Signal</code> directives for platforms like Cloudflare Pages and Netlify.</p>
+          </div>
+          <div className="feature">
+            <h2>Final-output validation</h2>
+            <p>Catch missing required fields, incomplete schema.org schemas, thin client-shell HTML, AI crawler conflicts, and malformed llms.txt before you deploy, not in production.</p>
           </div>
         </section>
 
@@ -109,7 +117,7 @@ function Home() {
           <div className="checker-cta-card">
             <h2>Check your website before you ship it</h2>
             <p>
-              Run the built-in website checker to inspect any public homepage for llms.txt, JSON-LD, robots.txt, sitemap discovery, canonical tags, and common AI crawler issues. It does not invent a score. It tells you exactly what is missing.
+              Run the built-in website checker to inspect any public homepage for llms.txt, JSON-LD, markdown mirrors, robots.txt, sitemap discovery, canonical tags, and thin-HTML issues. It follows at most one same-origin link, does not invent a score, and tells you exactly what is missing.
             </p>
             <a className="checker-cta-link" href="/checker/">Open the website checker</a>
           </div>
@@ -142,7 +150,7 @@ function Home() {
           <p className="output-note">This is a recent build output from agentmarkup.dev with <code>@agentmarkup/vite</code>. The exact page and entry counts change as the docs site grows.</p>
           <img
             src="/agentmarkup-build-output.webp"
-            alt="Terminal output from a recent agentmarkup.dev build showing llms.txt generation, JSON-LD injection, robots.txt patching, and a clean validation report"
+            alt="Terminal output from a recent agentmarkup.dev build showing llms.txt generation, JSON-LD injection, markdown page generation, _headers patching, and a clean validation report"
             className="output-screenshot"
             width="880"
             height="424"
@@ -191,7 +199,7 @@ function Home() {
 
           <details>
             <summary>What does agentmarkup actually do?</summary>
-            <p>It adds three things to your build output: an <code>llms.txt</code> file that describes your site for LLMs, <code>&lt;script type="application/ld+json"&gt;</code> tags with structured data in your HTML, and <code>robots.txt</code> rules for AI crawlers. It also validates all of this at build time and warns you about problems.</p>
+            <p>It adds machine-readable build output: an <code>llms.txt</code> file, <code>&lt;script type="application/ld+json"&gt;</code> tags with structured data, markdown mirrors for built pages, <code>robots.txt</code> rules for AI crawlers, and optional <code>_headers</code> entries with Content-Signal directives. It also validates the final output and warns you about thin HTML, schema issues, and crawler conflicts.</p>
           </details>
 
           <details>
