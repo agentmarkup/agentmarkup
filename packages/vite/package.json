@@ -1,7 +1,7 @@
 {
   "name": "@agentmarkup/vite",
-  "version": "0.3.3",
-  "description": "Build-time llms.txt, JSON-LD, markdown mirrors, headers, AI crawler controls, and validation for Vite",
+  "version": "0.3.4",
+  "description": "Build-time llms.txt, llms-full.txt, JSON-LD, markdown mirrors, headers, AI crawler controls, and validation for Vite",
   "type": "module",
   "license": "MIT",
   "author": "Sebastian Cochinescu <hello@animafelix.com> (https://animafelix.com)",
@@ -17,6 +17,7 @@
   "keywords": [
     "vite-plugin",
     "llms-txt",
+    "llms-full",
     "json-ld",
     "markdown",
     "schema-org",

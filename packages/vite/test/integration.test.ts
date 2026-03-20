@@ -128,6 +128,9 @@ describe('agentmarkup integration', () => {
             },
           ],
         },
+        llmsFullTxt: {
+          enabled: true,
+        },
         globalSchemas: [
           {
             preset: 'webSite',
@@ -174,6 +177,7 @@ describe('agentmarkup integration', () => {
     );
 
     const llmsTxt = await readDistFile(root, 'llms.txt');
+    const llmsFullTxt = await readDistFile(root, 'llms-full.txt');
     const robotsTxt = await readDistFile(root, 'robots.txt');
     const headers = await readDistFile(root, '_headers');
     const homeMarkdown = await readDistFile(root, 'index.md');
@@ -183,6 +187,8 @@ describe('agentmarkup integration', () => {
 
     expect(llmsTxt).toContain('# Example');
     expect(llmsTxt).toContain('[FAQ](https://example.com/faq.md)');
+    expect(llmsFullTxt).toContain('### FAQ');
+    expect(llmsFullTxt).toContain('Preferred fetch: https://example.com/faq.md');
 
     expect(robotsTxt).toContain('User-agent: *\nAllow: /');
     expect(robotsTxt).toContain('Sitemap: https://example.com/sitemap.xml');
@@ -192,6 +198,8 @@ describe('agentmarkup integration', () => {
 
     expect(homeHtml).toContain('"@type": "WebSite"');
     expect(homeHtml).toContain('"@type": "Organization"');
+    expect(homeHtml).toContain('type="text/plain"');
+    expect(homeHtml).toContain('href="/llms.txt"');
     expect(homeHtml).toContain('type="text/markdown"');
     expect(homeHtml).not.toContain('"@type": "FAQPage"');
     expect(countJsonLdScripts(homeHtml)).toBe(2);
@@ -199,6 +207,7 @@ describe('agentmarkup integration', () => {
     expect(faqHtml).toContain('"@type": "WebSite"');
     expect(faqHtml).toContain('"@type": "Organization"');
     expect(faqHtml).toContain('"@type": "FAQPage"');
+    expect(faqHtml).toContain('href="/llms.txt"');
     expect(faqHtml).toContain('href="/faq.md"');
     expect(countJsonLdScripts(faqHtml)).toBe(3);
 
@@ -462,6 +471,42 @@ describe('agentmarkup integration', () => {
     expect(llmsTxt).toBe(existingLlms);
     expect(robotsTxt).toBe(existingRobots);
     expect(countJsonLdScripts(homeHtml)).toBe(1);
+  });
+
+  it('injects an llms.txt discovery link when the site ships a public llms.txt file', async () => {
+    const root = await createFixture({
+      'src/main.js': 'console.log("agentmarkup llms discovery fixture");\n',
+      'public/llms.txt': '# Existing\n\n## Docs\n\n- [Guide](https://example.com/guide)\n',
+      'index.html': [
+        '<!doctype html>',
+        '<html lang="en">',
+        '  <head>',
+        '    <meta charset="UTF-8" />',
+        '    <title>Home</title>',
+        '  </head>',
+        '  <body>',
+        '    <main><h1>Home</h1><p>Readable HTML.</p></main>',
+        '    <script type="module" src="/src/main.js"></script>',
+        '  </body>',
+        '</html>',
+      ].join('\n'),
+    });
+
+    await buildFixture(
+      root,
+      {
+        site: 'https://example.com',
+        name: 'Example',
+      },
+      ['index.html']
+    );
+
+    const homeHtml = await readDistFile(root, 'index.html');
+    const llmsTxt = await readDistFile(root, 'llms.txt');
+
+    expect(homeHtml).toContain('type="text/plain"');
+    expect(homeHtml).toContain('href="/llms.txt"');
+    expect(llmsTxt).toContain('# Existing');
   });
 
   it('emits markdown canonical headers even without Content-Signal enabled', async () => {

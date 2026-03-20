@@ -1,7 +1,7 @@
 {
   "name": "@agentmarkup/core",
-  "version": "0.3.2",
-  "description": "Framework-agnostic llms.txt, JSON-LD, markdown mirrors, headers, AI crawler controls, and validation",
+  "version": "0.3.4",
+  "description": "Framework-agnostic llms.txt, llms-full.txt, JSON-LD, markdown mirrors, headers, AI crawler controls, and validation",
   "type": "module",
   "license": "MIT",
   "author": "Sebastian Cochinescu <hello@animafelix.com> (https://animafelix.com)",
@@ -16,6 +16,7 @@
   },
   "keywords": [
     "llms-txt",
+    "llms-full",
     "json-ld",
     "markdown",
     "schema-org",

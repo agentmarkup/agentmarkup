@@ -6,10 +6,13 @@ import type { AstroIntegration } from 'astro';
 import {
   collectSchemasForPage,
   filterJsonLdByExistingTypes,
+  generateLlmsFullTxt,
+  generateLlmsTxtDiscoveryLink,
   generateMarkdownAlternateLink,
   generatePageMarkdown,
   generateJsonLdTags,
   generateLlmsTxt,
+  hasLlmsTxtDiscoveryLink,
   hasExistingJsonLdScripts,
   injectHeadContent,
   injectJsonLdTags,
@@ -20,9 +23,13 @@ import {
   patchRobotsTxt,
   presetToJsonLd,
   printReport,
+  resolveLlmsTxtSections,
   validateExistingJsonLd,
   validateHtmlContent,
   validateLlmsTxt,
+  validateLlmsTxtMarkdownCoverage,
+  validateMarkdownAlternateLink,
+  validateMarkdownContent,
   validateRobotsTxt,
   validateSchema,
 } from '@agentmarkup/core';
@@ -39,6 +46,8 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
   let llmsTxtEntries = 0;
   let llmsTxtSections = 0;
   let llmsTxtStatus: 'generated' | 'preserved' | 'none' = 'none';
+  let llmsFullTxtEntries = 0;
+  let llmsFullTxtStatus: 'generated' | 'preserved' | 'none' = 'none';
   let jsonLdPages = 0;
   let markdownPages = 0;
   let markdownPagesStatus: 'generated' | 'preserved' | 'none' = 'none';
@@ -59,6 +68,12 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
       'astro:build:done': async ({ dir }) => {
         const outDir = fileURLToPath(dir);
         const htmlFiles = await findHtmlFiles(outDir);
+        const resolvedLlmsSections = resolveLlmsTxtSections(config);
+        const markdownByUrl: Record<string, string> = {};
+        const availableMarkdownUrls = new Set<string>();
+        const advertiseLlmsTxt =
+          Boolean(config.llmsTxt) ||
+          Boolean(publicDir && existsSync(join(publicDir, 'llms.txt')));
 
         for (const htmlFile of htmlFiles) {
           const pagePath = pagePathFromOutputFile(outDir, htmlFile);
@@ -72,6 +87,10 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
             validationResults.push(...validateExistingJsonLd(nextHtml, pagePath));
           }
 
+          if (advertiseLlmsTxt && !hasLlmsTxtDiscoveryLink(nextHtml)) {
+            nextHtml = injectHeadContent(nextHtml, generateLlmsTxtDiscoveryLink());
+          }
+
           if (
             isFeatureEnabled(config.markdownPages) &&
             pagePath &&
@@ -81,6 +100,13 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
               nextHtml,
               generateMarkdownAlternateLink(pagePath)
             );
+          }
+
+          if (
+            isFeatureEnabled(config.markdownPages) &&
+            !config.validation?.disabled
+          ) {
+            validationResults.push(...validateMarkdownAlternateLink(nextHtml, pagePath));
           }
 
           if (schemas.length === 0) {
@@ -137,6 +163,7 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
             const outputMarkdownPath = join(outDir, markdownFileName);
             const html = await readFile(htmlFile, 'utf8');
             const pagePath = pagePathFromOutputFile(outDir, htmlFile);
+            const markdownAbsoluteUrl = buildAbsoluteMarkdownUrl(config.site, pagePath);
             const markdown = generatePageMarkdown({
               html,
               pagePath,
@@ -156,10 +183,18 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
 
             if (existingMarkdown && !config.markdownPages?.replaceExisting) {
               preservedMarkdownPages += 1;
+              markdownByUrl[markdownAbsoluteUrl] = existingMarkdown;
+              availableMarkdownUrls.add(markdownAbsoluteUrl);
               markdownCanonicalEntries.push({
                 markdownPath: `/${markdownFileName}`,
                 canonicalUrl: buildCanonicalUrl(config.site, pagePath),
               });
+
+              if (!config.validation?.disabled) {
+                validationResults.push(
+                  ...validateMarkdownContent(existingMarkdown, pagePath)
+                );
+              }
 
               if (!existingOutputMarkdown) {
                 await writeFile(outputMarkdownPath, existingMarkdown, 'utf8');
@@ -168,10 +203,15 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
             }
 
             await writeFile(outputMarkdownPath, markdown, 'utf8');
+            markdownByUrl[markdownAbsoluteUrl] = markdown;
+            availableMarkdownUrls.add(markdownAbsoluteUrl);
             markdownCanonicalEntries.push({
               markdownPath: `/${markdownFileName}`,
               canonicalUrl: buildCanonicalUrl(config.site, pagePath),
             });
+            if (!config.validation?.disabled) {
+              validationResults.push(...validateMarkdownContent(markdown, pagePath));
+            }
             markdownPages += 1;
           }
 
@@ -203,6 +243,15 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
             if (!preserved || !existingOutputFileExists(outputHeadersPath)) {
               await writeFile(outputHeadersPath, patchedHeaders, 'utf8');
             }
+          }
+
+          if (!config.validation?.disabled && resolvedLlmsSections.length > 0) {
+            validationResults.push(
+              ...validateLlmsTxtMarkdownCoverage(
+                resolvedLlmsSections,
+                availableMarkdownUrls
+              )
+            );
           }
         }
 
@@ -236,6 +285,47 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
 
             if (!config.validation?.disabled) {
               validationResults.push(...validateLlmsTxt(llmsTxtContent));
+            }
+          }
+        }
+
+        if (config.llmsFullTxt?.enabled) {
+          const llmsFullTxtContent = generateLlmsFullTxt(config, {
+            contentByUrl: markdownByUrl,
+          });
+
+          if (llmsFullTxtContent) {
+            const outputLlmsFullPath = join(outDir, 'llms-full.txt');
+            const inlineEntries = countInlinedLlmsFullEntries(
+              resolvedLlmsSections,
+              markdownByUrl
+            );
+            const existingOutputLlmsFull = await readTextFileIfExists(outputLlmsFullPath);
+            const existingLlmsFull =
+              existingOutputLlmsFull ??
+              (publicDir
+                ? await readTextFileIfExists(join(publicDir, 'llms-full.txt'))
+                : null);
+
+            if (existingLlmsFull && !config.llmsFullTxt.replaceExisting) {
+              llmsFullTxtStatus = 'preserved';
+
+              if (!existingOutputLlmsFull) {
+                await writeFile(outputLlmsFullPath, existingLlmsFull, 'utf8');
+              }
+
+              if (!config.validation?.disabled) {
+                validationResults.push(...validateLlmsTxt(existingLlmsFull));
+              }
+            } else {
+              llmsFullTxtStatus = 'generated';
+              llmsFullTxtEntries = inlineEntries;
+
+              await writeFile(outputLlmsFullPath, llmsFullTxtContent, 'utf8');
+
+              if (!config.validation?.disabled) {
+                validationResults.push(...validateLlmsTxt(llmsFullTxtContent));
+              }
             }
           }
         }
@@ -294,6 +384,8 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
           llmsTxtEntries,
           llmsTxtSections,
           llmsTxtStatus,
+          llmsFullTxtEntries,
+          llmsFullTxtStatus,
           jsonLdPages,
           markdownPages,
           markdownPagesStatus,
@@ -346,6 +438,25 @@ function pagePathFromOutputFile(outDir: string, filePath: string): string {
 function buildCanonicalUrl(siteUrl: string, pagePath: string): string {
   const base = siteUrl.replace(/\/$/, '');
   return pagePath === '/' ? `${base}/` : `${base}${pagePath}`;
+}
+
+function buildAbsoluteMarkdownUrl(siteUrl: string, pagePath: string): string {
+  const base = siteUrl.replace(/\/$/, '');
+  return pagePath === '/' ? `${base}/index.md` : `${base}${pagePath}.md`;
+}
+
+function countInlinedLlmsFullEntries(
+  sections: ReturnType<typeof resolveLlmsTxtSections>,
+  markdownByUrl: Record<string, string>
+): number {
+  return sections.reduce(
+    (sum, section) =>
+      sum +
+      section.entries.filter(
+        (entry) => Boolean(entry.markdownUrl && markdownByUrl[entry.markdownUrl])
+      ).length,
+    0
+  );
 }
 
 function existingOutputFileExists(filePath: string): boolean {

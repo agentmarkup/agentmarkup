@@ -67,6 +67,9 @@ describe('@agentmarkup/astro', () => {
           },
         ],
       },
+      llmsFullTxt: {
+        enabled: true,
+      },
       globalSchemas: [
         {
           preset: 'webSite',
@@ -122,18 +125,24 @@ describe('@agentmarkup/astro', () => {
     const homeHtml = await readFile(join(root, 'dist', 'index.html'), 'utf8');
     const faqHtml = await readFile(join(root, 'dist', 'faq', 'index.html'), 'utf8');
     const llmsTxt = await readFile(join(root, 'dist', 'llms.txt'), 'utf8');
+    const llmsFullTxt = await readFile(join(root, 'dist', 'llms-full.txt'), 'utf8');
     const faqMarkdown = await readFile(join(root, 'dist', 'faq.md'), 'utf8');
     const headers = await readFile(join(root, 'dist', '_headers'), 'utf8');
     const robotsTxt = await readFile(join(root, 'dist', 'robots.txt'), 'utf8');
 
     expect(homeHtml).toContain('"@type": "WebSite"');
     expect(homeHtml).toContain('"@type": "Organization"');
+    expect(homeHtml).toContain('type="text/plain"');
+    expect(homeHtml).toContain('href="/llms.txt"');
     expect(homeHtml).toContain('type="text/markdown"');
     expect(faqHtml).toContain('"@type": "FAQPage"');
+    expect(faqHtml).toContain('href="/llms.txt"');
     expect(faqHtml).toContain('href="/faq.md"');
 
     expect(llmsTxt).toContain('# Example');
     expect(llmsTxt).toContain('[FAQ](https://example.com/faq.md)');
+    expect(llmsFullTxt).toContain('### FAQ');
+    expect(llmsFullTxt).toContain('Preferred fetch: https://example.com/faq.md');
     expect(faqMarkdown).toContain('# FAQ');
     expect(headers).toContain('Content-Signal: ai-train=yes, search=yes, ai-input=yes');
     expect(headers).toContain('/index.md');
@@ -253,6 +262,38 @@ describe('@agentmarkup/astro', () => {
     expect((homeHtml.match(/application\/ld\+json/g) ?? [])).toHaveLength(1);
     expect(llmsTxt).toBe(existingLlms);
     expect(robotsTxt).toBe(existingRobots);
+  });
+
+  it('injects an llms.txt discovery link when the site ships a public llms.txt file', async () => {
+    const root = await createFixture({
+      'dist/index.html': '<html><head><title>Home</title></head><body><main><h1>Home</h1><p>Readable HTML.</p></main></body></html>',
+      'public/llms.txt': '# Existing\n\n## Docs\n\n- [Guide](https://example.com/guide)\n',
+    });
+
+    const integration = agentmarkup({
+      site: 'https://example.com',
+      name: 'Example',
+    });
+
+    await integration.hooks['astro:config:done']?.({
+      config: {
+        publicDir: pathToFileURL(join(root, 'public/')),
+      } as unknown as AstroConfig,
+      setAdapter: () => {},
+      injectTypes: () => pathToFileURL(join(root, 'types.d.ts')),
+      logger: {} as unknown as AstroIntegrationLogger,
+    } as AstroConfigDoneArgs);
+
+    await integration.hooks['astro:build:done']?.({
+      dir: pathToFileURL(join(root, 'dist/')),
+      routes: [],
+      pages: [{ pathname: '/' }],
+    } as AstroBuildDoneArgs);
+
+    const homeHtml = await readFile(join(root, 'dist', 'index.html'), 'utf8');
+
+    expect(homeHtml).toContain('type="text/plain"');
+    expect(homeHtml).toContain('href="/llms.txt"');
   });
 
   it('writes markdown canonical headers even without Content-Signal enabled', async () => {

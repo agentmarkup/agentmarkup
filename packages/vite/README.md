@@ -1,6 +1,6 @@
 # @agentmarkup/vite
 
-Build-time `llms.txt`, JSON-LD, markdown mirrors, AI crawler controls, and validation for Vite websites.
+Build-time `llms.txt`, optional `llms-full.txt`, JSON-LD, markdown mirrors, AI crawler controls, and validation for Vite websites.
 
 `@agentmarkup/vite` is the Vite adapter in the `agentmarkup` package family. Framework-agnostic helpers live in `@agentmarkup/core`, and Astro sites use `@agentmarkup/astro`.
 
@@ -37,6 +37,9 @@ export default defineConfig({
             ],
           },
         ],
+      },
+      llmsFullTxt: {
+        enabled: true,
       },
       markdownPages: {
         enabled: true,
@@ -92,20 +95,25 @@ export default defineConfig({
 ## What It Does
 
 - Generates `/llms.txt` from config
+- Generates optional `/llms-full.txt` with inlined same-site markdown content
+- Injects the homepage `llms.txt` discovery link automatically
 - Injects JSON-LD into built HTML pages
 - Validates JSON-LD already present in page HTML
-- Generates `.md` mirrors from the final HTML output
+- Generates `.md` mirrors from the final HTML output when a cleaner agent-facing fetch path is useful
 - Patches or creates `robots.txt` with AI crawler directives
 - Patches or creates `_headers` with `Content-Signal` and canonical `Link` headers for markdown mirrors
 - Validates common schema and crawler mistakes at build time
 - Warns when a page looks like a thin client-rendered HTML shell
+- Warns when markdown alternate links or `llms.txt` mirror coverage drift out of sync
 - Exposes the same generators and validators for custom prerender or post-build scripts
 
 If the page already contains JSON-LD for a schema type, or the site already ships a curated `llms.txt` or matching crawler rules, the adapter preserves those by default. Set `llmsTxt.replaceExisting` or `jsonLd.replaceExistingTypes` only when you want Vite output to replace existing assets.
 
-Markdown mirrors stay directly fetchable for agents, while their `_headers` entries point search engines back at the HTML page as canonical. Existing files are still preserved unless you opt into replacement with `markdownPages.replaceExisting` or `contentSignalHeaders.replaceExisting`.
+Markdown mirrors are optional. They are usually most useful for thin, noisy, or client-rendered HTML where the raw page is a weak fetch target for agents. The generated `.md` files stay directly fetchable for agents, while their `_headers` entries point search engines back at the HTML page as canonical. Existing files are still preserved unless you opt into replacement with `markdownPages.replaceExisting` or `contentSignalHeaders.replaceExisting`.
 
 When markdown mirrors are enabled, same-site page entries in `llms.txt` automatically point at the generated `.md` mirrors by default. Set `llmsTxt.preferMarkdownMirrors: false` if you want `llms.txt` to keep linking to HTML routes instead.
+
+Enable `llmsFullTxt` when you want a richer companion file for agents that can consume more than the compact `llms.txt` manifest. The generated `llms-full.txt` keeps the same section structure but inlines same-site markdown mirror content when those mirrors exist.
 
 The adapter assumes Vite controls the final HTML output. If a framework does an additional server-render or prerender pass after Vite finishes, use `@agentmarkup/core` in that final step or reach for a dedicated adapter instead of assuming JSON-LD injection will carry through automatically.
 
@@ -170,6 +178,7 @@ const robotsIssues = validateRobotsTxt(robots, {
   @agentmarkup/vite
 
   ✓ llms.txt generated (6 entries, 2 sections)
+  ✓ llms-full.txt generated (6 inlined entries)
   ✓ JSON-LD injected into 1 pages
   ✓ Markdown pages generated (6 files)
   ✓ _headers generated with markdown canonicals (6 files)

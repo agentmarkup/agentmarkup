@@ -1,14 +1,17 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve as resolvePath } from 'node:path';
 import type { Plugin } from 'vite';
 import {
   collectSchemasForPage,
   filterJsonLdByExistingTypes,
+  generateLlmsFullTxt,
+  generateLlmsTxtDiscoveryLink,
   generateMarkdownAlternateLink,
   generatePageMarkdown,
   generateLlmsTxt,
   generateJsonLdTags,
+  hasLlmsTxtDiscoveryLink,
   hasExistingJsonLdScripts,
   injectHeadContent,
   injectJsonLdTags,
@@ -19,9 +22,13 @@ import {
   patchRobotsTxt,
   presetToJsonLd,
   printReport,
+  resolveLlmsTxtSections,
   validateExistingJsonLd,
   validateHtmlContent,
   validateLlmsTxt,
+  validateLlmsTxtMarkdownCoverage,
+  validateMarkdownAlternateLink,
+  validateMarkdownContent,
   validateRobotsTxt,
   validateSchema,
 } from '@agentmarkup/core';
@@ -42,6 +49,8 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
   let llmsTxtEntries = 0;
   let llmsTxtSections = 0;
   let llmsTxtStatus: 'generated' | 'preserved' | 'none' = 'none';
+  let llmsFullTxtEntries = 0;
+  let llmsFullTxtStatus: 'generated' | 'preserved' | 'none' = 'none';
   let jsonLdPages = 0;
   let markdownPages = 0;
   let markdownPagesStatus: 'generated' | 'preserved' | 'none' = 'none';
@@ -89,6 +98,13 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
 
         if (!config.validation?.disabled) {
           validationResults.push(...validateExistingJsonLd(nextHtml, pagePath));
+        }
+
+        if (
+          shouldAdvertiseLlmsTxt(config, publicDir) &&
+          !hasLlmsTxtDiscoveryLink(nextHtml)
+        ) {
+          nextHtml = injectHeadContent(nextHtml, generateLlmsTxtDiscoveryLink());
         }
 
         if (
@@ -150,6 +166,10 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
       if (isSsrBuild) {
         return;
       }
+
+      const resolvedLlmsSections = resolveLlmsTxtSections(config);
+      const markdownByUrl: Record<string, string> = {};
+      const availableMarkdownUrls = new Set<string>();
 
       // Generate llms.txt
       llmsTxtContent = generateLlmsTxt(config);
@@ -287,6 +307,7 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
           const html = getAssetText(asset.source);
           const pagePath = resolveOutputPagePath(htmlFileName);
           const markdownFileName = markdownFileNameFromHtmlFile(htmlFileName);
+          const markdownAbsoluteUrl = buildAbsoluteMarkdownUrl(config.site, pagePath);
           const markdown = generatePageMarkdown({
             html,
             pagePath,
@@ -312,10 +333,17 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
           const preservedMarkdown = existingMarkdown ?? publicMarkdown;
           if (preservedMarkdown && !config.markdownPages?.replaceExisting) {
             preservedMarkdownPages += 1;
+            markdownByUrl[markdownAbsoluteUrl] = preservedMarkdown;
+            availableMarkdownUrls.add(markdownAbsoluteUrl);
             markdownCanonicalEntries.push({
               markdownPath: `/${markdownFileName}`,
               canonicalUrl: buildCanonicalUrl(config.site, pagePath),
             });
+            if (!config.validation?.disabled && !writesBuildOutput) {
+              validationResults.push(
+                ...validateMarkdownContent(preservedMarkdown, pagePath)
+              );
+            }
             if (!existingMarkdownAsset) {
               this.emitFile({
                 type: 'asset',
@@ -335,10 +363,15 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
             fileName: markdownFileName,
             source: markdown,
           });
+          markdownByUrl[markdownAbsoluteUrl] = markdown;
+          availableMarkdownUrls.add(markdownAbsoluteUrl);
           markdownCanonicalEntries.push({
             markdownPath: `/${markdownFileName}`,
             canonicalUrl: buildCanonicalUrl(config.site, pagePath),
           });
+          if (!config.validation?.disabled && !writesBuildOutput) {
+            validationResults.push(...validateMarkdownContent(markdown, pagePath));
+          }
           markdownPages += 1;
         }
 
@@ -387,6 +420,81 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
               fileName: headersFileName,
               source: patchedHeaders,
             });
+          }
+        }
+
+        if (!config.validation?.disabled && resolvedLlmsSections.length > 0) {
+          validationResults.push(
+            ...validateLlmsTxtMarkdownCoverage(
+              resolvedLlmsSections,
+              availableMarkdownUrls
+            )
+          );
+        }
+      }
+
+      if (config.llmsFullTxt?.enabled) {
+        const llmsFullTxtContent = generateLlmsFullTxt(config, {
+          contentByUrl: markdownByUrl,
+        });
+
+        if (llmsFullTxtContent) {
+          const inlineEntries = countInlinedLlmsFullEntries(
+            resolvedLlmsSections,
+            markdownByUrl
+          );
+          let existingLlmsFull: string | null = null;
+          let existingLlmsFullFromBundle = false;
+
+          for (const [fileName, asset] of Object.entries(bundle)) {
+            if (fileName === 'llms-full.txt' && asset.type === 'asset') {
+              existingLlmsFull =
+                typeof asset.source === 'string'
+                  ? asset.source
+                  : new TextDecoder().decode(asset.source);
+              existingLlmsFullFromBundle = true;
+              break;
+            }
+          }
+
+          if (!existingLlmsFull && publicDir) {
+            const publicLlmsFullPath = join(publicDir, 'llms-full.txt');
+            if (existsSync(publicLlmsFullPath)) {
+              existingLlmsFull = readFileSync(publicLlmsFullPath, 'utf8');
+            }
+          }
+
+          if (existingLlmsFull && !config.llmsFullTxt.replaceExisting) {
+            llmsFullTxtStatus = 'preserved';
+
+            if (!existingLlmsFullFromBundle) {
+              this.emitFile({
+                type: 'asset',
+                fileName: 'llms-full.txt',
+                source: existingLlmsFull,
+              });
+            }
+
+            if (!config.validation?.disabled) {
+              validationResults.push(...validateLlmsTxt(existingLlmsFull));
+            }
+          } else {
+            llmsFullTxtStatus = 'generated';
+            llmsFullTxtEntries = inlineEntries;
+
+            if (existingLlmsFullFromBundle) {
+              delete bundle['llms-full.txt'];
+            }
+
+            this.emitFile({
+              type: 'asset',
+              fileName: 'llms-full.txt',
+              source: llmsFullTxtContent,
+            });
+
+            if (!config.validation?.disabled) {
+              validationResults.push(...validateLlmsTxt(llmsFullTxtContent));
+            }
           }
         }
       }
@@ -442,10 +550,27 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
         return;
       }
 
+      if (
+        llmsFullTxtStatus !== 'preserved' &&
+        config.llmsFullTxt?.enabled &&
+        writesBuildOutput
+      ) {
+        const finalLlmsFullEntries = await rewriteFinalLlmsFullTxt(
+          outDir,
+          config
+        );
+
+        if (finalLlmsFullEntries !== null) {
+          llmsFullTxtEntries = finalLlmsFullEntries;
+          llmsFullTxtStatus = 'generated';
+        }
+      }
+
       const finalHtmlValidationResults = config.validation?.disabled
         ? []
         : await collectFinalHtmlValidationResults(
-            writesBuildOutput ? outDir : undefined
+            writesBuildOutput ? outDir : undefined,
+            config
           );
 
       printReport({
@@ -453,6 +578,8 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
         llmsTxtEntries,
         llmsTxtSections,
         llmsTxtStatus,
+        llmsFullTxtEntries,
+        llmsFullTxtStatus,
         jsonLdPages,
         markdownPages,
         markdownPagesStatus,
@@ -558,7 +685,8 @@ function hasMarkdownAlternateLink(html: string): boolean {
 }
 
 async function collectFinalHtmlValidationResults(
-  outputDir: string | undefined
+  outputDir: string | undefined,
+  config: AgentMarkupConfig
 ): Promise<ValidationResult[]> {
   if (!outputDir || !existsSync(outputDir)) {
     return [];
@@ -573,13 +701,70 @@ async function collectFinalHtmlValidationResults(
       .slice(outputDir.length)
       .replace(/^[/\\]+/, '')
       .replace(/\\/g, '/');
+    const pagePath = resolveOutputPagePath(relativeHtmlFile);
 
-    results.push(
-      ...validateHtmlContent(html, resolveOutputPagePath(relativeHtmlFile))
-    );
+    results.push(...validateHtmlContent(html, pagePath));
+
+    if (isFeatureEnabled(config.markdownPages)) {
+      results.push(...validateMarkdownAlternateLink(html, pagePath));
+    }
+  }
+
+  if (isFeatureEnabled(config.markdownPages)) {
+    const markdownFiles = await findMarkdownFiles(outputDir);
+
+    for (const markdownFile of markdownFiles) {
+      const markdown = await readFile(markdownFile, 'utf8');
+      const relativeMarkdownFile = markdownFile
+        .slice(outputDir.length)
+        .replace(/^[/\\]+/, '')
+        .replace(/\\/g, '/');
+      const pagePath = resolveOutputMarkdownPagePath(relativeMarkdownFile);
+
+      results.push(...validateMarkdownContent(markdown, pagePath));
+    }
   }
 
   return results;
+}
+
+async function rewriteFinalLlmsFullTxt(
+  outputDir: string | undefined,
+  config: AgentMarkupConfig
+): Promise<number | null> {
+  if (!outputDir || !existsSync(outputDir) || !config.llmsFullTxt?.enabled) {
+    return null;
+  }
+
+  const markdownFiles = await findMarkdownFiles(outputDir);
+  const markdownByUrl: Record<string, string> = {};
+
+  for (const markdownFile of markdownFiles) {
+    const markdown = await readFile(markdownFile, 'utf8');
+    const relativeMarkdownFile = markdownFile
+      .slice(outputDir.length)
+      .replace(/^[/\\]+/, '')
+      .replace(/\\/g, '/');
+    const pagePath = resolveOutputMarkdownPagePath(relativeMarkdownFile);
+    const markdownUrl = buildAbsoluteMarkdownUrl(config.site, pagePath);
+
+    markdownByUrl[markdownUrl] = markdown;
+  }
+
+  const llmsFullTxtContent = generateLlmsFullTxt(config, {
+    contentByUrl: markdownByUrl,
+  });
+
+  if (!llmsFullTxtContent) {
+    return null;
+  }
+
+  await writeFile(join(outputDir, 'llms-full.txt'), llmsFullTxtContent, 'utf8');
+
+  return countInlinedLlmsFullEntries(
+    resolveLlmsTxtSections(config),
+    markdownByUrl
+  );
 }
 
 async function findHtmlFiles(dir: string): Promise<string[]> {
@@ -600,4 +785,67 @@ async function findHtmlFiles(dir: string): Promise<string[]> {
   }
 
   return htmlFiles;
+}
+
+async function findMarkdownFiles(dir: string): Promise<string[]> {
+  const entries = await readdir(dir, { withFileTypes: true });
+  const markdownFiles: string[] = [];
+
+  for (const entry of entries) {
+    const entryPath = join(dir, entry.name);
+
+    if (entry.isDirectory()) {
+      markdownFiles.push(...(await findMarkdownFiles(entryPath)));
+      continue;
+    }
+
+    if (
+      entry.isFile() &&
+      entry.name.endsWith('.md') &&
+      entry.name !== 'llms.txt' &&
+      entry.name !== 'llms-full.txt'
+    ) {
+      markdownFiles.push(entryPath);
+    }
+  }
+
+  return markdownFiles;
+}
+
+function shouldAdvertiseLlmsTxt(
+  config: AgentMarkupConfig,
+  publicDir: string | undefined
+): boolean {
+  if (config.llmsTxt) {
+    return true;
+  }
+
+  return Boolean(publicDir && existsSync(join(publicDir, 'llms.txt')));
+}
+
+function buildAbsoluteMarkdownUrl(siteUrl: string, pagePath: string): string {
+  const base = siteUrl.replace(/\/$/, '');
+  return pagePath === '/' ? `${base}/index.md` : `${base}${pagePath}.md`;
+}
+
+function resolveOutputMarkdownPagePath(fileName: string): string {
+  if (fileName === 'index.md') {
+    return '/';
+  }
+
+  return normalizePagePath(`/${fileName.replace(/\.md$/, '')}`);
+}
+
+function countInlinedLlmsFullEntries(
+  sections: ReturnType<typeof resolveLlmsTxtSections>,
+  markdownByUrl: Record<string, string>
+): number {
+  return sections.reduce(
+    (sum, section) =>
+      sum +
+      section.entries.filter(
+        (entry) => Boolean(entry.markdownUrl && markdownByUrl[entry.markdownUrl])
+      ).length,
+    0
+  );
 }

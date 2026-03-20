@@ -14,6 +14,9 @@ export type {
   LlmsTxtConfig,
   LlmsTxtSection,
   LlmsTxtEntry,
+  LlmsFullTxtConfig,
+  ResolvedLlmsTxtEntry,
+  ResolvedLlmsTxtSection,
   MarkdownPagesConfig,
   ContentSignalDirective,
   ContentSignalHeadersConfig,
@@ -44,7 +47,13 @@ export {
   generatePageMarkdown,
   generateMarkdownAlternateLink,
 } from './generators/markdown.js';
-export { generateLlmsTxt } from './generators/llms-txt.js';
+export {
+  generateLlmsTxt,
+  generateLlmsFullTxt,
+  generateLlmsTxtDiscoveryLink,
+  hasLlmsTxtDiscoveryLink,
+  resolveLlmsTxtSections,
+} from './generators/llms-txt.js';
 export {
   generateCrawlerRules,
   patchRobotsTxt,
@@ -75,4 +84,9 @@ export {
 export { validateRobotsTxt } from './validation/robots.js';
 export { validateLlmsTxt } from './validation/llms-txt.js';
 export { validateHtmlContent } from './validation/html.js';
+export {
+  validateMarkdownAlternateLink,
+  validateMarkdownContent,
+  validateLlmsTxtMarkdownCoverage,
+} from './validation/markdown.js';
 export { printReport } from './validation/reporter.js';

@@ -14,7 +14,7 @@ interface HeadMetadata {
 
 const PRE_BLOCK_RE = /<pre\b[^>]*>([\s\S]*?)<\/pre>/gi;
 const TAGS_TO_REMOVE_RE =
-  /<(script|style|template|svg|canvas|iframe|form)\b[^>]*>[\s\S]*?<\/\1>/gi;
+  /<(script|style|template|svg|canvas|iframe|form|button)\b[^>]*>[\s\S]*?<\/\1>/gi;
 const LAYOUT_TAGS_RE = /<(nav|header|footer|aside)\b[^>]*>[\s\S]*?<\/\1>/gi;
 const NOSCRIPT_RE = /<noscript\b[^>]*>([\s\S]*?)<\/noscript>/gi;
 const UI_CHROME_RE = [
@@ -23,6 +23,23 @@ const UI_CHROME_RE = [
   /<span\b[^>]*>\s*\d+\s*<\/span>/gi,
   /<[^>]+\baria-hidden=(['"])true\1[^>]*>[\s\S]*?<\/[^>]+>/gi,
 ];
+const ENTITY_MAP: Record<string, string> = {
+  nbsp: ' ',
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+  '#39': "'",
+  middot: '·',
+  ndash: '–',
+  mdash: '—',
+  hellip: '…',
+  lsquo: '‘',
+  rsquo: '’',
+  ldquo: '“',
+  rdquo: '”',
+};
 
 export function generatePageMarkdown(options: PageMarkdownOptions): string {
   const metadata = extractHeadMetadata(options.html);
@@ -171,14 +188,17 @@ function htmlFragmentToMarkdown(html: string): string {
   const preBlocks: string[] = [];
   let working = html.replace(PRE_BLOCK_RE, (_match, inner) => {
     const fence = `@@AGENTMARKUP_PRE_${preBlocks.length}@@`;
-    const code = decodeHtmlEntities(stripTags(inner)).trimEnd();
-    preBlocks.push(code ? `\n\`\`\`\n${code}\n\`\`\`\n` : '');
+    const codeBlock = extractCodeBlock(inner);
+    const fenceMarker = codeBlock.language
+      ? `\n\`\`\`${codeBlock.language}\n${codeBlock.code}\n\`\`\`\n`
+      : `\n\`\`\`\n${codeBlock.code}\n\`\`\`\n`;
+    preBlocks.push(codeBlock.code ? fenceMarker : '');
     return fence;
   });
 
   working = working
-    .replace(/<(section|article|main|div)\b[^>]*>/gi, '\n\n')
-    .replace(/<\/(section|article|main|div)>/gi, '\n\n')
+    .replace(/<(section|article|main|div|figure)\b[^>]*>/gi, '\n\n')
+    .replace(/<\/(section|article|main|div|figure)>/gi, '\n\n')
     .replace(/<(h[1-6])\b[^>]*>([\s\S]*?)<\/\1>/gi, (_match, tag, inner) => {
       const level = Number(tag.slice(1));
       return `\n\n${'#'.repeat(level)} ${renderInline(inner)}\n\n`;
@@ -239,8 +259,8 @@ function renderInline(html: string): string {
       return label ? `*${label}*` : '';
     })
     .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/?(span|small|sup|sub)\b[^>]*>/gi, '')
-    .replace(/<[^>]+>/g, '');
+    .replace(/<\/?(span|small|sup|sub)\b[^>]*>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ');
 
   working = decodeHtmlEntities(working);
 
@@ -251,7 +271,7 @@ function renderInline(html: string): string {
     );
   }
 
-  return working;
+  return normalizeInlineText(working);
 }
 
 function stripResidualTagsPreservingMarkdown(markdownishHtml: string): string {
@@ -270,8 +290,8 @@ function stripResidualTagsPreservingMarkdown(markdownishHtml: string): string {
 
   working = decodeHtmlEntities(
     working
-      .replace(/<\/?(span|small|sup|sub)\b[^>]*>/gi, '')
-      .replace(/<[^>]+>/g, '')
+      .replace(/<\/?(span|small|sup|sub)\b[^>]*>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
   );
 
   for (let index = 0; index < preservedBlocks.length; index += 1) {
@@ -290,6 +310,21 @@ function normalizeMarkdown(markdown: string): string {
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .replace(/\n[ \t]+-/g, '\n-')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
+}
+
+function normalizeInlineText(value: string): string {
+  return value
+    .replace(/\r/g, '')
+    .split('\n')
+    .map((line) =>
+      line
+        .replace(/[ \t]{2,}/g, ' ')
+        .replace(/\s+([,.;:!?])/g, '$1')
+        .trim()
+    )
+    .join('\n')
     .trim();
 }
 
@@ -315,15 +350,52 @@ function stripTags(html: string): string {
 }
 
 function decodeHtmlEntities(value: string): string {
+  return value.replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (_match, entity) => {
+    const normalized = entity.toLowerCase();
+
+    if (normalized.startsWith('#x')) {
+      return String.fromCodePoint(Number.parseInt(normalized.slice(2), 16));
+    }
+
+    if (normalized.startsWith('#')) {
+      return String.fromCodePoint(Number.parseInt(normalized.slice(1), 10));
+    }
+
+    return ENTITY_MAP[normalized] ?? `&${entity};`;
+  });
+}
+
+function extractCodeBlock(innerHtml: string): {
+  code: string;
+  language: string | null;
+} {
+  const languageMatch = innerHtml.match(
+    /\b(?:language|lang)-([a-z0-9#+-]+)/i
+  );
+  const withoutLineNumbers = innerHtml
+    .replace(
+      /<span\b[^>]*class=(['"])[^'"]*line-numbers[^'"]*\1[^>]*>[\s\S]*?<\/span>/gi,
+      ''
+    )
+    .replace(/<[^>]+\baria-hidden=(['"])true\1[^>]*>[\s\S]*?<\/[^>]+>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n');
+
+  const code = normalizeCodeBlockText(
+    decodeHtmlEntities(stripTags(withoutLineNumbers))
+  );
+
+  return {
+    code,
+    language: languageMatch?.[1]?.toLowerCase() ?? null,
+  };
+}
+
+function normalizeCodeBlockText(value: string): string {
   return value
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/&middot;/gi, '·')
-    .replace(/&#(\d+);/g, (_match, code) => String.fromCharCode(Number(code)));
+    .replace(/\r/g, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trimEnd();
 }
 
 function escapeAttribute(value: string): string {

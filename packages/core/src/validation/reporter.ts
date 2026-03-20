@@ -12,6 +12,8 @@ export function printReport(opts: {
   llmsTxtEntries: number;
   llmsTxtSections: number;
   llmsTxtStatus?: 'generated' | 'preserved' | 'none';
+  llmsFullTxtEntries?: number;
+  llmsFullTxtStatus?: 'generated' | 'preserved' | 'none';
   jsonLdPages: number;
   markdownPages?: number;
   markdownPagesStatus?: 'generated' | 'preserved' | 'none';
@@ -27,6 +29,8 @@ export function printReport(opts: {
     llmsTxtEntries,
     llmsTxtSections,
     llmsTxtStatus = llmsTxtEntries > 0 ? 'generated' : 'none',
+    llmsFullTxtEntries = 0,
+    llmsFullTxtStatus = llmsFullTxtEntries > 0 ? 'generated' : 'none',
     jsonLdPages,
     markdownPages = 0,
     markdownPagesStatus = markdownPages > 0 ? 'generated' : 'none',
@@ -49,6 +53,14 @@ export function printReport(opts: {
     );
   } else if (llmsTxtStatus === 'preserved') {
     console.log(`  ${GREEN}✓${RESET} llms.txt preserved (existing file retained)`);
+  }
+
+  if (llmsFullTxtStatus === 'generated') {
+    console.log(
+      `  ${GREEN}✓${RESET} llms-full.txt generated (${llmsFullTxtEntries} inlined entries)`
+    );
+  } else if (llmsFullTxtStatus === 'preserved') {
+    console.log(`  ${GREEN}✓${RESET} llms-full.txt preserved (existing file retained)`);
   }
 
   if (jsonLdPages > 0) {

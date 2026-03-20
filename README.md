@@ -1,6 +1,6 @@
 # agentmarkup
 
-Build-time `llms.txt`, JSON-LD, markdown mirrors, AI crawler controls, and validation for Vite and Astro websites.
+Build-time `llms.txt`, optional `llms-full.txt`, JSON-LD, markdown mirrors, AI crawler controls, and validation for Vite and Astro websites.
 
 ## What This Repo Contains
 
@@ -67,16 +67,18 @@ export default defineConfig({
 On build, the adapters can:
 
 - emit `llms.txt`
+- emit optional `llms-full.txt` with inlined same-site markdown context
+- inject the homepage `llms.txt` discovery link automatically
 - inject JSON-LD into generated HTML
 - validate JSON-LD already present in page HTML
-- emit page-level `.md` mirrors from final HTML output
+- emit page-level `.md` mirrors from final HTML output when a cleaner agent-facing fetch path is useful
 - patch or create `robots.txt` with AI crawler directives
 - patch or create `_headers` with `Content-Signal` and canonical `Link` headers for markdown mirrors
-- report deterministic validation warnings and errors in the terminal
+- report deterministic validation warnings and errors in the terminal, including markdown alternate-link and mirror-coverage issues
 
 By default, agentmarkup coexists with existing machine-readable assets. If a site already has a curated `llms.txt`, matching crawler rules, or hand-authored JSON-LD for a schema type, those are preserved unless you explicitly opt into replacement.
 
-When markdown mirrors are enabled, same-site page entries in `llms.txt` now default to the generated `.md` URLs so cold agents discover the cleaner fetch path first. Set `llmsTxt.preferMarkdownMirrors: false` if you want `llms.txt` to keep pointing at HTML routes instead.
+Markdown mirrors are optional. They are usually most useful for thin, noisy, or client-rendered HTML where the raw page is a poor fetch target for agents. When enabled, same-site page entries in `llms.txt` default to the generated `.md` URLs so cold agents discover the cleaner fetch path first. Set `llmsTxt.preferMarkdownMirrors: false` if you want `llms.txt` to keep pointing at HTML routes instead.
 
 If your site already has a custom prerender or post-build step, `@agentmarkup/core` exposes reusable `llms.txt`, JSON-LD, and `robots.txt` helpers so you can keep one final output pipeline instead of duplicating that logic.
 
@@ -86,9 +88,12 @@ If your site already has a custom prerender or post-build step, `@agentmarkup/co
 
 - Vite and Astro adapters
 - `llms.txt` generation
+- optional `llms-full.txt` generation
+- automatic `llms.txt` discovery-link injection
 - JSON-LD injection
 - existing JSON-LD validation
 - markdown page generation
+- markdown alternate-link and mirror-coverage validation
 - schema presets for website and ecommerce basics
 - AI crawler `robots.txt` management
 - `Content-Signal` header generation

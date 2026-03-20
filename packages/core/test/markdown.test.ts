@@ -88,6 +88,31 @@ describe('generatePageMarkdown', () => {
     expect(markdown).toContain('const answer = 42;');
     expect(markdown).toContain('Use `<link rel="alternate">` in the head.');
   });
+
+  it('removes tab chrome, preserves badge spacing, and decodes numeric entities', () => {
+    const markdown = generatePageMarkdown({
+      html: [
+        '<html>',
+        '<head><title>Patterns</title></head>',
+        '<body>',
+        '<main>',
+        '<div class="fw-tabs"><button>Vite</button><button>Astro</button></div>',
+        '<p><span class="preset">webSite</span><span class="preset">organization</span><span class="preset">article</span></p>',
+        '<pre><code class="language-ts">const label = &#x27;agentmarkup&#x27;;\nconsole.log(label);</code></pre>',
+        '</main>',
+        '</body>',
+        '</html>',
+      ].join(''),
+      pagePath: '/patterns/',
+      siteUrl: 'https://example.com',
+    });
+
+    expect(markdown).not.toContain('ViteAstro');
+    expect(markdown).not.toContain('\nVite\n');
+    expect(markdown).toContain('webSite organization article');
+    expect(markdown).toContain("const label = 'agentmarkup';");
+    expect(markdown).toContain('```ts');
+  });
 });
 
 describe('generateMarkdownAlternateLink', () => {

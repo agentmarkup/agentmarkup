@@ -1,6 +1,6 @@
 # @agentmarkup/core
 
-Framework-agnostic `llms.txt`, JSON-LD, markdown mirror, AI crawler `robots.txt`, header, and validation primitives for machine-readable websites.
+Framework-agnostic `llms.txt`, optional `llms-full.txt`, JSON-LD, markdown mirror, AI crawler `robots.txt`, header, and validation primitives for machine-readable websites.
 
 ## Install
 
@@ -14,7 +14,7 @@ pnpm add -D @agentmarkup/core
 
 The helpers are coexistence-friendly: `patchRobotsTxt()` leaves matching manual crawler rules untouched, and adapters built on core can preserve curated `llms.txt` files or existing JSON-LD by default.
 
-When `markdownPages.enabled` is on, `generateLlmsTxt()` prefers same-site markdown mirror URLs for page entries by default so agents discover the cleaner fetch path first. Set `llmsTxt.preferMarkdownMirrors: false` to keep HTML URLs in `llms.txt`.
+When `markdownPages.enabled` is on, `generateLlmsTxt()` prefers same-site markdown mirror URLs for page entries by default so agents discover the cleaner fetch path first. This is usually most useful when the raw HTML is thin or noisy. Set `llmsTxt.preferMarkdownMirrors: false` to keep HTML URLs in `llms.txt`.
 
 ```ts
 import {
@@ -85,10 +85,13 @@ const schemaIssues = validateExistingJsonLd(builtHtml, '/pricing/');
 ## What It Includes
 
 - `llms.txt` generators and validators
+- optional `llms-full.txt` generator
+- `llms.txt` discovery-link generation
 - JSON-LD serialization and HTML injection helpers
 - existing JSON-LD inspection and validation
 - HTML thin-shell validation
-- markdown page generation helpers
+- markdown page generation helpers for cleaner agent-facing fetch paths
+- markdown alternate-link and mirror-coverage validation
 - schema.org preset builders
 - AI crawler `robots.txt` generation and patching
 - `Content-Signal` header generation and patching

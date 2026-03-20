@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { generateLlmsTxt } from '../src/generators/llms-txt.js';
+import {
+  generateLlmsFullTxt,
+  generateLlmsTxt,
+  generateLlmsTxtDiscoveryLink,
+  hasLlmsTxtDiscoveryLink,
+} from '../src/generators/llms-txt.js';
 import type { AgentMarkupConfig } from '../src/types.js';
 
 function makeConfig(overrides: Partial<AgentMarkupConfig> = {}): AgentMarkupConfig {
@@ -182,5 +187,69 @@ describe('generateLlmsTxt', () => {
 
     expect(result).toContain('https://example.com/about');
     expect(result).not.toContain('https://example.com//about');
+  });
+
+  it('generates llms-full.txt with inlined same-site markdown content', () => {
+    const result = generateLlmsFullTxt(
+      makeConfig({
+        description: 'An example site',
+        llmsTxt: {
+          sections: [
+            {
+              title: 'Docs',
+              entries: [
+                { title: 'Guide', url: '/docs/guide/', description: 'Implementation guide' },
+                { title: 'External', url: 'https://external.example/docs' },
+              ],
+            },
+          ],
+        },
+        llmsFullTxt: {
+          enabled: true,
+        },
+        markdownPages: {
+          enabled: true,
+        },
+      }),
+      {
+        contentByUrl: {
+          'https://example.com/docs/guide.md': [
+            '# Guide',
+            '',
+            '> Implementation guide',
+            '',
+            'Source: https://example.com/docs/guide/',
+            '',
+            '## Setup',
+            '',
+            'Ship the final HTML first.',
+          ].join('\n'),
+        },
+      }
+    );
+
+    expect(result).toContain('# Example');
+    expect(result).toContain('## Docs');
+    expect(result).toContain('- [Guide](https://example.com/docs/guide.md): Implementation guide');
+    expect(result).toContain('### Guide');
+    expect(result).toContain('Source: https://example.com/docs/guide/');
+    expect(result).toContain('Preferred fetch: https://example.com/docs/guide.md');
+    expect(result).toContain('## Setup');
+    expect(result).toContain('Ship the final HTML first.');
+    expect(result).toContain('- [External](https://external.example/docs)');
+    expect(
+      result?.match(/Source: https:\/\/example\.com\/docs\/guide\//g)
+    ).toHaveLength(1);
+    expect(result).not.toContain('\n# Guide\n');
+    expect(result).not.toContain('> Implementation guide\n\nSource: https://example.com/docs/guide/\n\n## Setup');
+  });
+
+  it('builds a discoverable llms.txt alternate link and detects it in HTML', () => {
+    const link = generateLlmsTxtDiscoveryLink();
+    expect(link).toContain('type="text/plain"');
+    expect(link).toContain('href="/llms.txt"');
+    expect(
+      hasLlmsTxtDiscoveryLink(`<html><head>${link}</head><body></body></html>`)
+    ).toBe(true);
   });
 });

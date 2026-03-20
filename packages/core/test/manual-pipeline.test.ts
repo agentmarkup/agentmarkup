@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   generateContentSignalHeaders,
+  generateLlmsFullTxt,
+  generateLlmsTxtDiscoveryLink,
   generateJsonLdTags,
   generateLlmsTxt,
   generateMarkdownCanonicalHeaders,
@@ -42,6 +44,38 @@ describe('manual pipeline helpers', () => {
     expect(llms).toContain('https://gritsprout.com/pricing');
     expect(llms).toContain('Frequently asked questions about GritSprout.');
     expect(validateLlmsTxt(llms ?? '')).toEqual([]);
+  });
+
+  it('generates llms-full.txt through the public API', () => {
+    const llmsFull = generateLlmsFullTxt(
+      {
+        site: 'https://gritsprout.com',
+        name: 'GritSprout',
+        description: 'GritSprout is the app for daily habits and rewards for kids.',
+        llmsTxt: {
+          sections: [
+            {
+              title: 'Public pages',
+              entries: [{ title: 'Pricing', url: '/pricing', description: 'Plans and billing.' }],
+            },
+          ],
+        },
+        llmsFullTxt: {
+          enabled: true,
+        },
+        markdownPages: {
+          enabled: true,
+        },
+      },
+      {
+        contentByUrl: {
+          'https://gritsprout.com/pricing.md': '# Pricing\n\nPlans and billing.\n',
+        },
+      }
+    );
+
+    expect(llmsFull).toContain('### Pricing');
+    expect(llmsFull).toContain('https://gritsprout.com/pricing.md');
   });
 
   it('patches existing robots.txt without losing existing directives', () => {
@@ -100,6 +134,12 @@ describe('manual pipeline helpers', () => {
   it('builds Content-Signal headers through the public API', () => {
     const headers = generateContentSignalHeaders();
     expect(headers).toContain('Content-Signal: ai-train=yes, search=yes, ai-input=yes');
+  });
+
+  it('builds an llms.txt discovery link through the public API', () => {
+    const link = generateLlmsTxtDiscoveryLink();
+    expect(link).toContain('/llms.txt');
+    expect(link).toContain('text/plain');
   });
 
   it('builds markdown canonical headers through the public API', () => {

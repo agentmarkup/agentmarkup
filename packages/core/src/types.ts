@@ -111,6 +111,27 @@ export interface LlmsTxtConfig {
   preferMarkdownMirrors?: boolean;
 }
 
+export interface LlmsFullTxtConfig {
+  enabled?: boolean;
+  replaceExisting?: boolean;
+}
+
+export interface ResolvedLlmsTxtEntry {
+  title: string;
+  description?: string;
+  originalUrl: string;
+  url: string;
+  canonicalUrl: string;
+  markdownUrl: string | null;
+  sameSite: boolean;
+  htmlLike: boolean;
+}
+
+export interface ResolvedLlmsTxtSection {
+  title: string;
+  entries: ResolvedLlmsTxtEntry[];
+}
+
 export interface MarkdownPagesConfig {
   enabled?: boolean;
   replaceExisting?: boolean;
@@ -149,6 +170,7 @@ export interface AgentMarkupConfig {
   name: string;
   description?: string;
   llmsTxt?: LlmsTxtConfig;
+  llmsFullTxt?: LlmsFullTxtConfig;
   markdownPages?: MarkdownPagesConfig;
   contentSignalHeaders?: ContentSignalHeadersConfig;
   jsonLd?: {
