@@ -53,29 +53,6 @@ const installCommands: Record<Framework, string> = {
   astro: 'pnpm add -D @agentmarkup/astro',
 }
 
-const buildOutputs: Record<Framework, string> = {
-  vite: `@agentmarkup/vite
-
-✓ llms.txt generated (1 entry, 1 section)
-✓ JSON-LD injected into 3 pages
-✓ robots.txt patched (3 AI crawlers configured)
-
-Checks:
-✓ All JSON-LD schemas have required fields
-✓ AI crawlers not blocked by existing robots.txt
-⚠ /about: No structured data configured for this page`,
-  astro: `@agentmarkup/astro
-
-✓ llms.txt generated (1 entry, 1 section)
-✓ JSON-LD injected into 3 pages
-✓ robots.txt patched (3 AI crawlers configured)
-
-Checks:
-✓ All JSON-LD schemas have required fields
-✓ AI crawlers not blocked by existing robots.txt
-⚠ /about: No structured data configured for this page`,
-}
-
 const examples: Record<Framework, string> = {
   vite: viteExample,
   astro: astroExample,
