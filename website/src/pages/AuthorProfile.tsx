@@ -12,7 +12,13 @@ function AuthorProfile() {
         <section>
           <h2>About</h2>
           <p>
-            Sebastian is a product builder and developer with over 25 years in technology. He created agentmarkup to solve a problem he encountered on his own projects: making websites machine-readable for LLMs and AI agents required juggling separate tools for llms.txt, JSON-LD, and robots.txt. agentmarkup combines all three into one build-time plugin.
+            Sebastian is a product builder and developer with over 25 years in
+            technology. He created agentmarkup to solve a problem he encountered
+            on his own projects: making websites machine-readable for LLMs and
+            AI agents required juggling separate tools for llms.txt, JSON-LD,
+            robots.txt, markdown mirrors, headers, and validation. agentmarkup
+            combines that build-time surface into one toolkit for Vite and
+            Astro.
           </p>
           <p>
             He is also the founder of <a href="https://animafelix.com" target="_blank" rel="noopener noreferrer">Anima Felix</a>, an anxiety support app that uses agentmarkup in production.

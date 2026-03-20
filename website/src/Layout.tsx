@@ -1,25 +1,60 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import CookieConsent from './CookieConsent'
+
+const THEME_STORAGE_KEY = 'theme'
+const THEME_CHANGE_EVENT = 'agentmarkup:theme-change'
 
 function getPreferredTheme(): 'dark' | 'light' {
   if (typeof window === 'undefined') return 'dark'
-  const stored = localStorage.getItem('theme')
+  const stored = localStorage.getItem(THEME_STORAGE_KEY)
   if (stored === 'light' || stored === 'dark') return stored
   return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
 }
 
+function subscribeTheme(onStoreChange: () => void) {
+  if (typeof window === 'undefined') {
+    return () => {}
+  }
+
+  const mediaQuery = window.matchMedia('(prefers-color-scheme: light)')
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === null || event.key === THEME_STORAGE_KEY) {
+      onStoreChange()
+    }
+  }
+  const handleThemeChange = () => {
+    onStoreChange()
+  }
+  const handleMediaChange = () => {
+    if (!localStorage.getItem(THEME_STORAGE_KEY)) {
+      onStoreChange()
+    }
+  }
+
+  window.addEventListener('storage', handleStorage)
+  window.addEventListener(THEME_CHANGE_EVENT, handleThemeChange)
+  mediaQuery.addEventListener('change', handleMediaChange)
+
+  return () => {
+    window.removeEventListener('storage', handleStorage)
+    window.removeEventListener(THEME_CHANGE_EVENT, handleThemeChange)
+    mediaQuery.removeEventListener('change', handleMediaChange)
+  }
+}
+
 function Layout({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<'dark' | 'light'>(() => getPreferredTheme())
-  const [themeReady] = useState(() => typeof window !== 'undefined')
+  const theme = useSyncExternalStore(subscribeTheme, getPreferredTheme, () => 'dark')
   const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
-    if (!themeReady) return
     document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem('theme', theme)
-  }, [theme, themeReady])
+  }, [theme])
 
-  const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark')
+  const toggleTheme = () => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark'
+    localStorage.setItem(THEME_STORAGE_KEY, nextTheme)
+    window.dispatchEvent(new Event(THEME_CHANGE_EVENT))
+  }
 
   return (
     <>

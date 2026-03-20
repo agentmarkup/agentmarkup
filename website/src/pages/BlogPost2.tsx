@@ -27,7 +27,8 @@ function WhatIsGeo() {
         <section>
           <h2>What GEO actually involves</h2>
           <p>
-            Strip away the marketing buzzwords and GEO comes down to three practical things:
+            Strip away the marketing buzzwords and GEO comes down to a few
+            practical things:
           </p>
           <ol>
             <li>
@@ -38,6 +39,12 @@ function WhatIsGeo() {
             </li>
             <li>
               <strong>Explicit crawler permissions.</strong> Your robots.txt determines which AI bots can access your content. If you block GPTBot, your content will not appear in ChatGPT answers. If you allow it, it might.
+            </li>
+            <li>
+              <strong>Clean fetchable content.</strong> If your raw HTML is a
+              thin client shell, many fetch-based agents still see almost
+              nothing. Prerendered HTML or markdown mirrors give them a readable
+              body instead of an empty app shell.
             </li>
           </ol>
         </section>
@@ -73,7 +80,10 @@ function WhatIsGeo() {
             If you build websites, the people who use those websites are increasingly finding information through AI. A potential customer asking Claude "what is the best project management tool for small teams" might get an answer that includes or excludes your product based entirely on whether your site has clear, machine-readable content.
           </p>
           <p>
-            The good news: most of what GEO requires is just good web development practice. Structured data, clean content, proper robots.txt rules. These are things you should be doing anyway.
+            The good news: most of what GEO requires is just good web
+            development practice. Structured data, clean content, readable raw
+            output, and intentional robots.txt rules. These are things you
+            should be doing anyway.
           </p>
         </section>
 
@@ -93,10 +103,15 @@ function WhatIsGeo() {
               <strong>Add llms.txt.</strong> Create a machine-readable overview of your site. Even if not all AI systems consume it today, the effort is minimal and the format is likely to gain adoption.
             </li>
             <li>
-              <strong>Write clear, structured content.</strong> Use headings, lists, and concise paragraphs. AI systems extract information better from well-structured pages.
+              <strong>Publish readable raw output.</strong> Prefer prerendered
+              HTML, and if needed add markdown mirrors so fetch-based agents do
+              not have to reverse-engineer your page from a JavaScript shell.
             </li>
             <li>
-              <strong>Validate everything at build time.</strong> Broken JSON-LD, conflicting robots.txt rules, and malformed llms.txt are invisible bugs. Catch them before they go to production.
+              <strong>Validate everything at build time.</strong> Broken
+              JSON-LD, conflicting robots.txt rules, malformed llms.txt, and
+              thin HTML are invisible bugs. Catch them before they go to
+              production.
             </li>
           </ol>
         </section>
@@ -104,7 +119,12 @@ function WhatIsGeo() {
         <section>
           <h2>Automating GEO with agentmarkup</h2>
           <p>
-            <a href="https://github.com/agentmarkup/agentmarkup" target="_blank" rel="noopener noreferrer">agentmarkup</a> is an open-source plugin for Vite and Astro that handles all of the above at build time. One plugin generates llms.txt, injects JSON-LD, patches robots.txt, and validates everything. No runtime code, no SaaS, no recurring cost.
+            <a href="https://github.com/agentmarkup/agentmarkup" target="_blank" rel="noopener noreferrer">agentmarkup</a>{' '}
+            is an open-source toolkit for Vite and Astro that handles all of
+            the above at build time. One config can generate llms.txt, inject
+            JSON-LD, emit markdown mirrors, patch robots.txt and host-friendly
+            headers, and validate everything. No runtime code, no SaaS, no
+            recurring cost.
           </p>
           <p>
             It does not promise AI rankings. It gives you the tools to make your site machine-readable and lets you decide what that means for your business.

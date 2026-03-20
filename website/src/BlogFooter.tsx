@@ -9,7 +9,11 @@ function BlogFooter({ currentSlug }: { currentSlug: string }) {
       <section className="blog-cta">
         <h2>Make your website machine-readable</h2>
         <p>
-          agentmarkup is an open-source plugin for Vite and Astro that generates llms.txt, injects JSON-LD structured data, creates markdown mirrors from final HTML, manages AI crawler robots.txt rules, patches Content-Signal headers, and validates everything at build time. Zero runtime cost.
+          agentmarkup is an open-source build-time toolkit for Vite and Astro
+          that generates llms.txt, injects JSON-LD structured data, creates
+          markdown mirrors from final HTML, manages AI crawler robots.txt rules,
+          patches optional Content-Signal and canonical mirror headers, and
+          validates everything at build time. Zero runtime cost.
         </p>
         <div className="blog-cta-actions">
           <a href="/" className="blog-cta-link">Learn more</a>

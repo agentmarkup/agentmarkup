@@ -56,6 +56,8 @@ const AGENTMARKUP = {
     'agentmarkup adds machine-readable metadata, markdown mirrors, and crawler controls around the page, but some issues still need a direct site or hosting fix.',
 } as const;
 
+type MarkdownRequirement = 'required' | 'optional' | 'undetermined';
+
 export function analyzeSiteCheck(result: SiteCheckResponse): SiteAnalysis {
   const items: AuditItem[] = [];
 
@@ -353,7 +355,7 @@ function analyzeJsonLd(html: string, items: AuditItem[]): void {
 }
 
 function analyzeMarkdown(result: SiteCheckResponse, items: AuditItem[]): void {
-  const homepageNeedsMarkdown = resourceNeedsMarkdownMirror(result.homepage);
+  const homepageMarkdownRequirement = getMarkdownRequirement(result.homepage);
 
   analyzeMarkdownResource(
     result.homepageMarkdown,
@@ -365,10 +367,10 @@ function analyzeMarkdown(result: SiteCheckResponse, items: AuditItem[]): void {
         'Publish a richer markdown mirror for the homepage so LLM fetches get more than just metadata.',
     },
     items,
-    { required: homepageNeedsMarkdown }
+    { requirement: homepageMarkdownRequirement }
   );
 
-  const samplePageNeedsMarkdown = resourceNeedsMarkdownMirror(result.samplePage);
+  const samplePageMarkdownRequirement = getMarkdownRequirement(result.samplePage);
 
   if (result.samplePage?.ok && result.samplePage.body && looksLikeHtml(result.samplePage)) {
     for (const validationResult of validateHtmlContent(
@@ -396,7 +398,7 @@ function analyzeMarkdown(result: SiteCheckResponse, items: AuditItem[]): void {
           'Generate markdown for important linked pages so an LLM that follows one link can fetch useful body content.',
       },
       items,
-      { required: samplePageNeedsMarkdown }
+      { requirement: samplePageMarkdownRequirement }
     );
   }
 }
@@ -514,15 +516,15 @@ function analyzeSitemap(result: SiteCheckResponse, items: AuditItem[]): void {
 }
 
 function buildResourceStatuses(result: SiteCheckResponse): ResourceStatus[] {
-  const homepageNeedsMarkdown = resourceNeedsMarkdownMirror(result.homepage);
-  const samplePageNeedsMarkdown = resourceNeedsMarkdownMirror(result.samplePage);
+  const homepageMarkdownRequirement = getMarkdownRequirement(result.homepage);
+  const samplePageMarkdownRequirement = getMarkdownRequirement(result.samplePage);
   const resources: ResourceStatus[] = [
     buildResourceStatus('homepage', 'Homepage', result.homepage),
     buildMarkdownResourceStatus(
       'homepageMarkdown',
       'Homepage markdown',
       result.homepageMarkdown,
-      homepageNeedsMarkdown
+      homepageMarkdownRequirement
     ),
     buildResourceStatus('llmsTxt', 'llms.txt', result.llmsTxt),
     buildResourceStatus('robotsTxt', 'robots.txt', result.robotsTxt),
@@ -541,7 +543,7 @@ function buildResourceStatuses(result: SiteCheckResponse): ResourceStatus[] {
         'samplePageMarkdown',
         'Sample linked markdown',
         result.samplePageMarkdown,
-        samplePageNeedsMarkdown
+        samplePageMarkdownRequirement
       )
     );
   }
@@ -587,31 +589,33 @@ function buildMarkdownResourceStatus(
   key: Extract<ResourceStatus['key'], 'homepageMarkdown' | 'samplePageMarkdown'>,
   label: string,
   resource: RemoteResource | null,
-  required: boolean
+  requirement: MarkdownRequirement
 ): ResourceStatus {
   if (!resource || !resource.ok || !resource.body) {
-    const level: ResourceLevel = required
+    const level: ResourceLevel = requirement === 'required'
       ? resource?.status === 404
         ? 'warning'
         : 'error'
       : 'info';
-    const detail = resource
-      ? required
-        ? buildFetchFailureDetail(resource, 'markdown resource')
-        : `${buildFetchFailureDetail(resource, 'markdown resource')} The paired HTML already looks substantial, so this mirror is optional.`
-      : required
-        ? 'The checker did not fetch a markdown resource here.'
-        : 'The checker did not fetch a markdown resource here. The paired HTML already looks substantial, so this mirror is optional.';
+    const detail = buildMarkdownFailureDetail(resource, requirement);
 
     return {
       key,
       level,
       label,
       url: resource?.finalUrl || resource?.requestedUrl || null,
-      status: resource?.status ? `HTTP ${resource.status}` : required ? 'Request failed' : 'Optional',
+      status:
+        resource?.status
+          ? `HTTP ${resource.status}`
+          : requirement === 'required'
+            ? 'Request failed'
+            : 'Optional',
       detail,
       ok: false,
-      agentmarkupHelp: required ? AGENTMARKUP.markdown : AGENTMARKUP.markdownOptional,
+      agentmarkupHelp:
+        requirement === 'optional'
+          ? AGENTMARKUP.markdownOptional
+          : AGENTMARKUP.markdown,
     };
   }
 
@@ -662,11 +666,11 @@ function analyzeMarkdownResource(
   },
   items: AuditItem[],
   options: {
-    required: boolean;
+    requirement: MarkdownRequirement;
   }
 ): void {
   if (!resource || !resource.ok || !resource.body) {
-    if (!options.required) {
+    if (options.requirement !== 'required') {
       return;
     }
 
@@ -740,6 +744,35 @@ function resourceNeedsMarkdownMirror(resource: RemoteResource | null): boolean {
 
   return validateHtmlContent(resource.body, resource.finalUrl || resource.requestedUrl)
     .length > 0;
+}
+
+function getMarkdownRequirement(resource: RemoteResource | null): MarkdownRequirement {
+  if (!resource?.ok || !resource.body || !looksLikeHtml(resource)) {
+    return 'undetermined';
+  }
+
+  return resourceNeedsMarkdownMirror(resource) ? 'required' : 'optional';
+}
+
+function buildMarkdownFailureDetail(
+  resource: RemoteResource | null,
+  requirement: MarkdownRequirement
+): string {
+  if (requirement === 'required') {
+    return resource
+      ? buildFetchFailureDetail(resource, 'markdown resource')
+      : 'The checker did not fetch a markdown resource here.';
+  }
+
+  if (requirement === 'optional') {
+    return resource
+      ? `${buildFetchFailureDetail(resource, 'markdown resource')} The paired HTML already looks substantial, so this mirror is optional.`
+      : 'The checker did not fetch a markdown resource here. The paired HTML already looks substantial, so this mirror is optional.';
+  }
+
+  return resource
+    ? `${buildFetchFailureDetail(resource, 'markdown resource')} The paired HTML page could not be fetched successfully, so this mirror was not treated as required.`
+    : 'The checker did not fetch a markdown resource here because the paired HTML page could not be fetched successfully.';
 }
 
 function getJsonLdTypes(html: string | null): string[] {

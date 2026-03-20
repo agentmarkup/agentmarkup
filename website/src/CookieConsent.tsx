@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useSyncExternalStore } from 'react'
 
 const STORAGE_KEY = 'agentmarkup-cookie-consent'
 const STORAGE_TS_KEY = 'agentmarkup-cookie-consent-ts'
+const CONSENT_CHANGE_EVENT = 'agentmarkup:cookie-consent-change'
 const GA_ID = 'G-LWKDV94L16'
 const MAX_AGE_DAYS = 180
 
@@ -42,13 +43,25 @@ function bootstrapGA() {
     ad_personalization: 'denied',
   })
   window.gtag('js', new Date())
-  window.gtag('config', GA_ID)
+  window.gtag('config', GA_ID, {
+    send_page_view: false,
+  })
 }
 
 function grantConsent() {
   initGtagStub()
   window.gtag('consent', 'update', {
     analytics_storage: 'granted',
+  })
+}
+
+function trackPageView() {
+  initGtagStub()
+  window.gtag('config', GA_ID, {
+    page_path: `${window.location.pathname}${window.location.search}${window.location.hash}`,
+    page_location: window.location.href,
+    page_title: document.title,
+    send_page_view: true,
   })
 }
 
@@ -66,45 +79,79 @@ function getConsent(): Consent {
   return consent as 'accepted' | 'declined'
 }
 
+function subscribeConsent(onStoreChange: () => void) {
+  if (typeof window === 'undefined') {
+    return () => {}
+  }
+
+  const handleStorage = (event: StorageEvent) => {
+    if (
+      event.key === null ||
+      event.key === STORAGE_KEY ||
+      event.key === STORAGE_TS_KEY
+    ) {
+      onStoreChange()
+    }
+  }
+  const handleConsentChange = () => {
+    onStoreChange()
+  }
+
+  window.addEventListener('storage', handleStorage)
+  window.addEventListener(CONSENT_CHANGE_EVENT, handleConsentChange)
+
+  return () => {
+    window.removeEventListener('storage', handleStorage)
+    window.removeEventListener(CONSENT_CHANGE_EVENT, handleConsentChange)
+  }
+}
+
 function CookieConsent() {
-  const [consent, setConsent] = useState<Consent>(() => getConsent())
-  const [consentReady] = useState(() => typeof window !== 'undefined')
+  const consent = useSyncExternalStore(subscribeConsent, getConsent, () => null)
 
   const reset = useCallback(() => {
     if (typeof window === 'undefined') return
     localStorage.removeItem(STORAGE_KEY)
     localStorage.removeItem(STORAGE_TS_KEY)
-    setConsent(null)
+    window.dispatchEvent(new Event(CONSENT_CHANGE_EVENT))
   }, [])
 
   useEffect(() => {
-    if (!consentReady) return
     // Always bootstrap gtag stub so consent default is set
     bootstrapGA()
 
     if (consent === 'accepted') {
+      ;(window as unknown as Record<string, unknown>)[`ga-disable-${GA_ID}`] = false
       injectGAScript()
       grantConsent()
+      trackPageView()
+    } else if (consent === 'declined') {
+      ;(window as unknown as Record<string, unknown>)[`ga-disable-${GA_ID}`] = true
     }
 
     window.resetCookieConsent = reset
-  }, [consent, consentReady, reset])
+    return () => {
+      if (window.resetCookieConsent === reset) {
+        delete window.resetCookieConsent
+      }
+    }
+  }, [consent, reset])
 
   const accept = () => {
     localStorage.setItem(STORAGE_KEY, 'accepted')
     localStorage.setItem(STORAGE_TS_KEY, String(Date.now()))
-    setConsent('accepted')
+    window.dispatchEvent(new Event(CONSENT_CHANGE_EVENT))
   }
 
   const decline = () => {
     localStorage.setItem(STORAGE_KEY, 'declined')
     localStorage.setItem(STORAGE_TS_KEY, String(Date.now()))
-    setConsent('declined')
     // Disable GA for this page
     ;(window as unknown as Record<string, unknown>)[`ga-disable-${GA_ID}`] = true
+    window.dispatchEvent(new Event(CONSENT_CHANGE_EVENT))
   }
 
-  if (!consentReady || consent !== null) return null
+  if (consent !== null) return null
 
   return (
     <div className="cookie-banner">

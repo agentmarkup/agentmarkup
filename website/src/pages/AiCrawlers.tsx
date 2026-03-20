@@ -106,7 +106,11 @@ function AiCrawlers() {
             <li><strong>Selective access:</strong> Allow some crawlers (like PerplexityBot for search) while blocking others (like CCBot for training data)</li>
           </ul>
           <p>
-            Combined with <a href="/docs/llms-txt/">llms.txt</a> and <a href="/docs/json-ld/">JSON-LD structured data</a>, controlling AI crawler access is one of three pillars of making your website machine-readable.
+            Combined with <a href="/docs/llms-txt/">llms.txt</a>,{' '}
+            <a href="/docs/json-ld/">JSON-LD structured data</a>, and{' '}
+            <a href="/blog/markdown-mirrors/">markdown mirrors</a>, crawler
+            access is one part of a machine-readable website instead of a
+            standalone fix.
           </p>
         </section>
         <section className="faq">

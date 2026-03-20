@@ -118,7 +118,11 @@ function JsonLd() {
             <li><strong>Custom schema checks:</strong> Every custom schema must have an <code>@type</code> field</li>
           </ul>
           <p>
-            Combined with <a href="/docs/llms-txt/">llms.txt generation</a> and <a href="/docs/ai-crawlers/">AI crawler management</a>, this gives your website complete machine-readability coverage.
+            Combined with <a href="/docs/llms-txt/">llms.txt generation</a>,{' '}
+            <a href="/blog/markdown-mirrors/">markdown mirrors</a>, and{' '}
+            <a href="/docs/ai-crawlers/">AI crawler management</a>, this gives
+            your website a fuller machine-readable surface instead of relying
+            on structured data alone.
           </p>
         </section>
         <section className="faq">

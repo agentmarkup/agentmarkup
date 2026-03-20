@@ -82,6 +82,13 @@ function LlmsTxt() {
             The plugin outputs a spec-compliant <code>/llms.txt</code> file in your build directory:
           </p>
           <CodeBlock code={output} />
+          <p>
+            If you also enable markdown mirrors, same-site page entries in
+            <code>llms.txt</code> default to the generated <code>.md</code>{' '}
+            URLs so cold agents discover the cleaner fetch path first. Set{' '}
+            <code>llmsTxt.preferMarkdownMirrors</code> to <code>false</code> if
+            you want <code>llms.txt</code> to keep pointing at HTML routes.
+          </p>
         </section>
 
         <section>
@@ -113,7 +120,7 @@ function LlmsTxt() {
           </details>
           <details>
             <summary>What happens if I do not configure llmsTxt?</summary>
-            <p>No llms.txt file is generated. The other features (JSON-LD, robots.txt, validation) still work independently. You can enable features selectively.</p>
+            <p>No llms.txt file is generated. The other features (JSON-LD, markdown mirrors, robots.txt, optional headers, and validation) still work independently. You can enable features selectively.</p>
           </details>
         </section>
       </article>

@@ -133,7 +133,13 @@ llms.txt is a proposed standard that gives LLMs a structured overview of your we
         <section>
           <h2>Getting started</h2>
           <p>
-            Add <code>markdownPages: {'{ enabled: true }'}</code> to your agentmarkup config. On the next build, every HTML page in your output gets a companion .md file. Check the <a href="/docs/llms-txt/">llms.txt guide</a> for how to reference markdown mirrors in your site's machine-readable overview.
+            Add <code>markdownPages: {'{ enabled: true }'}</code> to your
+            agentmarkup config. On the next build, every HTML page in your
+            output gets a companion .md file. When markdown mirrors are enabled,
+            same-site page entries in <code>llms.txt</code> also default to the
+            generated markdown URLs so cold agents discover the cleaner fetch
+            path first. Check the <a href="/docs/llms-txt/">llms.txt guide</a>{' '}
+            for the opt-out if you want HTML-first links instead.
           </p>
           <CodeBlock code={`pnpm add -D @agentmarkup/vite  # or @agentmarkup/astro`} />
         </section>

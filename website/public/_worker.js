@@ -1,4 +1,4 @@
-const CHECKER_USER_AGENT = 'agentmarkup-checker/0.3.0 (+https://agentmarkup.dev)';
+const CHECKER_USER_AGENT = 'agentmarkup-checker/0.3.2 (+https://agentmarkup.dev)';
 const CHECKS_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS checker_checks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

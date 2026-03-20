@@ -83,7 +83,7 @@ function WebsiteCheckerGuide() {
           </p>
           <ul>
             <li><strong>Error</strong> - something is blocking AI access. Homepage unreachable, noindex header present, invalid JSON-LD.</li>
-            <li><strong>Warning</strong> - something important is missing. No Organization schema, no explicit AI crawler rules, no markdown mirrors.</li>
+            <li><strong>Warning</strong> - something important is missing. No Organization schema, no explicit AI crawler rules, or thin HTML without adequate markdown coverage.</li>
             <li><strong>Pass</strong> - a best practice is met. Homepage reachable, canonical URL present, llms.txt valid.</li>
           </ul>
           <p>
@@ -138,10 +138,19 @@ function WebsiteCheckerGuide() {
         <section>
           <h2>Try it now</h2>
           <p>
-            Go to <a href="/checker/">agentmarkup.dev/checker</a>, enter your website URL, and see the results in seconds. It is free, requires no signup, and does not store your URL beyond anonymous analytics.
+            Go to <a href="/checker/">agentmarkup.dev/checker</a>, enter your
+            website URL, and see the results in seconds. It is free and requires
+            no signup. The deployed checker may retain normalized check records
+            briefly for caching, rate limiting, and recent-history views, but it
+            is not a lead form.
           </p>
           <p>
-            If the checker finds issues, the documentation guides on this site explain how to fix each one. Or install <a href="https://github.com/agentmarkup/agentmarkup" target="_blank" rel="noopener noreferrer">agentmarkup</a> for Vite or Astro and it handles llms.txt, JSON-LD, robots.txt, markdown mirrors, and validation automatically at build time.
+            If the checker finds issues, the documentation guides on this site
+            explain how to fix each one. Or install{' '}
+            <a href="https://github.com/agentmarkup/agentmarkup" target="_blank" rel="noopener noreferrer">agentmarkup</a>{' '}
+            for Vite or Astro and it handles llms.txt, JSON-LD, robots.txt,
+            markdown mirrors, optional headers, and validation automatically at
+            build time.
           </p>
         </section>
       </article>

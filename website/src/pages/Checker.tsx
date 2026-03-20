@@ -2,6 +2,7 @@ import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import { analyzeSiteCheck } from '../checker/analyze';
+import { normalizeWebsiteInput } from '../normalizeWebsiteInput';
 import type {
   AuditItem,
   CheckerErrorResponse,
@@ -66,7 +67,9 @@ function getInitialUrl(): string {
     return '';
   }
 
-  return new URLSearchParams(window.location.search).get('url') ?? '';
+  return normalizeWebsiteInput(
+    new URLSearchParams(window.location.search).get('url') ?? ''
+  );
 }
 
 async function loadTurnstile(): Promise<TurnstileApi> {
@@ -139,7 +142,7 @@ async function requestSiteCheck(
   rawUrl: string,
   turnstileToken?: string
 ): Promise<SiteCheckResponse> {
-  const trimmedUrl = rawUrl.trim();
+  const trimmedUrl = normalizeWebsiteInput(rawUrl);
   const response = await fetch('/api/check', {
     method: 'POST',
     headers: {
@@ -205,7 +208,7 @@ function Checker() {
   const turnstileWidgetIdRef = useRef<string | null>(null);
 
   async function performCheck(rawUrl: string, turnstileToken?: string) {
-    const trimmedUrl = rawUrl.trim();
+    const trimmedUrl = normalizeWebsiteInput(rawUrl);
     if (!trimmedUrl) {
       setError('Enter a public website URL to run the checker.');
       setResult(null);
@@ -421,6 +424,9 @@ function Checker() {
                 placeholder="https://example.com"
                 value={targetUrl}
                 onChange={(event) => setTargetUrl(event.target.value)}
+                onBlur={() =>
+                  setTargetUrl((currentUrl) => normalizeWebsiteInput(currentUrl))
+                }
                 inputMode="url"
                 autoComplete="url"
                 spellCheck={false}

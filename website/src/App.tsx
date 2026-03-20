@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import CodeBlock from './CodeBlock'
+import { normalizeWebsiteInput } from './normalizeWebsiteInput'
 
 const viteExample = `// vite.config.ts
 import { agentmarkup } from '@agentmarkup/vite'
@@ -64,6 +65,18 @@ const configFiles: Record<Framework, string> = {
 
 function Home() {
   const [fw, setFw] = useState<Framework>('vite')
+  const [checkerUrl, setCheckerUrl] = useState('')
+
+  function handleHeroCheckerSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const normalizedUrl = normalizeWebsiteInput(checkerUrl)
+    if (!normalizedUrl) {
+      return
+    }
+
+    setCheckerUrl(normalizedUrl)
+    window.location.assign(`/checker/?url=${encodeURIComponent(normalizedUrl)}`)
+  }
 
   return (
     <>
@@ -81,7 +94,7 @@ function Home() {
               before you install anything.
             </p>
           </div>
-          <form className="hero-checker-form" action="/checker/" method="get">
+          <form className="hero-checker-form" action="/checker/" method="get" onSubmit={handleHeroCheckerSubmit}>
             <label className="hero-checker-label" htmlFor="hero-checker-url">
               Website URL
             </label>
@@ -94,9 +107,12 @@ function Home() {
               <input
                 id="hero-checker-url"
                 className="checker-input"
-                type="url"
+                type="text"
                 name="url"
                 placeholder="https://example.com"
+                value={checkerUrl}
+                onChange={(event) => setCheckerUrl(event.target.value)}
+                onBlur={() => setCheckerUrl((currentUrl) => normalizeWebsiteInput(currentUrl))}
                 inputMode="url"
                 autoComplete="url"
                 spellCheck={false}
@@ -138,7 +154,7 @@ function Home() {
           </div>
           <div className="feature">
             <h2>Markdown mirrors</h2>
-            <p>Generate a clean <code>.md</code> companion for every built HTML page so fetch-based agents can read the page content without parsing navigation, scripts, and layout noise.</p>
+            <p>Generate a clean <code>.md</code> companion for every built HTML page so fetch-based agents can read the page content without parsing navigation, scripts, and layout noise. When enabled, same-site <code>llms.txt</code> entries can point at those mirrors by default.</p>
           </div>
           <div className="feature">
             <h2>Content-Signal headers</h2>
@@ -187,10 +203,10 @@ function Home() {
           <p className="output-note">This is a recent build output from agentmarkup.dev with <code>@agentmarkup/vite</code>. The exact page and entry counts change as the docs site grows.</p>
           <img
             src="/agentmarkup-build-output.webp"
-            alt="Terminal output from a recent agentmarkup.dev build showing llms.txt generation, JSON-LD injection, markdown page generation, _headers patching, and a clean validation report"
+            alt="Terminal output from a recent agentmarkup.dev build showing llms.txt generation, JSON-LD injection, markdown page generation, Content-Signal headers, markdown canonical headers, and a clean validation report"
             className="output-screenshot"
-            width="820"
-            height="460"
+            width="964"
+            height="500"
             loading="lazy"
           />
         </section>
@@ -236,7 +252,7 @@ function Home() {
 
           <details>
             <summary>What does agentmarkup actually do?</summary>
-            <p>It adds machine-readable build output: an <code>llms.txt</code> file, <code>&lt;script type="application/ld+json"&gt;</code> tags with structured data, markdown mirrors for built pages, <code>robots.txt</code> rules for AI crawlers, and optional <code>_headers</code> entries with Content-Signal directives. It also validates the final output and warns you about thin HTML, schema issues, and crawler conflicts.</p>
+            <p>It adds machine-readable build output: an <code>llms.txt</code> file, <code>&lt;script type="application/ld+json"&gt;</code> tags with structured data, markdown mirrors for built pages, <code>robots.txt</code> rules for AI crawlers, and optional <code>_headers</code> entries with Content-Signal plus markdown-canonical directives. It also validates the final output and warns you about thin HTML, schema issues, and crawler conflicts.</p>
           </details>
 
           <details>
