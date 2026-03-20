@@ -1,12 +1,12 @@
 import { prerenderPage } from '../entry-render'
-import LlmsTxt from '../pages/LlmsTxt'
+import MarkdownPages from '../pages/BlogPost7'
 
 export function prerender() {
-  return prerenderPage(LlmsTxt)
+  return prerenderPage(MarkdownPages)
 }
 
 if (typeof document !== 'undefined') {
   void import('../entry-client').then(({ mountPage }) => {
-    mountPage(LlmsTxt)
+    mountPage(MarkdownPages)
   })
 }

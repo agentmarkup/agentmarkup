@@ -1,11 +1,12 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import '../index.css'
-import Layout from '../Layout'
+import { prerenderPage } from '../entry-render'
 import JsonLdGuide from '../pages/BlogPost3'
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <Layout><JsonLdGuide /></Layout>
-  </StrictMode>,
-)
+export function prerender() {
+  return prerenderPage(JsonLdGuide)
+}
+
+if (typeof document !== 'undefined') {
+  void import('../entry-client').then(({ mountPage }) => {
+    mountPage(JsonLdGuide)
+  })
+}

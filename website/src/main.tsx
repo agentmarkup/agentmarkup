@@ -1,11 +1,12 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import Layout from './Layout'
+import { prerenderPage } from './entry-render'
 import Home from './App'
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <Layout><Home /></Layout>
-  </StrictMode>,
-)
+export function prerender() {
+  return prerenderPage(Home)
+}
+
+if (typeof document !== 'undefined') {
+  void import('./entry-client').then(({ mountPage }) => {
+    mountPage(Home)
+  })
+}

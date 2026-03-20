@@ -1,4 +1,5 @@
 import { author, blogPosts, type BlogPostMeta } from './data/editorial'
+import { formatEditorialDate } from './formatDate'
 
 function BlogFooter({ currentSlug }: { currentSlug: string }) {
   const otherPosts = blogPosts.filter(p => p.slug !== currentSlug)
@@ -43,11 +44,7 @@ function BlogFooter({ currentSlug }: { currentSlug: string }) {
 }
 
 function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
+  return formatEditorialDate(dateStr)
 }
 
 export default BlogFooter

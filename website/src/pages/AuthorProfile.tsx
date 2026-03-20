@@ -1,4 +1,5 @@
 import { author, blogPosts } from '../data/editorial'
+import { formatEditorialDate } from '../formatDate'
 
 function AuthorProfile() {
   return (
@@ -30,7 +31,7 @@ function AuthorProfile() {
                 <h3>{post.title}</h3>
                 <p>{post.description}</p>
                 <span className="blog-date">
-                  {new Date(post.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                  {formatEditorialDate(post.date)}
                   {' '}&middot; {post.readingTime}
                 </span>
               </a>

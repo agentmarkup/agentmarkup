@@ -1,12 +1,12 @@
 import { prerenderPage } from '../entry-render'
-import LlmsTxt from '../pages/LlmsTxt'
+import WebsiteCheckerGuide from '../pages/BlogPost8'
 
 export function prerender() {
-  return prerenderPage(LlmsTxt)
+  return prerenderPage(WebsiteCheckerGuide)
 }
 
 if (typeof document !== 'undefined') {
   void import('../entry-client').then(({ mountPage }) => {
-    mountPage(LlmsTxt)
+    mountPage(WebsiteCheckerGuide)
   })
 }

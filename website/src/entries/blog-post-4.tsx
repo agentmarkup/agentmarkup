@@ -1,11 +1,12 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import '../index.css'
-import Layout from '../Layout'
+import { prerenderPage } from '../entry-render'
 import AiCrawlers2026 from '../pages/BlogPost4'
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <Layout><AiCrawlers2026 /></Layout>
-  </StrictMode>,
-)
+export function prerender() {
+  return prerenderPage(AiCrawlers2026)
+}
+
+if (typeof document !== 'undefined') {
+  void import('../entry-client').then(({ mountPage }) => {
+    mountPage(AiCrawlers2026)
+  })
+}

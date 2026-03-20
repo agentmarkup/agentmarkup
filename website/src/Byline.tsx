@@ -1,11 +1,8 @@
 import { author } from './data/editorial'
+import { formatEditorialDate } from './formatDate'
 
 function Byline({ date, readingTime }: { date: string; readingTime: string }) {
-  const formatted = new Date(date).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
+  const formatted = formatEditorialDate(date)
 
   return (
     <p className="blog-meta">

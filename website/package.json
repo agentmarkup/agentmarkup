@@ -8,6 +8,7 @@
     "dev": "vite",
     "prebuild": "pnpm -C ../packages/vite build",
     "build": "tsc -b && vite build",
+    "smoke": "pnpm build",
     "lint": "eslint .",
     "typecheck": "tsc -b",
     "preview": "vite preview"
@@ -18,6 +19,7 @@
     "react-router-dom": "^7.13.1"
   },
   "devDependencies": {
+    "@agentmarkup/core": "workspace:*",
     "@agentmarkup/vite": "workspace:*",
     "@eslint/js": "^9.39.4",
     "@types/node": "^24.12.0",

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      (function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t)})()
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Website checker for llms.txt, JSON-LD, and AI crawler readiness - agentmarkup</title>
+    <meta
+      name="description"
+      content="Check any public website for llms.txt, JSON-LD structured data, robots.txt AI crawler rules, sitemap discovery, canonical tags, and homepage metadata."
+    />
+    <meta name="keywords" content="website checker, llms.txt checker, json-ld checker, robots.txt checker, ai crawler checker, sitemap checker, schema.org validator, seo, geo, ai discoverability" />
+    <meta name="author" content="Sebastian Cochinescu" />
+    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
+    <link rel="canonical" href="https://agentmarkup.dev/checker/" />
+    <meta property="og:title" content="Website checker for llms.txt, JSON-LD, and AI crawler readiness - agentmarkup" />
+    <meta property="og:description" content="Fetch any public website and inspect llms.txt, JSON-LD, robots.txt, sitemap discovery, and homepage metadata with deterministic pass, warning, and error findings." />
+    <meta property="og:url" content="https://agentmarkup.dev/checker/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="agentmarkup" />
+    <meta property="og:image" content="https://agentmarkup.dev/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM-readable site summary" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/entries/checker.tsx"></script>
+  </body>
+</html>

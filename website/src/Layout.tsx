@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
-import './App.css'
 import CookieConsent from './CookieConsent'
 
-function getInitialTheme(): 'dark' | 'light' {
+function getPreferredTheme(): 'dark' | 'light' {
   if (typeof window === 'undefined') return 'dark'
   const stored = localStorage.getItem('theme')
   if (stored === 'light' || stored === 'dark') return stored
@@ -10,13 +9,20 @@ function getInitialTheme(): 'dark' | 'light' {
 }
 
 function Layout({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<'dark' | 'light'>(getInitialTheme)
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+  const [themeReady, setThemeReady] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
+    setTheme(getPreferredTheme())
+    setThemeReady(true)
+  }, [])
+
+  useEffect(() => {
+    if (!themeReady) return
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem('theme', theme)
-  }, [theme])
+  }, [theme, themeReady])
 
   const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark')
 
@@ -65,6 +71,7 @@ function Layout({ children }: { children: React.ReactNode }) {
               )}
             </button>
             <div className="nav-links">
+              <a href="/checker/">Checker</a>
               <a href="/docs/llms-txt/">llms.txt</a>
               <a href="/docs/json-ld/">JSON-LD</a>
               <a href="/docs/ai-crawlers/">AI Crawlers</a>
@@ -75,6 +82,7 @@ function Layout({ children }: { children: React.ReactNode }) {
         </div>
         {menuOpen && (
           <div className="mobile-menu">
+            <a href="/checker/" onClick={() => setMenuOpen(false)}>Checker</a>
             <a href="/docs/llms-txt/" onClick={() => setMenuOpen(false)}>llms.txt</a>
             <a href="/docs/json-ld/" onClick={() => setMenuOpen(false)}>JSON-LD</a>
             <a href="/docs/ai-crawlers/" onClick={() => setMenuOpen(false)}>AI Crawlers</a>
@@ -99,6 +107,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             </div>
             <div className="footer-col">
               <h4>Docs</h4>
+              <a href="/checker/">Website checker</a>
               <a href="/docs/llms-txt/">llms.txt guide</a>
               <a href="/docs/json-ld/">JSON-LD guide</a>
               <a href="/docs/ai-crawlers/">AI crawlers guide</a>

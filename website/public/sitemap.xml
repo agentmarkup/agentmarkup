@@ -6,6 +6,11 @@
     <priority>1.0</priority>
   </url>
   <url>
+    <loc>https://agentmarkup.dev/checker/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
     <loc>https://agentmarkup.dev/docs/llms-txt/</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -52,6 +57,16 @@
   </url>
   <url>
     <loc>https://agentmarkup.dev/blog/brand-awareness-ai/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://agentmarkup.dev/blog/markdown-mirrors/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://agentmarkup.dev/blog/website-checker/</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>

@@ -16,6 +16,20 @@ export interface BlogPostMeta {
 
 export const blogPosts: BlogPostMeta[] = [
   {
+    slug: 'website-checker',
+    title: 'Is your website ready for AI? Free LLM discoverability checker',
+    description: 'Audit your website for llms.txt, JSON-LD, robots.txt, markdown mirrors, and sitemap. Free tool for e-commerce and brand websites.',
+    date: '2026-03-20',
+    readingTime: '8 min read',
+  },
+  {
+    slug: 'markdown-mirrors',
+    title: 'Markdown mirrors for every page: build-time vs Cloudflare\'s approach',
+    description: 'Generate clean markdown versions of your HTML pages at build time so AI agents can read your content without parsing HTML.',
+    date: '2026-03-20',
+    readingTime: '7 min read',
+  },
+  {
     slug: 'brand-awareness-ai',
     title: 'How to make your brand appear in AI conversations',
     description: 'Organization schema, llms.txt, and FAQ markup make your brand visible in ChatGPT, Claude, and Perplexity answers.',

@@ -1,12 +1,13 @@
 import { prerenderPage } from '../entry-render'
-import LlmsTxt from '../pages/LlmsTxt'
+
+import Checker from '../pages/Checker'
 
 export function prerender() {
-  return prerenderPage(LlmsTxt)
+  return prerenderPage(Checker)
 }
 
 if (typeof document !== 'undefined') {
   void import('../entry-client').then(({ mountPage }) => {
-    mountPage(LlmsTxt)
+    mountPage(Checker)
   })
 }

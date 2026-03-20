@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import './App.css'
 import CodeBlock from './CodeBlock'
 
 const viteExample = `// vite.config.ts
@@ -106,6 +105,16 @@ function Home() {
           </div>
         </section>
 
+        <section className="checker-cta">
+          <div className="checker-cta-card">
+            <h2>Check your website before you ship it</h2>
+            <p>
+              Run the built-in website checker to inspect any public homepage for llms.txt, JSON-LD, robots.txt, sitemap discovery, canonical tags, and common AI crawler issues. It does not invent a score. It tells you exactly what is missing.
+            </p>
+            <a className="checker-cta-link" href="/checker/">Open the website checker</a>
+          </div>
+        </section>
+
         <section className="presets">
           <h2>Schema.org presets</h2>
           <p className="presets-description">Type-safe builders for common structured data types. Apply globally or per-page.</p>
@@ -130,10 +139,10 @@ function Home() {
 
         <section className="output">
           <h2>Build output from this website</h2>
-          <p className="output-note">This is the actual output from building agentmarkup.dev with <code>@agentmarkup/vite</code>.</p>
+          <p className="output-note">This is a recent build output from agentmarkup.dev with <code>@agentmarkup/vite</code>. The exact page and entry counts change as the docs site grows.</p>
           <img
             src="/agentmarkup-build-output.webp"
-            alt="agentmarkup build output showing llms.txt generated with 17 entries, JSON-LD injected into 13 pages, robots.txt patched with 5 AI crawlers configured, and no issues found"
+            alt="Terminal output from a recent agentmarkup.dev build showing llms.txt generation, JSON-LD injection, robots.txt patching, and a clean validation report"
             className="output-screenshot"
             width="880"
             height="424"
