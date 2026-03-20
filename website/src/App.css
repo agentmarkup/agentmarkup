@@ -1380,11 +1380,18 @@ h2 {
   align-items: center;
   gap: 0.75rem;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  pointer-events: none;
 }
 
 html[data-cookie-consent="accepted"] .cookie-banner,
 html[data-cookie-consent="declined"] .cookie-banner {
   display: none;
+}
+
+html[data-cookie-consent-ready="true"][data-cookie-consent="pending"] .cookie-banner {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .cookie-banner p {
@@ -1496,8 +1503,37 @@ html[data-cookie-consent="declined"] .cookie-banner {
     min-width: 0;
   }
 
+  .container {
+    padding-top: 1.5rem;
+  }
+
+  header {
+    margin-bottom: 2rem;
+  }
+
   header h1 {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
+  }
+
+  .tagline {
+    font-size: 0.95rem;
+  }
+
+  .subtitle {
+    font-size: 0.85rem;
+  }
+
+  .hero-checker {
+    margin: 1.25rem auto 1rem;
+    padding: 1rem;
+  }
+
+  .hero-checker h2 {
+    font-size: 1.1rem;
+  }
+
+  .hero-checker p {
+    font-size: 0.85rem;
   }
 
   .doc-page h1 {

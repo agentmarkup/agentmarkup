@@ -6,7 +6,7 @@
       (function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t);document.documentElement.style.backgroundColor=t==='light'?'#fafafa':'#0a0a0a';document.documentElement.style.colorScheme=t})()
     </script>
     <script>
-      (function(){var k='agentmarkup-cookie-consent',tk='agentmarkup-cookie-consent-ts',max=180*24*60*60*1000;try{var c=localStorage.getItem(k),ts=localStorage.getItem(tk),now=Date.now();if(c&&ts&&now-Number(ts)<=max&&(c==='accepted'||c==='declined'))document.documentElement.setAttribute('data-cookie-consent',c);else document.documentElement.removeAttribute('data-cookie-consent')}catch(_){document.documentElement.removeAttribute('data-cookie-consent')}})()
+      (function(){var d=document.documentElement,k='agentmarkup-cookie-consent',tk='agentmarkup-cookie-consent-ts',max=180*24*60*60*1000,s='pending';try{var c=localStorage.getItem(k),ts=localStorage.getItem(tk),now=Date.now();if(c&&ts&&now-Number(ts)<=max&&(c==='accepted'||c==='declined'))s=c}catch(_){}d.setAttribute('data-cookie-consent',s);d.setAttribute('data-cookie-consent-ready','true')})()
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 

@@ -19,11 +19,17 @@ declare global {
   }
 }
 
+function dataLayerCommandFactory(...commandArgs: unknown[]): IArguments {
+  void commandArgs
+  // eslint-disable-next-line prefer-rest-params
+  return arguments
+}
+
 function initGtagStub() {
   window.dataLayer = window.dataLayer || []
   if (!window.gtag) {
     window.gtag = function gtag(...args: unknown[]) {
-      window.dataLayer.push(args)
+      window.dataLayer.push(dataLayerCommandFactory(...args))
     }
   }
 }
@@ -120,12 +126,11 @@ function getConsent(): Consent {
 function syncConsentDocumentState(consent: Consent) {
   if (typeof document === 'undefined') return
 
-  if (consent === null) {
-    document.documentElement.removeAttribute('data-cookie-consent')
-    return
-  }
-
-  document.documentElement.setAttribute('data-cookie-consent', consent)
+  document.documentElement.setAttribute(
+    'data-cookie-consent',
+    consent ?? 'pending',
+  )
+  document.documentElement.setAttribute('data-cookie-consent-ready', 'true')
 }
 
 function subscribeConsent(onStoreChange: () => void) {
