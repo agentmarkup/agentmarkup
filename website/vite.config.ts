@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { agentmarkup } from '../packages/vite/src/index.ts'
+import { agentmarkup } from '@agentmarkup/vite'
 
 export default defineConfig({
   plugins: [

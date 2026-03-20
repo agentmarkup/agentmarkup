@@ -66,8 +66,7 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
         const tags = generateJsonLdTags(jsonLdObjects);
         jsonLdPages++;
 
-        // Inject before </head>
-        return html.replace('</head>', `${tags}\n</head>`);
+        return injectJsonLdTags(html, tags);
       },
     },
 
@@ -200,4 +199,26 @@ function normalizePagePath(path: string): string {
  */
 function matchesPage(actual: string, configured: string): boolean {
   return normalizePagePath(actual) === normalizePagePath(configured);
+}
+
+function injectJsonLdTags(html: string, tags: string): string {
+  return (
+    injectBeforePattern(html, tags, /<\/head\s*>/i) ??
+    injectBeforePattern(html, tags, /<body\b[^>]*>/i) ??
+    `${html}\n${tags}`
+  );
+}
+
+function injectBeforePattern(
+  html: string,
+  content: string,
+  pattern: RegExp
+): string | null {
+  const match = pattern.exec(html);
+
+  if (!match || match.index === undefined) {
+    return null;
+  }
+
+  return `${html.slice(0, match.index)}${content}\n${html.slice(match.index)}`;
 }

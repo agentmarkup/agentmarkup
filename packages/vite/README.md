@@ -115,7 +115,9 @@ See the example app in the GitHub repo at [`examples/vite-react`](https://github
 
 ## Maintainer
 
-Built by Sebastian Cochinescu at [Anima Felix](https://animafelix.com).
+Copyright (c) 2026 [Sebastian Cochinescu](https://www.cochinescu.com). MIT License.
+
+Used in production on [Anima Felix](https://animafelix.com).
 
 ## License
 

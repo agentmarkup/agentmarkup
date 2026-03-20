@@ -5,7 +5,7 @@ Build-time `llms.txt`, JSON-LD, AI crawler controls, and validation for Vite web
 ## What This Repo Contains
 
 - `packages/vite` — the publishable `@agentmarkup/vite` package
-- `website` — the dogfooding landing page built with the local plugin source
+- `website` — the dogfooding landing page built against the workspace package boundary
 - `examples/vite-react` — a minimal example app for local verification and onboarding
 
 ## Quick Start
@@ -84,6 +84,10 @@ pnpm build
 Package details live in [packages/vite/README.md](./packages/vite/README.md).
 Contribution guidelines live in [CONTRIBUTING.md](./CONTRIBUTING.md).
 
+Website deploys are manual via `./deploy/website-deploy.sh`.
+
 ## Maintainer
 
-Built by Sebastian Cochinescu at [Anima Felix](https://animafelix.com).
+Copyright (c) 2026 [Sebastian Cochinescu](https://www.cochinescu.com). MIT License.
+
+Used in production on [Anima Felix](https://animafelix.com).
