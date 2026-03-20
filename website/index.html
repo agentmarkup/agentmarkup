@@ -29,15 +29,23 @@
     <meta property="og:locale" content="en_US" />
 
     <!-- Twitter -->
-    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="agentmarkup - machine-readable metadata for Vite and Astro websites" />
     <meta name="twitter:description" content="Build-time llms.txt, JSON-LD, AI crawler controls, and validation for Vite and Astro websites." />
+    <meta name="twitter:image" content="https://agentmarkup.dev/og-image.png" />
+
+    <!-- OG image -->
+    <meta property="og:image" content="https://agentmarkup.dev/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
 
     <!-- LLM discovery -->
     <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM-readable site summary" />
 
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
   </head>
   <body>
     <div id="root"></div>
@@ -45,9 +53,9 @@
 
     <noscript>
       <div style="max-width:800px;margin:0 auto;padding:4rem 2rem;font-family:system-ui,sans-serif;color:#ededed;background:#0a0a0a;">
-        <h1>agentmarkup - Vite plugin for machine-readable websites</h1>
+        <h1>agentmarkup - machine-readable metadata for Vite and Astro websites</h1>
         <p>Generate llms.txt, inject schema.org JSON-LD structured data, manage AI crawler robots.txt rules, and validate everything at build time. Zero runtime cost.</p>
-        <p><strong>Install:</strong> <code>pnpm add -D @agentmarkup/vite</code></p>
+        <p><strong>Install:</strong> <code>pnpm add -D @agentmarkup/vite</code> or <code>pnpm add -D @agentmarkup/astro</code></p>
         <h2>Features</h2>
         <ul>
           <li><strong>llms.txt generation</strong> - Auto-generate an llms.txt file following the llmstxt.org spec.</li>
@@ -57,7 +65,7 @@
         </ul>
         <h2>Schema.org presets</h2>
         <p>webSite, organization, article, faqPage, product, offer</p>
-        <p><a href="https://github.com/agentmarkup/agentmarkup">GitHub</a> | <a href="https://www.npmjs.com/package/@agentmarkup/vite">npm</a></p>
+        <p><a href="https://github.com/agentmarkup/agentmarkup">GitHub</a> | <a href="https://www.npmjs.com/package/@agentmarkup/vite">@agentmarkup/vite</a> | <a href="https://www.npmjs.com/package/@agentmarkup/astro">@agentmarkup/astro</a> | <a href="https://www.npmjs.com/package/@agentmarkup/core">@agentmarkup/core</a></p>
       </div>
     </noscript>
   </body>

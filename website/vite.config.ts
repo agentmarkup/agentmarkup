@@ -84,11 +84,13 @@ export default defineConfig({
           preset: 'organization',
           name: 'agentmarkup',
           url: 'https://agentmarkup.dev',
-          logo: 'https://agentmarkup.dev/favicon.svg',
+          logo: 'https://agentmarkup.dev/apple-touch-icon.png',
           description: 'Open-source tooling for machine-readable websites and agent-friendly markup.',
           sameAs: [
             'https://github.com/agentmarkup/agentmarkup',
             'https://www.npmjs.com/package/@agentmarkup/vite',
+            'https://www.npmjs.com/package/@agentmarkup/astro',
+            'https://www.npmjs.com/package/@agentmarkup/core',
           ],
         },
       ],
@@ -103,7 +105,7 @@ export default defineConfig({
               applicationCategory: 'DeveloperApplication',
               operatingSystem: 'Any',
               url: 'https://agentmarkup.dev',
-              description: 'Build-time llms.txt, JSON-LD, AI crawler controls, and validation for Vite websites.',
+              description: 'Build-time llms.txt, JSON-LD, AI crawler controls, and validation for Vite and Astro websites.',
               offers: {
                 '@type': 'Offer',
                 price: '0',

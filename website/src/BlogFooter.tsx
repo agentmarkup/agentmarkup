@@ -13,7 +13,7 @@ function BlogFooter({ currentSlug }: { currentSlug: string }) {
         <div className="blog-cta-actions">
           <a href="/" className="blog-cta-link">Learn more</a>
           <a href="https://github.com/agentmarkup/agentmarkup" target="_blank" rel="noopener noreferrer" className="blog-cta-link">GitHub</a>
-          <pre className="blog-cta-install"><code>pnpm add -D @agentmarkup/vite</code></pre>
+          <pre className="blog-cta-install"><code>pnpm add -D @agentmarkup/vite  # or @agentmarkup/astro</code></pre>
         </div>
       </section>
 

@@ -46,7 +46,15 @@ export default defineConfig({
   ],
 })`
 
-const buildOutput = `@agentmarkup/vite
+type Framework = 'vite' | 'astro'
+
+const installCommands: Record<Framework, string> = {
+  vite: 'pnpm add -D @agentmarkup/vite',
+  astro: 'pnpm add -D @agentmarkup/astro',
+}
+
+const buildOutputs: Record<Framework, string> = {
+  vite: `@agentmarkup/vite
 
 ✓ llms.txt generated (1 entry, 1 section)
 ✓ JSON-LD injected into 3 pages
@@ -55,13 +63,17 @@ const buildOutput = `@agentmarkup/vite
 Checks:
 ✓ All JSON-LD schemas have required fields
 ✓ AI crawlers not blocked by existing robots.txt
-⚠ /about: No structured data configured for this page`
+⚠ /about: No structured data configured for this page`,
+  astro: `@agentmarkup/astro
 
-type Framework = 'vite' | 'astro'
+✓ llms.txt generated (1 entry, 1 section)
+✓ JSON-LD injected into 3 pages
+✓ robots.txt patched (3 AI crawlers configured)
 
-const installCommands: Record<Framework, string> = {
-  vite: 'pnpm add -D @agentmarkup/vite',
-  astro: 'pnpm add -D @agentmarkup/astro',
+Checks:
+✓ All JSON-LD schemas have required fields
+✓ AI crawlers not blocked by existing robots.txt
+⚠ /about: No structured data configured for this page`,
 }
 
 const examples: Record<Framework, string> = {
@@ -141,7 +153,7 @@ function Home() {
 
         <section className="output">
           <h2>Build output</h2>
-          <CodeBlock code={buildOutput} />
+          <CodeBlock code={buildOutputs[fw]} />
         </section>
 
         <section className="packages">
