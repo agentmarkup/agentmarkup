@@ -17,7 +17,11 @@ function WebsiteCheckerGuide() {
             When ChatGPT, Claude, or Perplexity answers a question about your industry, does your website show up? In most cases, the answer is no. Not because your content is not relevant, but because AI systems cannot understand your site.
           </p>
           <p>
-            The difference between a website that gets cited by AI and one that does not often comes down to a few missing files and metadata tags. A robots.txt that accidentally blocks AI crawlers. Missing JSON-LD structured data. No llms.txt file. No markdown mirrors for clean content extraction.
+            The difference between a website that gets cited by AI and one that
+            does not often comes down to a few missing files and metadata tags.
+            A robots.txt that accidentally blocks AI crawlers. Missing JSON-LD
+            structured data. No llms.txt file. No readable fallback when the
+            raw HTML is thin or heavily client-rendered.
           </p>
           <p>
             These are not complex problems. They are configuration gaps that take minutes to fix once you know they exist. The hard part is knowing they exist.
@@ -57,9 +61,9 @@ function WebsiteCheckerGuide() {
 
           <h3>Markdown mirrors</h3>
           <ul>
-            <li>Does your homepage have a markdown alternate link?</li>
+            <li>If the raw HTML is thin, does your homepage have a markdown alternate link?</li>
             <li>Is the markdown file accessible and substantial (not empty or raw HTML)?</li>
-            <li>Do sample internal pages have markdown mirrors too?</li>
+            <li>If a linked page also serves thin HTML, is there a useful markdown fallback there too?</li>
           </ul>
 
           <h3>Robots.txt and AI crawlers</h3>
@@ -129,7 +133,7 @@ function WebsiteCheckerGuide() {
           </p>
           <ul>
             <li><strong>llms.txt</strong> is not checked by any SEO tool. It is AI-specific.</li>
-            <li><strong>Markdown mirrors</strong> are irrelevant to Google but critical for LLM crawlers that cannot render JavaScript.</li>
+            <li><strong>Markdown mirrors</strong> are irrelevant to Google but useful when the raw HTML is thin, heavily client-rendered, or cluttered with layout noise.</li>
             <li><strong>AI crawler rules</strong> (GPTBot, ClaudeBot) are separate from Googlebot rules. You might have perfect Google indexing while being completely invisible to ChatGPT.</li>
             <li><strong>No scores.</strong> SEO tools love to give you a number out of 100. The checker gives you specific, actionable findings. "Your robots.txt does not include explicit rules for GPTBot" is more useful than "Your AI readiness score is 47."</li>
           </ul>

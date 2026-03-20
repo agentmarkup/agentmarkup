@@ -16,6 +16,13 @@ export interface BlogPostMeta {
 
 export const blogPosts: BlogPostMeta[] = [
   {
+    slug: 'when-markdown-mirrors-help',
+    title: 'When markdown mirrors help, and when they do not',
+    description: 'A practical guide to when generated markdown mirrors add signal, when HTML is already enough, and how to avoid unnecessary downsides.',
+    date: '2026-03-20',
+    readingTime: '7 min read',
+  },
+  {
     slug: 'website-checker',
     title: 'Is your website ready for AI? Free LLM discoverability checker',
     description: 'Audit your website for llms.txt, JSON-LD, robots.txt, markdown mirrors, and sitemap. Free tool for e-commerce and brand websites.',
@@ -24,8 +31,8 @@ export const blogPosts: BlogPostMeta[] = [
   },
   {
     slug: 'markdown-mirrors',
-    title: 'Markdown mirrors for every page: build-time vs Cloudflare\'s approach',
-    description: 'Generate clean markdown versions of your HTML pages at build time so AI agents can read your content without parsing HTML.',
+    title: 'Build-time markdown mirrors for agent readability: Cloudflare comparison',
+    description: 'Build-time markdown generation for AI readability, including when it helps and how it compares to Cloudflare runtime extraction.',
     date: '2026-03-20',
     readingTime: '7 min read',
   },

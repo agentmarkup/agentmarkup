@@ -21,6 +21,12 @@ export default defineConfig({
           },
         ],
       },
+      llmsFullTxt: {
+        enabled: true,
+      },
+      markdownPages: {
+        enabled: true,
+      },
     }),
   ],
 })`
@@ -33,8 +39,30 @@ Optional instructions for LLMs visiting this site.
 
 ## Pages
 
-- [About](https://example.com/about): About us
-- [Blog](https://example.com/blog): Latest posts`
+- [About](https://example.com/about.md): About us
+- [Blog](https://example.com/blog.md): Latest posts`
+
+const fullOutput = `# My Website
+
+> A short description of your website.
+
+Optional instructions for LLMs visiting this site.
+
+This optional agentmarkup context file expands the published llms.txt manifest with inline same-site markdown content when those mirrors are available.
+
+## Pages
+
+- [About](https://example.com/about.md): About us
+- [Blog](https://example.com/blog.md): Latest posts
+
+### About
+
+> About us
+
+Source: https://example.com/about
+Preferred fetch: https://example.com/about.md
+
+About the company, team, and public positioning...`
 
 function LlmsTxt() {
   return (
@@ -83,25 +111,46 @@ function LlmsTxt() {
           </p>
           <CodeBlock code={output} />
           <p>
-            If you also enable markdown mirrors, same-site page entries in
-            <code>llms.txt</code> default to the generated <code>.md</code>{' '}
-            URLs so cold agents discover the cleaner fetch path first. Set{' '}
-            <code>llmsTxt.preferMarkdownMirrors</code> to <code>false</code> if
-            you want <code>llms.txt</code> to keep pointing at HTML routes.
+            With markdown mirrors enabled in the example above, same-site page
+            entries in <code>llms.txt</code> default to the generated
+            <code>.md</code> URLs so cold agents discover the cleaner fetch
+            path first. Set <code>llmsTxt.preferMarkdownMirrors</code> to
+            <code>false</code> if your raw HTML is already substantial and you
+            want <code>llms.txt</code> to keep pointing at HTML routes.
           </p>
+        </section>
+
+        <section>
+          <h2>Optional llms-full.txt</h2>
+          <p>
+            If you enable <code>llmsFullTxt</code>, agentmarkup also emits an
+            optional <code>/llms-full.txt</code> file. It keeps the same
+            high-level manifest structure as <code>llms.txt</code> but inlines
+            same-site markdown mirror content when those mirrors exist, which
+            gives agents a richer machine-readable context file without making
+            you hand-maintain a second document.
+          </p>
+          <CodeBlock code={fullOutput} />
         </section>
 
         <section>
           <h2>Validation</h2>
           <p>
-            agentmarkup validates your llms.txt at build time. It checks that the file starts with an H1 heading, has at least one section, and that all links have valid titles and URLs. Errors are printed to the terminal during build so you catch problems before deploying.
+            agentmarkup validates your <code>llms.txt</code> and
+            <code>llms-full.txt</code> output at build time. It checks that the
+            files start with an H1 heading, have at least one section, and that
+            all links have valid titles and URLs. If markdown mirrors are
+            enabled, it also warns when <code>llms.txt</code> points to a
+            markdown URL that was never emitted.
           </p>
         </section>
 
         <section>
           <h2>LLM discovery</h2>
           <p>
-            To help LLMs find your llms.txt file, add a <code>&lt;link&gt;</code> tag to your HTML <code>&lt;head&gt;</code>:
+            agentmarkup injects the homepage <code>llms.txt</code> discovery
+            link automatically when you generate or ship an <code>llms.txt</code>
+            file. The tag looks like this:
           </p>
           <CodeBlock code={`<link rel="alternate" type="text/plain" href="/llms.txt" title="LLM-readable site summary" />`} />
           <p>
@@ -116,7 +165,7 @@ function LlmsTxt() {
           </details>
           <details>
             <summary>Can I have both llms.txt and llms-full.txt?</summary>
-            <p>Yes. llms.txt is the summary. llms-full.txt can contain expanded page content for deeper context. agentmarkup currently generates llms.txt. Full-text generation is planned for a future release.</p>
+            <p>Yes. llms.txt is the summary. llms-full.txt is optional expanded context. agentmarkup can generate both, and when markdown mirrors are enabled it inlines the same-site mirror content into llms-full.txt automatically.</p>
           </details>
           <details>
             <summary>What happens if I do not configure llmsTxt?</summary>

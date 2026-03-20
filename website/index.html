@@ -13,9 +13,9 @@
     <title>agentmarkup - machine-readable websites for Vite and Astro</title>
     <meta
       name="description"
-      content="Build-time llms.txt, JSON-LD, markdown mirrors, AI crawler controls, Content-Signal headers, validation, and a free website checker for Vite and Astro."
+      content="Build-time llms.txt, optional llms-full.txt, JSON-LD, markdown mirrors, AI crawler controls, Content-Signal headers, validation, and a free website checker for Vite and Astro."
     />
-    <meta name="keywords" content="vite plugin, astro integration, llms.txt, json-ld, structured data, schema.org, robots.txt, markdown mirrors, content-signal, ai crawler, machine-readable, seo, geo, build-time validation, ai agents, llm, website checker" />
+    <meta name="keywords" content="vite plugin, astro integration, llms.txt, llms-full.txt, json-ld, structured data, schema.org, robots.txt, markdown mirrors, content-signal, ai crawler, machine-readable, seo, geo, build-time validation, ai agents, llm, website checker" />
     <meta name="author" content="Sebastian Cochinescu" />
     <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
 
@@ -25,7 +25,7 @@
 
     <!-- Open Graph -->
     <meta property="og:title" content="agentmarkup - machine-readable websites for Vite and Astro" />
-    <meta property="og:description" content="Build-time llms.txt, JSON-LD, markdown mirrors, AI crawler controls, Content-Signal headers, validation, and a free website checker." />
+    <meta property="og:description" content="Build-time llms.txt, optional llms-full.txt, JSON-LD, markdown mirrors, AI crawler controls, Content-Signal headers, validation, and a free website checker." />
     <meta property="og:url" content="https://agentmarkup.dev/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="agentmarkup" />
@@ -34,7 +34,7 @@
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="agentmarkup - machine-readable websites for Vite and Astro" />
-    <meta name="twitter:description" content="Build-time llms.txt, JSON-LD, markdown mirrors, AI crawler controls, Content-Signal headers, validation, and a free website checker." />
+    <meta name="twitter:description" content="Build-time llms.txt, optional llms-full.txt, JSON-LD, markdown mirrors, AI crawler controls, Content-Signal headers, validation, and a free website checker." />
     <meta name="twitter:image" content="https://agentmarkup.dev/og-image.png" />
 
     <!-- OG image -->
@@ -57,11 +57,11 @@
     <noscript>
       <div style="max-width:800px;margin:0 auto;padding:4rem 2rem;font-family:system-ui,sans-serif;color:#ededed;background:#0a0a0a;">
         <h1>agentmarkup - machine-readable websites for Vite and Astro</h1>
-        <p>Generate llms.txt, inject schema.org JSON-LD, create markdown mirrors from final HTML, manage AI crawler robots.txt rules, patch Content-Signal headers, and validate everything at build time. Zero runtime cost.</p>
+        <p>Generate llms.txt and optional llms-full.txt, inject schema.org JSON-LD, create markdown mirrors from final HTML, manage AI crawler robots.txt rules, patch Content-Signal headers, and validate everything at build time. Zero runtime cost.</p>
         <p><strong>Install:</strong> <code>pnpm add -D @agentmarkup/vite</code> or <code>pnpm add -D @agentmarkup/astro</code></p>
         <h2>Features</h2>
         <ul>
-          <li><strong>llms.txt generation</strong> - Auto-generate an llms.txt file following the llmstxt.org spec.</li>
+          <li><strong>llms manifests</strong> - Auto-generate llms.txt, inject its discovery link, and optionally emit llms-full.txt with expanded same-site context.</li>
           <li><strong>JSON-LD structured data injection</strong> - Inject schema.org JSON-LD into every page with XSS-safe serialization. 6 built-in presets.</li>
           <li><strong>AI crawler robots.txt management</strong> - Allow or block GPTBot, ClaudeBot, PerplexityBot, Google-Extended, CCBot.</li>
           <li><strong>Markdown mirrors</strong> - Generate cleaned <code>.md</code> companions for built pages so fetch-based agents can read the content directly.</li>

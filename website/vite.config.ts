@@ -121,6 +121,7 @@ export default defineConfig({
         'docs-json-ld': resolve(__dirname, 'docs/json-ld/index.html'),
         'docs-ai-crawlers': resolve(__dirname, 'docs/ai-crawlers/index.html'),
         'blog-index': resolve(__dirname, 'blog/index.html'),
+        'blog-when-markdown-mirrors-help': resolve(__dirname, 'blog/when-markdown-mirrors-help/index.html'),
         'blog-why-llms-txt': resolve(__dirname, 'blog/why-llms-txt-matters/index.html'),
         'blog-what-is-geo': resolve(__dirname, 'blog/what-is-geo/index.html'),
         'blog-json-ld-guide': resolve(__dirname, 'blog/json-ld-structured-data-guide/index.html'),
@@ -137,6 +138,7 @@ export default defineConfig({
         'prerender-docs-json-ld': resolve(__dirname, 'src/entries/json-ld.tsx'),
         'prerender-docs-ai-crawlers': resolve(__dirname, 'src/entries/ai-crawlers.tsx'),
         'prerender-blog-index': resolve(__dirname, 'src/entries/blog-index.tsx'),
+        'prerender-blog-when-markdown-mirrors-help': resolve(__dirname, 'src/entries/blog-post-9.tsx'),
         'prerender-blog-why-llms-txt': resolve(__dirname, 'src/entries/blog-post-1.tsx'),
         'prerender-blog-what-is-geo': resolve(__dirname, 'src/entries/blog-post-2.tsx'),
         'prerender-blog-json-ld-guide': resolve(__dirname, 'src/entries/blog-post-3.tsx'),
@@ -155,10 +157,10 @@ export default defineConfig({
     agentmarkup({
       site: siteUrl,
       name: 'agentmarkup',
-      description: 'Make your markup agent-ready. Build-time llms.txt, JSON-LD, markdown mirrors, AI crawler controls, and validation for modern websites.',
+      description: 'Make your markup agent-ready. Build-time llms.txt, optional llms-full.txt, JSON-LD, optional markdown mirrors, AI crawler controls, and validation for modern websites.',
 
       llmsTxt: {
-        instructions: 'agentmarkup is an open-source package family for Vite and Astro that makes websites machine-readable for LLMs and AI agents. It generates llms.txt, injects JSON-LD structured data, creates markdown mirrors from final HTML, manages AI crawler robots.txt directives, and validates everything at build time.',
+        instructions: 'agentmarkup is an open-source package family for Vite and Astro that makes websites machine-readable for LLMs and AI agents. It generates llms.txt, optional llms-full.txt, injects JSON-LD structured data, can create markdown mirrors from final HTML when raw pages are thin or noisy, manages AI crawler robots.txt directives, and validates everything at build time.',
         sections: [
           {
             title: 'Documentation',
@@ -181,6 +183,7 @@ export default defineConfig({
           {
             title: 'Blog',
             entries: [
+              { title: 'When markdown mirrors help', url: '/blog/when-markdown-mirrors-help/', description: 'Practical guide to when generated markdown mirrors help and when HTML is already enough' },
               { title: 'Why llms.txt matters', url: '/blog/why-llms-txt-matters/', description: 'How llms.txt makes your website discoverable by AI systems like ChatGPT and Perplexity' },
               { title: 'What is GEO?', url: '/blog/what-is-geo/', description: 'Generative Engine Optimization explained for developers - what is real and what is hype' },
               { title: 'JSON-LD structured data guide', url: '/blog/json-ld-structured-data-guide/', description: 'Complete guide to JSON-LD for web developers - schema types, common mistakes, and validation' },
@@ -203,6 +206,10 @@ export default defineConfig({
         ],
       },
 
+      llmsFullTxt: {
+        enabled: true,
+      },
+
       markdownPages: {
         enabled: true,
       },
@@ -216,14 +223,14 @@ export default defineConfig({
           preset: 'webSite',
           name: 'agentmarkup',
           url: siteUrl,
-          description: 'Build-time llms.txt, JSON-LD, markdown mirrors, AI crawler controls, Content-Signal headers, and validation for machine-readable websites.',
+          description: 'Build-time llms.txt, optional llms-full.txt, JSON-LD, optional markdown mirrors, AI crawler controls, Content-Signal headers, and validation for machine-readable websites.',
         },
         {
           preset: 'organization',
           name: 'agentmarkup',
           url: siteUrl,
           logo: `${siteUrl}/apple-touch-icon.png`,
-          description: 'Open-source tooling for machine-readable websites, agent-friendly markup, markdown mirrors, and build-time validation.',
+          description: 'Open-source tooling for machine-readable websites, agent-friendly markup, llms manifests, optional markdown mirrors, and build-time validation.',
           sameAs: [
             'https://github.com/agentmarkup/agentmarkup',
             'https://www.npmjs.com/package/@agentmarkup/vite',
@@ -243,7 +250,7 @@ export default defineConfig({
               applicationCategory: 'DeveloperApplication',
               operatingSystem: 'Any',
               url: siteUrl,
-              description: 'Build-time llms.txt, JSON-LD, markdown mirrors, AI crawler controls, Content-Signal headers, and validation for Vite and Astro websites.',
+              description: 'Build-time llms.txt, optional llms-full.txt, JSON-LD, optional markdown mirrors, AI crawler controls, Content-Signal headers, and validation for Vite and Astro websites.',
               offers: {
                 '@type': 'Offer',
                 price: '0',

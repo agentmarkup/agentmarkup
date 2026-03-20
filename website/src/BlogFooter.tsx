@@ -11,7 +11,8 @@ function BlogFooter({ currentSlug }: { currentSlug: string }) {
         <p>
           agentmarkup is an open-source build-time toolkit for Vite and Astro
           that generates llms.txt, injects JSON-LD structured data, creates
-          markdown mirrors from final HTML, manages AI crawler robots.txt rules,
+          optional markdown mirrors from final HTML when raw pages need a
+          cleaner agent-facing fetch path, manages AI crawler robots.txt rules,
           patches optional Content-Signal and canonical mirror headers, and
           validates everything at build time. Zero runtime cost.
         </p>

@@ -19,6 +19,15 @@ export default defineConfig({
           { title: 'Wallets', url: '/products/wallets', description: 'Leather wallets' },
         ]}],
       },
+      llmsFullTxt: {
+        enabled: true,
+      },
+      markdownPages: {
+        enabled: true,
+      },
+      contentSignalHeaders: {
+        enabled: true,
+      },
       aiCrawlers: { GPTBot: 'allow', ClaudeBot: 'allow', CCBot: 'disallow' },
     }),
   ],
@@ -40,6 +49,15 @@ export default defineConfig({
         sections: [{ title: 'Posts', entries: [
           { title: 'Hello World', url: '/blog/hello', description: 'First post' },
         ]}],
+      },
+      llmsFullTxt: {
+        enabled: true,
+      },
+      markdownPages: {
+        enabled: true,
+      },
+      contentSignalHeaders: {
+        enabled: true,
       },
       aiCrawlers: { GPTBot: 'allow', ClaudeBot: 'allow' },
     }),
@@ -135,14 +153,14 @@ function Home() {
       <main>
         <section className="about">
           <p>
-            agentmarkup makes your website understandable by LLMs and AI agents. It generates <a href="/docs/llms-txt/">llms.txt</a> files, injects <a href="/docs/json-ld/">schema.org JSON-LD</a>, generates <a href="/blog/markdown-mirrors/">markdown mirrors</a> from final HTML, manages <a href="/docs/ai-crawlers/">AI crawler robots.txt rules</a>, patches <code>_headers</code> with Content-Signal directives, and validates the final output at build time. Same config, same features, whether you use Vite or Astro.
+            agentmarkup makes your website understandable by LLMs and AI agents. It generates <a href="/docs/llms-txt/">llms.txt</a> and optional <code>llms-full.txt</code> files, injects <a href="/docs/json-ld/">schema.org JSON-LD</a>, can generate <a href="/blog/markdown-mirrors/">markdown mirrors</a> from final HTML when raw pages are thin or noisy, manages <a href="/docs/ai-crawlers/">AI crawler robots.txt rules</a>, patches <code>_headers</code> with Content-Signal directives, and validates the final output at build time. Same config, same features, whether you use Vite or Astro.
           </p>
         </section>
 
         <section className="features">
           <div className="feature">
             <h2>llms.txt generation</h2>
-            <p>Auto-generate an llms.txt file following the <a href="https://llmstxt.org" target="_blank" rel="noopener noreferrer">llmstxt.org</a> spec. Define your site name, description, sections, and page entries, and the plugin outputs a spec-compliant file at build time.</p>
+            <p>Auto-generate an llms.txt file following the <a href="https://llmstxt.org" target="_blank" rel="noopener noreferrer">llmstxt.org</a> spec, inject the homepage discovery link automatically, and optionally emit <code>llms-full.txt</code> with inlined same-site markdown context.</p>
           </div>
           <div className="feature">
             <h2>JSON-LD structured data</h2>
@@ -154,7 +172,7 @@ function Home() {
           </div>
           <div className="feature">
             <h2>Markdown mirrors</h2>
-            <p>Generate a clean <code>.md</code> companion for every built HTML page so fetch-based agents can read the page content without parsing navigation, scripts, and layout noise. When enabled, same-site <code>llms.txt</code> entries can point at those mirrors by default.</p>
+            <p>Optionally generate a clean <code>.md</code> companion for built HTML pages when fetch-based agents need a better path than the raw HTML. Useful for thin or noisy output. If your HTML already ships substantial content, keep HTML as the primary fetch target. <a href="/blog/when-markdown-mirrors-help/">Read when mirrors help and when they do not</a>.</p>
           </div>
           <div className="feature">
             <h2>Content-Signal headers</h2>
@@ -162,7 +180,7 @@ function Home() {
           </div>
           <div className="feature">
             <h2>Final-output validation</h2>
-            <p>Catch missing required fields, incomplete schema.org schemas, thin client-shell HTML, AI crawler conflicts, and malformed llms.txt before you deploy, not in production.</p>
+            <p>Catch missing required fields, incomplete schema.org schemas, thin client-shell HTML, broken markdown alternate links, missing llms mirror coverage, AI crawler conflicts, and malformed llms files before you deploy.</p>
           </div>
         </section>
 
@@ -252,7 +270,7 @@ function Home() {
 
           <details>
             <summary>What does agentmarkup actually do?</summary>
-            <p>It adds machine-readable build output: an <code>llms.txt</code> file, <code>&lt;script type="application/ld+json"&gt;</code> tags with structured data, markdown mirrors for built pages, <code>robots.txt</code> rules for AI crawlers, and optional <code>_headers</code> entries with Content-Signal plus markdown-canonical directives. It also validates the final output and warns you about thin HTML, schema issues, and crawler conflicts.</p>
+            <p>It adds machine-readable build output: an <code>llms.txt</code> file, optional <code>llms-full.txt</code> context, the homepage <code>llms.txt</code> discovery link, <code>&lt;script type="application/ld+json"&gt;</code> tags with structured data, optional markdown mirrors for built pages, <code>robots.txt</code> rules for AI crawlers, and optional <code>_headers</code> entries with Content-Signal plus markdown-canonical directives. It also validates the final output and warns you about thin HTML, schema issues, broken markdown discovery, and crawler conflicts.</p>
           </details>
 
           <details>
@@ -278,6 +296,11 @@ function Home() {
           <details>
             <summary>Does it add any runtime JavaScript?</summary>
             <p>No. Everything happens at build time. The plugin runs during your Vite or Astro build and outputs static files. Zero JavaScript is shipped to the browser.</p>
+          </details>
+
+          <details>
+            <summary>Do I need markdown mirrors on every page?</summary>
+            <p>No. They are most useful when the raw HTML is thin, noisy, or heavily client-rendered. If your pages already serve substantial HTML, keep HTML as the primary fetch target and treat markdown mirrors as optional extra coverage.</p>
           </details>
 
           <details>
