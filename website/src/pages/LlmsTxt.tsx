@@ -112,9 +112,9 @@ function LlmsTxt() {
           <CodeBlock code={output} />
           <p>
             With markdown mirrors enabled in the example above, same-site page
-            entries in <code>llms.txt</code> default to the generated
+            entries in <code>llms.txt</code> default to the generated{' '}
             <code>.md</code> URLs so cold agents discover the cleaner fetch
-            path first. Set <code>llmsTxt.preferMarkdownMirrors</code> to
+            path first. Set <code>llmsTxt.preferMarkdownMirrors</code> to{' '}
             <code>false</code> if your raw HTML is already substantial and you
             want <code>llms.txt</code> to keep pointing at HTML routes.
           </p>
@@ -136,7 +136,7 @@ function LlmsTxt() {
         <section>
           <h2>Validation</h2>
           <p>
-            agentmarkup validates your <code>llms.txt</code> and
+            agentmarkup validates your <code>llms.txt</code> and{' '}
             <code>llms-full.txt</code> output at build time. It checks that the
             files start with an H1 heading, have at least one section, and that
             all links have valid titles and URLs. If markdown mirrors are
@@ -149,8 +149,8 @@ function LlmsTxt() {
           <h2>LLM discovery</h2>
           <p>
             agentmarkup injects the homepage <code>llms.txt</code> discovery
-            link automatically when you generate or ship an <code>llms.txt</code>
-            file. The tag looks like this:
+            link automatically when you generate or ship an{' '}
+            <code>llms.txt</code> file. The tag looks like this:
           </p>
           <CodeBlock code={`<link rel="alternate" type="text/plain" href="/llms.txt" title="LLM-readable site summary" />`} />
           <p>

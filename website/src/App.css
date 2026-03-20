@@ -1030,15 +1030,124 @@ h2 {
 }
 
 /* License page */
-.license-text {
-  color: var(--text-body);
+.license-page {
+  max-width: 100%;
+}
+
+.license-kicker {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.8rem;
+}
+
+.license-intro-card {
+  margin-bottom: 2rem;
+  padding: 1.35rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at top left, rgba(92, 164, 201, 0.12), transparent 35%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent),
+    var(--surface);
+}
+
+.license-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.license-meta-card {
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.license-meta-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.35rem;
+}
+
+.license-meta-value {
+  color: var(--text);
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0;
+}
+
+.license-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.license-panel {
+  padding: 1.15rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.license-panel h2 {
+  font-size: 1rem;
+  margin-bottom: 0.9rem;
+}
+
+.license-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.license-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-code);
+  color: var(--text-doc);
   font-size: 0.9rem;
-  line-height: 1.7;
-  white-space: pre-wrap;
-  font-family: inherit;
-  background: none;
-  border: none;
-  padding: 0;
+  line-height: 1.35;
+}
+
+.license-document {
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent), var(--surface);
+}
+
+.license-document-heading {
+  color: var(--text);
+  font-size: 1.02rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.license-document p {
+  color: var(--text-body);
+  margin-bottom: 1rem;
+}
+
+.license-disclaimer {
+  font-size: 0.92rem;
+  letter-spacing: 0.01em;
+}
+
+@media (max-width: 720px) {
+  .license-meta-grid,
+  .license-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Author page */
