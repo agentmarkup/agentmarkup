@@ -284,4 +284,54 @@ describe('@agentmarkup/astro', () => {
     expect(headers).toContain('Link: <https://example.com/>; rel="canonical"');
     expect(headers).not.toContain('Content-Signal:');
   });
+
+  it('preserves markdown canonical headers when patching an existing public _headers file', async () => {
+    const root = await createFixture({
+      'dist/index.html': [
+        '<html>',
+        '  <head><title>Home</title></head>',
+        '  <body><main><h1>Home</h1><p>Readable body copy for markdown output.</p></main></body>',
+        '</html>',
+      ].join('\n'),
+      'public/_headers': [
+        '/assets/*',
+        '  Cache-Control: public, max-age=31536000, immutable',
+        '',
+      ].join('\n'),
+    });
+
+    const integration = agentmarkup({
+      site: 'https://example.com',
+      name: 'Example',
+      markdownPages: {
+        enabled: true,
+      },
+      contentSignalHeaders: {
+        enabled: true,
+      },
+    });
+
+    await integration.hooks['astro:config:done']?.({
+      config: {
+        publicDir: pathToFileURL(join(root, 'public/')),
+      } as unknown as AstroConfig,
+      setAdapter: () => {},
+      injectTypes: () => pathToFileURL(join(root, 'types.d.ts')),
+      logger: {} as unknown as AstroIntegrationLogger,
+    } as AstroConfigDoneArgs);
+
+    await integration.hooks['astro:build:done']?.({
+      dir: pathToFileURL(join(root, 'dist/')),
+      routes: [],
+      pages: [{ pathname: '/' }],
+    } as AstroBuildDoneArgs);
+
+    const headers = await readFile(join(root, 'dist', '_headers'), 'utf8');
+
+    expect(headers).toContain('/assets/*');
+    expect(headers).toContain('Cache-Control: public, max-age=31536000, immutable');
+    expect(headers).toContain('Content-Signal: ai-train=yes, search=yes, ai-input=yes');
+    expect(headers).toContain('/index.md');
+    expect(headers).toContain('Link: <https://example.com/>; rel="canonical"');
+  });
 });

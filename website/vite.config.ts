@@ -216,14 +216,14 @@ export default defineConfig({
           preset: 'webSite',
           name: 'agentmarkup',
           url: siteUrl,
-          description: 'Build-time llms.txt, JSON-LD, and AI crawler controls for websites',
+          description: 'Build-time llms.txt, JSON-LD, markdown mirrors, AI crawler controls, Content-Signal headers, and validation for machine-readable websites.',
         },
         {
           preset: 'organization',
           name: 'agentmarkup',
           url: siteUrl,
           logo: `${siteUrl}/apple-touch-icon.png`,
-          description: 'Open-source tooling for machine-readable websites and agent-friendly markup.',
+          description: 'Open-source tooling for machine-readable websites, agent-friendly markup, markdown mirrors, and build-time validation.',
           sameAs: [
             'https://github.com/agentmarkup/agentmarkup',
             'https://www.npmjs.com/package/@agentmarkup/vite',
@@ -243,7 +243,7 @@ export default defineConfig({
               applicationCategory: 'DeveloperApplication',
               operatingSystem: 'Any',
               url: siteUrl,
-              description: 'Build-time llms.txt, JSON-LD, AI crawler controls, and validation for Vite and Astro websites.',
+              description: 'Build-time llms.txt, JSON-LD, markdown mirrors, AI crawler controls, Content-Signal headers, and validation for Vite and Astro websites.',
               offers: {
                 '@type': 'Offer',
                 price: '0',

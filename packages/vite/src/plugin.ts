@@ -50,6 +50,7 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
   let crawlersConfigured = 0;
   let robotsTxtStatus: 'patched' | 'preserved' | 'none' = 'none';
   let contentSignalHeadersStatus: 'generated' | 'preserved' | 'none' = 'none';
+  let pendingMarkdownCanonicalEntries: MarkdownCanonicalHeaderEntry[] = [];
   let publicDir: string | undefined;
   let outDir: string | undefined;
   let writesBuildOutput = true;
@@ -347,6 +348,7 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
             : preservedMarkdownPages > 0
               ? 'preserved'
               : 'none';
+        pendingMarkdownCanonicalEntries = markdownCanonicalEntries;
 
         if (markdownCanonicalEntries.length > 0) {
           const headersFileName = '_headers';
@@ -399,7 +401,10 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
         const existingHeadersText = headersPatch.existingHeadersText;
         const patchedHeaders = patchHeadersFile(
           existingHeadersText,
-          config.contentSignalHeaders
+          config.contentSignalHeaders,
+          {
+            markdownCanonicalEntries: pendingMarkdownCanonicalEntries,
+          }
         );
         const preserved =
           existingHeadersText !== null &&

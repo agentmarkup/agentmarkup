@@ -1,6 +1,6 @@
 {
   "name": "@agentmarkup/vite",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Build-time llms.txt, JSON-LD, markdown mirrors, headers, AI crawler controls, and validation for Vite",
   "type": "module",
   "license": "MIT",

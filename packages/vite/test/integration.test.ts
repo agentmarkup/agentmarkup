@@ -499,4 +499,51 @@ describe('agentmarkup integration', () => {
     expect(headers).toContain('Link: <https://example.com/>; rel="canonical"');
     expect(headers).not.toContain('Content-Signal:');
   });
+
+  it('preserves markdown canonical headers when patching an existing public _headers file', async () => {
+    const root = await createFixture({
+      'src/main.js': 'console.log("agentmarkup existing headers fixture");\n',
+      'public/_headers': [
+        '/assets/*',
+        '  Cache-Control: public, max-age=31536000, immutable',
+        '',
+      ].join('\n'),
+      'index.html': [
+        '<!doctype html>',
+        '<html lang="en">',
+        '  <head>',
+        '    <meta charset="UTF-8" />',
+        '    <title>Home</title>',
+        '  </head>',
+        '  <body>',
+        '    <main><h1>Home</h1><p>Readable body copy for markdown output.</p></main>',
+        '    <script type="module" src="/src/main.js"></script>',
+        '  </body>',
+        '</html>',
+      ].join('\n'),
+    });
+
+    await buildFixture(
+      root,
+      {
+        site: 'https://example.com',
+        name: 'Example',
+        markdownPages: {
+          enabled: true,
+        },
+        contentSignalHeaders: {
+          enabled: true,
+        },
+      },
+      ['index.html']
+    );
+
+    const headers = await readDistFile(root, '_headers');
+
+    expect(headers).toContain('/assets/*');
+    expect(headers).toContain('Cache-Control: public, max-age=31536000, immutable');
+    expect(headers).toContain('Content-Signal: ai-train=yes, search=yes, ai-input=yes');
+    expect(headers).toContain('/index.md');
+    expect(headers).toContain('Link: <https://example.com/>; rel="canonical"');
+  });
 });
