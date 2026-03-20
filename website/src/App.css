@@ -1265,6 +1265,11 @@ h2 {
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
 }
 
+html[data-cookie-consent="accepted"] .cookie-banner,
+html[data-cookie-consent="declined"] .cookie-banner {
+  display: none;
+}
+
 .cookie-banner p {
   color: var(--text-muted);
   font-size: 0.7rem;

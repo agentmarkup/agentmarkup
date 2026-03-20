@@ -135,7 +135,7 @@ function Home() {
       <main>
         <section className="about">
           <p>
-            agentmarkup makes your website understandable by LLMs and AI agents. It generates <a href="/docs/llms-txt/">llms.txt</a> files, injects <a href="/docs/json-ld/">schema.org JSON-LD</a>, generates markdown mirrors from final HTML, manages <a href="/docs/ai-crawlers/">AI crawler robots.txt rules</a>, patches <code>_headers</code> with Content-Signal directives, and validates the final output at build time. Same config, same features, whether you use Vite or Astro.
+            agentmarkup makes your website understandable by LLMs and AI agents. It generates <a href="/docs/llms-txt/">llms.txt</a> files, injects <a href="/docs/json-ld/">schema.org JSON-LD</a>, generates <a href="/blog/markdown-mirrors/">markdown mirrors</a> from final HTML, manages <a href="/docs/ai-crawlers/">AI crawler robots.txt rules</a>, patches <code>_headers</code> with Content-Signal directives, and validates the final output at build time. Same config, same features, whether you use Vite or Astro.
           </p>
         </section>
 

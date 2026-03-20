@@ -79,6 +79,17 @@ function getConsent(): Consent {
   return consent as 'accepted' | 'declined'
 }
 
+function syncConsentDocumentState(consent: Consent) {
+  if (typeof document === 'undefined') return
+
+  if (consent === null) {
+    document.documentElement.removeAttribute('data-cookie-consent')
+    return
+  }
+
+  document.documentElement.setAttribute('data-cookie-consent', consent)
+}
+
 function subscribeConsent(onStoreChange: () => void) {
   if (typeof window === 'undefined') {
     return () => {}
@@ -113,10 +124,13 @@ function CookieConsent() {
     if (typeof window === 'undefined') return
     localStorage.removeItem(STORAGE_KEY)
     localStorage.removeItem(STORAGE_TS_KEY)
+    syncConsentDocumentState(null)
     window.dispatchEvent(new Event(CONSENT_CHANGE_EVENT))
   }, [])
 
   useEffect(() => {
+    syncConsentDocumentState(consent)
+
     // Always bootstrap gtag stub so consent default is set
     bootstrapGA()
 
@@ -140,12 +154,14 @@ function CookieConsent() {
   const accept = () => {
     localStorage.setItem(STORAGE_KEY, 'accepted')
     localStorage.setItem(STORAGE_TS_KEY, String(Date.now()))
+    syncConsentDocumentState('accepted')
     window.dispatchEvent(new Event(CONSENT_CHANGE_EVENT))
   }
 
   const decline = () => {
     localStorage.setItem(STORAGE_KEY, 'declined')
     localStorage.setItem(STORAGE_TS_KEY, String(Date.now()))
+    syncConsentDocumentState('declined')
     // Disable GA for this page
     ;(window as unknown as Record<string, unknown>)[`ga-disable-${GA_ID}`] = true
     window.dispatchEvent(new Event(CONSENT_CHANGE_EVENT))
