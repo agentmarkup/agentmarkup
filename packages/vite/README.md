@@ -1,6 +1,6 @@
 # @agentmarkup/vite
 
-Build-time `llms.txt`, JSON-LD, AI crawler controls, and validation for Vite websites.
+Build-time `llms.txt`, JSON-LD, markdown mirrors, AI crawler controls, and validation for Vite websites.
 
 `@agentmarkup/vite` is the Vite adapter in the `agentmarkup` package family. Framework-agnostic helpers live in `@agentmarkup/core`, and Astro sites use `@agentmarkup/astro`.
 
@@ -37,6 +37,12 @@ export default defineConfig({
             ],
           },
         ],
+      },
+      markdownPages: {
+        enabled: true,
+      },
+      contentSignalHeaders: {
+        enabled: true,
       },
       globalSchemas: [
         {
@@ -87,11 +93,17 @@ export default defineConfig({
 
 - Generates `/llms.txt` from config
 - Injects JSON-LD into built HTML pages
+- Validates JSON-LD already present in page HTML
+- Generates `.md` mirrors from the final HTML output
 - Patches or creates `robots.txt` with AI crawler directives
+- Patches or creates `_headers` with `Content-Signal`
 - Validates common schema and crawler mistakes at build time
+- Warns when a page looks like a thin client-rendered HTML shell
 - Exposes the same generators and validators for custom prerender or post-build scripts
 
 If the page already contains JSON-LD for a schema type, or the site already ships a curated `llms.txt` or matching crawler rules, the adapter preserves those by default. Set `llmsTxt.replaceExisting` or `jsonLd.replaceExistingTypes` only when you want Vite output to replace existing assets.
+
+Markdown mirrors and `_headers` follow the same coexistence rule: existing files are preserved unless you opt into replacement with `markdownPages.replaceExisting` or `contentSignalHeaders.replaceExisting`.
 
 The adapter assumes Vite controls the final HTML output. If a framework does an additional server-render or prerender pass after Vite finishes, use `@agentmarkup/core` in that final step or reach for a dedicated adapter instead of assuming JSON-LD injection will carry through automatically.
 
@@ -157,7 +169,9 @@ const robotsIssues = validateRobotsTxt(robots, {
 
   ✓ llms.txt generated (6 entries, 2 sections)
   ✓ JSON-LD injected into 1 pages
+  ✓ Markdown pages generated (6 files)
   ✓ robots.txt patched (5 AI crawlers configured)
+  ✓ _headers generated with Content-Signal
 
   No issues found
 ```

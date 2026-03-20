@@ -137,7 +137,7 @@ describe('agentmarkup plugin', () => {
       filename: '/virtual/build/about/index.html',
     } as IndexHtmlTransformContext);
 
-    plugin.closeBundle?.call(plugin);
+    await plugin.closeBundle?.call(plugin);
 
     const output = consoleSpy.mock.calls
       .map((args) => args.map(String).join(' '))
@@ -145,6 +145,59 @@ describe('agentmarkup plugin', () => {
 
     expect(output).toContain('/about');
     expect(output).toContain('No structured data configured for this page');
+  });
+
+  it('validates existing JSON-LD even without configured schemas', async () => {
+    const plugin = agentmarkup({
+      site: 'https://example.com',
+      name: 'Example',
+    });
+
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await getTransformHandler(plugin)(
+      [
+        '<html><head>',
+        '<script type="application/ld+json">',
+        JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'WebSite',
+          name: 'Example',
+        }),
+        '</script>',
+        '</head><body><div id="root"></div></body></html>',
+      ].join(''),
+      {
+        path: '/',
+        filename: '/virtual/build/index.html',
+      } as IndexHtmlTransformContext
+    );
+
+    await plugin.closeBundle?.call(plugin);
+
+    const output = consoleSpy.mock.calls
+      .map((args) => args.map(String).join(' '))
+      .join('\n');
+
+    expect(output).toContain("WebSite schema missing required field 'url'");
+  });
+
+  it('adds a markdown alternate link when markdown pages are enabled', async () => {
+    const plugin = agentmarkup({
+      site: 'https://example.com',
+      name: 'Example',
+      markdownPages: {
+        enabled: true,
+      },
+    });
+
+    const result = await getTransformHandler(plugin)(HTML, {
+      path: '/docs/guide',
+      filename: '/virtual/build/docs/guide/index.html',
+    } as IndexHtmlTransformContext);
+
+    expect(result).toContain('type="text/markdown"');
+    expect(result).toContain('href="/docs/guide.md"');
   });
 
   it('skips HTML injection, asset emission, and reporting during SSR builds', async () => {
@@ -193,7 +246,7 @@ describe('agentmarkup plugin', () => {
     expect(emitFile).not.toHaveBeenCalled();
 
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    plugin.closeBundle?.call(plugin);
+    await plugin.closeBundle?.call(plugin);
     expect(consoleSpy).not.toHaveBeenCalled();
   });
 });

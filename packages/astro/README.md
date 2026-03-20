@@ -1,6 +1,6 @@
 # @agentmarkup/astro
 
-Build-time `llms.txt`, JSON-LD, AI crawler `robots.txt`, and validation for Astro websites.
+Build-time `llms.txt`, JSON-LD, markdown mirrors, AI crawler `robots.txt`, headers, and validation for Astro websites.
 
 ## Install
 
@@ -33,6 +33,12 @@ export default defineConfig({
             ],
           },
         ],
+      },
+      markdownPages: {
+        enabled: true,
+      },
+      contentSignalHeaders: {
+        enabled: true,
       },
       globalSchemas: [
         {
@@ -82,11 +88,17 @@ export default defineConfig({
 
 - Injects JSON-LD into built HTML pages during the Astro build
 - Generates `/llms.txt` from config
+- Validates JSON-LD already present in page HTML
+- Generates `.md` mirrors from the final HTML output
 - Patches or creates `robots.txt` with AI crawler directives
+- Patches or creates `_headers` with `Content-Signal`
 - Validates common schema and crawler mistakes at build time
+- Warns when a page looks like a thin client-rendered HTML shell
 - Re-exports `@agentmarkup/core` helpers for custom pipelines
 
 By default, the Astro adapter coexists with existing machine-readable assets. If a page already contains JSON-LD for a schema type, or the site already ships a curated `llms.txt` or matching crawler rules, those are preserved unless you opt into replacement.
+
+Markdown mirrors and `_headers` follow the same rule: existing files are preserved unless you opt into replacement with `markdownPages.replaceExisting` or `contentSignalHeaders.replaceExisting`.
 
 ## Maintainer
 

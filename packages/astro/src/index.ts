@@ -6,14 +6,21 @@ import type { AstroIntegration } from 'astro';
 import {
   collectSchemasForPage,
   filterJsonLdByExistingTypes,
+  generateMarkdownAlternateLink,
+  generatePageMarkdown,
   generateJsonLdTags,
   generateLlmsTxt,
   hasExistingJsonLdScripts,
+  injectHeadContent,
   injectJsonLdTags,
+  markdownFileNameFromHtmlFile,
+  patchHeadersFile,
   normalizePagePath,
   patchRobotsTxt,
   presetToJsonLd,
   printReport,
+  validateExistingJsonLd,
+  validateHtmlContent,
   validateLlmsTxt,
   validateRobotsTxt,
   validateSchema,
@@ -28,8 +35,11 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
   let llmsTxtSections = 0;
   let llmsTxtStatus: 'generated' | 'preserved' | 'none' = 'none';
   let jsonLdPages = 0;
+  let markdownPages = 0;
+  let markdownPagesStatus: 'generated' | 'preserved' | 'none' = 'none';
   let crawlersConfigured = 0;
   let robotsTxtStatus: 'patched' | 'preserved' | 'none' = 'none';
+  let contentSignalHeadersStatus: 'generated' | 'preserved' | 'none' = 'none';
   let publicDir: string | undefined;
 
   return {
@@ -46,8 +56,25 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
         for (const htmlFile of htmlFiles) {
           const pagePath = pagePathFromOutputFile(outDir, htmlFile);
           const html = await readFile(htmlFile, 'utf8');
+          let nextHtml = html;
           const schemas = collectSchemasForPage(config, pagePath);
-          const hasExistingJsonLd = hasExistingJsonLdScripts(html);
+          const hasExistingJsonLd = hasExistingJsonLdScripts(nextHtml);
+
+          if (!config.validation?.disabled) {
+            validationResults.push(...validateHtmlContent(nextHtml, pagePath));
+            validationResults.push(...validateExistingJsonLd(nextHtml, pagePath));
+          }
+
+          if (
+            isFeatureEnabled(config.markdownPages) &&
+            pagePath &&
+            !hasMarkdownAlternateLink(nextHtml)
+          ) {
+            nextHtml = injectHeadContent(
+              nextHtml,
+              generateMarkdownAlternateLink(pagePath)
+            );
+          }
 
           if (schemas.length === 0) {
             if (
@@ -63,13 +90,16 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
               });
             }
 
+            if (nextHtml !== html) {
+              await writeFile(htmlFile, nextHtml, 'utf8');
+            }
             continue;
           }
 
           const jsonLdObjects = schemas.map(presetToJsonLd);
           const injectables = config.jsonLd?.replaceExistingTypes
             ? jsonLdObjects
-            : filterJsonLdByExistingTypes(jsonLdObjects, html);
+            : filterJsonLdByExistingTypes(jsonLdObjects, nextHtml);
 
           if (!config.validation?.disabled) {
             for (const schema of schemas) {
@@ -78,12 +108,63 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
           }
 
           if (injectables.length === 0) {
+            if (nextHtml !== html) {
+              await writeFile(htmlFile, nextHtml, 'utf8');
+            }
             continue;
           }
 
           const tags = generateJsonLdTags(injectables);
-          await writeFile(htmlFile, injectJsonLdTags(html, tags), 'utf8');
+          nextHtml = injectJsonLdTags(nextHtml, tags);
+          await writeFile(htmlFile, nextHtml, 'utf8');
           jsonLdPages += 1;
+        }
+
+        if (isFeatureEnabled(config.markdownPages)) {
+          let preservedMarkdownPages = 0;
+
+          for (const htmlFile of htmlFiles) {
+            const relativeHtmlPath = relative(outDir, htmlFile).replace(/\\/g, '/');
+            const markdownFileName = markdownFileNameFromHtmlFile(relativeHtmlPath);
+            const outputMarkdownPath = join(outDir, markdownFileName);
+            const html = await readFile(htmlFile, 'utf8');
+            const pagePath = pagePathFromOutputFile(outDir, htmlFile);
+            const markdown = generatePageMarkdown({
+              html,
+              pagePath,
+              siteUrl: config.site,
+            });
+
+            if (!markdown) {
+              continue;
+            }
+
+            const existingOutputMarkdown = await readTextFileIfExists(outputMarkdownPath);
+            const existingMarkdown =
+              existingOutputMarkdown ??
+              (publicDir
+                ? await readTextFileIfExists(join(publicDir, markdownFileName))
+                : null);
+
+            if (existingMarkdown && !config.markdownPages?.replaceExisting) {
+              preservedMarkdownPages += 1;
+
+              if (!existingOutputMarkdown) {
+                await writeFile(outputMarkdownPath, existingMarkdown, 'utf8');
+              }
+              continue;
+            }
+
+            await writeFile(outputMarkdownPath, markdown, 'utf8');
+            markdownPages += 1;
+          }
+
+          markdownPagesStatus =
+            markdownPages > 0
+              ? 'generated'
+              : preservedMarkdownPages > 0
+                ? 'preserved'
+                : 'none';
         }
 
         const llmsTxtContent = generateLlmsTxt(config);
@@ -147,14 +228,38 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
           }
         }
 
+        if (isFeatureEnabled(config.contentSignalHeaders)) {
+          const outputHeadersPath = join(outDir, '_headers');
+          const existingOutputHeaders = await readTextFileIfExists(outputHeadersPath);
+          const existingHeaders =
+            existingOutputHeaders ??
+            (publicDir ? await readTextFileIfExists(join(publicDir, '_headers')) : null);
+
+          const patchedHeaders = patchHeadersFile(
+            existingHeaders,
+            config.contentSignalHeaders
+          );
+          const preserved =
+            existingHeaders !== null && patchedHeaders === existingHeaders;
+
+          contentSignalHeadersStatus = preserved ? 'preserved' : 'generated';
+
+          if (!preserved || !existingOutputFileExists(outputHeadersPath)) {
+            await writeFile(outputHeadersPath, patchedHeaders, 'utf8');
+          }
+        }
+
         printReport({
           label: '@agentmarkup/astro',
           llmsTxtEntries,
           llmsTxtSections,
           llmsTxtStatus,
           jsonLdPages,
+          markdownPages,
+          markdownPagesStatus,
           crawlersConfigured,
           robotsTxtStatus,
+          contentSignalHeadersStatus,
           validationResults,
         });
       },
@@ -198,4 +303,16 @@ function pagePathFromOutputFile(outDir: string, filePath: string): string {
 
 function existingOutputFileExists(filePath: string): boolean {
   return existsSync(filePath);
+}
+
+function isFeatureEnabled(
+  config: { enabled?: boolean } | undefined
+): boolean {
+  return Boolean(config && config.enabled !== false);
+}
+
+function hasMarkdownAlternateLink(html: string): boolean {
+  return /<link\b[^>]*rel=(['"])alternate\1[^>]*type=(['"])text\/markdown\2/i.test(
+    html
+  );
 }

@@ -96,6 +96,12 @@ describe('@agentmarkup/astro', () => {
         GPTBot: 'allow',
         ClaudeBot: 'allow',
       },
+      markdownPages: {
+        enabled: true,
+      },
+      contentSignalHeaders: {
+        enabled: true,
+      },
     });
 
     await integration.hooks['astro:config:done']?.({
@@ -116,14 +122,20 @@ describe('@agentmarkup/astro', () => {
     const homeHtml = await readFile(join(root, 'dist', 'index.html'), 'utf8');
     const faqHtml = await readFile(join(root, 'dist', 'faq', 'index.html'), 'utf8');
     const llmsTxt = await readFile(join(root, 'dist', 'llms.txt'), 'utf8');
+    const faqMarkdown = await readFile(join(root, 'dist', 'faq.md'), 'utf8');
+    const headers = await readFile(join(root, 'dist', '_headers'), 'utf8');
     const robotsTxt = await readFile(join(root, 'dist', 'robots.txt'), 'utf8');
 
     expect(homeHtml).toContain('"@type": "WebSite"');
     expect(homeHtml).toContain('"@type": "Organization"');
+    expect(homeHtml).toContain('type="text/markdown"');
     expect(faqHtml).toContain('"@type": "FAQPage"');
+    expect(faqHtml).toContain('href="/faq.md"');
 
     expect(llmsTxt).toContain('# Example');
     expect(llmsTxt).toContain('[FAQ](https://example.com/faq)');
+    expect(faqMarkdown).toContain('# FAQ');
+    expect(headers).toContain('Content-Signal: ai-train=yes, search=yes, ai-input=yes');
 
     expect(robotsTxt).toContain('Sitemap: https://example.com/sitemap.xml');
     expect(robotsTxt).toContain('# BEGIN agentmarkup AI crawlers');

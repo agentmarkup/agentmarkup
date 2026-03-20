@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  generateContentSignalHeaders,
   generateJsonLdTags,
   generateLlmsTxt,
+  generatePageMarkdown,
   patchRobotsTxt,
   presetToJsonLd,
   validateLlmsTxt,
@@ -81,5 +83,21 @@ describe('manual pipeline helpers', () => {
     expect(jsonLd).toContain('<script type="application/ld+json">');
     expect(jsonLd).toContain('"@type": "WebSite"');
     expect(jsonLd).toContain('"@type": "Organization"');
+  });
+
+  it('generates markdown mirrors from final HTML through the public API', () => {
+    const markdown = generatePageMarkdown({
+      html: '<html><head><title>FAQ</title></head><body><main><h1>FAQ</h1><p>Answers.</p></main></body></html>',
+      pagePath: '/faq/',
+      siteUrl: 'https://example.com',
+    });
+
+    expect(markdown).toContain('# FAQ');
+    expect(markdown).toContain('Answers.');
+  });
+
+  it('builds Content-Signal headers through the public API', () => {
+    const headers = generateContentSignalHeaders();
+    expect(headers).toContain('Content-Signal: ai-train=yes, search=yes, ai-input=yes');
   });
 });

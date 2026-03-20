@@ -12,7 +12,8 @@
     "build": "pnpm -r --workspace-concurrency=1 build",
     "test": "pnpm -r --workspace-concurrency=1 test",
     "lint": "pnpm -r lint",
-    "typecheck": "pnpm -r --workspace-concurrency=1 typecheck"
+    "typecheck": "pnpm -r --workspace-concurrency=1 typecheck",
+    "smoke:website": "pnpm -C website smoke"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

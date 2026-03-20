@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { build } from 'vite';
+import type { Plugin } from 'vite';
 import type { AgentMarkupConfig } from '../src/types.js';
 import { agentmarkup } from '../src/plugin.js';
 
@@ -33,7 +34,8 @@ async function createFixture(files: Record<string, string>): Promise<string> {
 async function buildFixture(
   root: string,
   config: AgentMarkupConfig,
-  inputs: string[]
+  inputs: string[],
+  extraPlugins: Plugin[] = []
 ): Promise<void> {
   const inputMap = Object.fromEntries(
     inputs.map((input) => [
@@ -52,7 +54,7 @@ async function buildFixture(
         input: inputMap,
       },
     },
-    plugins: [agentmarkup(config)],
+    plugins: [agentmarkup(config), ...extraPlugins],
   });
 }
 
@@ -161,12 +163,21 @@ describe('agentmarkup integration', () => {
           GPTBot: 'allow',
           ClaudeBot: 'allow',
         },
+        markdownPages: {
+          enabled: true,
+        },
+        contentSignalHeaders: {
+          enabled: true,
+        },
       },
       ['index.html', 'faq/index.html']
     );
 
     const llmsTxt = await readDistFile(root, 'llms.txt');
     const robotsTxt = await readDistFile(root, 'robots.txt');
+    const headers = await readDistFile(root, '_headers');
+    const homeMarkdown = await readDistFile(root, 'index.md');
+    const faqMarkdown = await readDistFile(root, 'faq.md');
     const homeHtml = await readDistFile(root, 'index.html');
     const faqHtml = await readDistFile(root, 'faq/index.html');
 
@@ -181,13 +192,19 @@ describe('agentmarkup integration', () => {
 
     expect(homeHtml).toContain('"@type": "WebSite"');
     expect(homeHtml).toContain('"@type": "Organization"');
+    expect(homeHtml).toContain('type="text/markdown"');
     expect(homeHtml).not.toContain('"@type": "FAQPage"');
     expect(countJsonLdScripts(homeHtml)).toBe(2);
 
     expect(faqHtml).toContain('"@type": "WebSite"');
     expect(faqHtml).toContain('"@type": "Organization"');
     expect(faqHtml).toContain('"@type": "FAQPage"');
+    expect(faqHtml).toContain('href="/faq.md"');
     expect(countJsonLdScripts(faqHtml)).toBe(3);
+
+    expect(homeMarkdown).toContain('# Home');
+    expect(faqMarkdown).toContain('# FAQ');
+    expect(headers).toContain('Content-Signal: ai-train=yes, search=yes, ai-input=yes');
   });
 
   it('reports validation warnings during a real Vite build', async () => {
@@ -261,12 +278,109 @@ describe('agentmarkup integration', () => {
       .map((args) => args.map(String).join(' '))
       .join('\n');
 
-    expect(output).toContain("product schema missing 'sku' field");
+    expect(output).toContain("Product schema missing 'sku' field");
     expect(output).toContain('No structured data configured for this page');
     expect(output).toContain('/about');
     // Note: public/robots.txt is not copied into the bundle during programmatic
     // Vite builds, so the robots.txt conflict warning cannot be tested here.
     // That path is covered by the unit test in robots-txt.test.ts.
+  });
+
+  it('reports thin HTML warnings from final emitted files', async () => {
+    const root = await createFixture({
+      'src/main.js': 'console.log("agentmarkup thin-html fixture");\n',
+      'index.html': [
+        '<!doctype html>',
+        '<html lang="en">',
+        '  <head>',
+        '    <meta charset="UTF-8" />',
+        '    <title>Home</title>',
+        '  </head>',
+        '  <body>',
+        '    <div id="root"></div>',
+        '    <script type="module" src="/src/main.js"></script>',
+        '  </body>',
+        '</html>',
+      ].join('\n'),
+    });
+
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await buildFixture(
+      root,
+      {
+        site: 'https://example.com',
+        name: 'Example',
+      },
+      ['index.html']
+    );
+
+    const output = consoleSpy.mock.calls
+      .map((args) => args.map(String).join(' '))
+      .join('\n');
+
+    expect(output).toContain('Page body has very little indexable HTML');
+    expect(output).toContain('/:');
+  });
+
+  it('validates final emitted HTML after late writeBundle prerendering', async () => {
+    const root = await createFixture({
+      'src/main.js': 'console.log("agentmarkup late-prerender fixture");\n',
+      'index.html': [
+        '<!doctype html>',
+        '<html lang="en">',
+        '  <head>',
+        '    <meta charset="UTF-8" />',
+        '    <title>Home</title>',
+        '  </head>',
+        '  <body>',
+        '    <div id="root"></div>',
+        '    <script type="module" src="/src/main.js"></script>',
+        '  </body>',
+        '</html>',
+      ].join('\n'),
+    });
+
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await buildFixture(
+      root,
+      {
+        site: 'https://example.com',
+        name: 'Example',
+      },
+      ['index.html'],
+      [
+        {
+          name: 'late-prerender-fixture',
+          async writeBundle() {
+            const htmlPath = join(root, 'dist', 'index.html');
+            const html = await readFile(htmlPath, 'utf8');
+            await writeFile(
+              htmlPath,
+              html.replace(
+                '<div id="root"></div>',
+                [
+                  '<div id="root">',
+                  '<main>',
+                  '<h1>Home</h1>',
+                  '<p>This page was prerendered after Vite emitted the HTML shell, so the final built file contains real indexable content.</p>',
+                  '</main>',
+                  '</div>',
+                ].join('')
+              ),
+              'utf8'
+            );
+          },
+        },
+      ]
+    );
+
+    const output = consoleSpy.mock.calls
+      .map((args) => args.map(String).join(' '))
+      .join('\n');
+
+    expect(output).not.toContain('Page body has very little indexable HTML');
   });
 
   it('preserves existing llms.txt and robots.txt and skips duplicate JSON-LD types', async () => {

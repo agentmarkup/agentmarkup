@@ -34,10 +34,14 @@ export function matchesPage(actual: string, configured: string): boolean {
 }
 
 export function injectJsonLdTags(html: string, tags: string): string {
+  return injectHeadContent(html, tags);
+}
+
+export function injectHeadContent(html: string, content: string): string {
   return (
-    injectBeforePattern(html, tags, /<\/head\s*>/i) ??
-    injectBeforePattern(html, tags, /<body\b[^>]*>/i) ??
-    `${html}\n${tags}`
+    injectBeforePattern(html, content, /<\/head\s*>/i) ??
+    injectBeforePattern(html, content, /<body\b[^>]*>/i) ??
+    `${html}\n${content}`
   );
 }
 
@@ -45,18 +49,25 @@ export function hasExistingJsonLdScripts(html: string): boolean {
   return /<script\b[^>]*type=(['"])application\/ld\+json\1[^>]*>/i.test(html);
 }
 
-export function findExistingJsonLdTypes(html: string): Set<string> {
-  const types = new Set<string>();
+export function extractJsonLdScriptContents(html: string): string[] {
+  const contents: string[] = [];
   const pattern =
     /<script\b[^>]*type=(['"])application\/ld\+json\1[^>]*>([\s\S]*?)<\/script\s*>/gi;
 
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(html)) !== null) {
     const content = match[2].trim();
-    if (!content) {
-      continue;
+    if (content) {
+      contents.push(content);
     }
+  }
 
+  return contents;
+}
+
+export function findExistingJsonLdTypes(html: string): Set<string> {
+  const types = new Set<string>();
+  for (const content of extractJsonLdScriptContents(html)) {
     try {
       collectJsonLdTypes(JSON.parse(content), types);
     } catch {
@@ -79,6 +90,25 @@ export function filterJsonLdByExistingTypes(
   return schemas.filter((schema) =>
     getJsonLdTypes(schema).every((type) => !existingTypes.has(type))
   );
+}
+
+export function markdownFileNameFromHtmlFile(fileName: string): string {
+  const normalized = fileName.replace(/\\/g, '/');
+
+  if (normalized === 'index.html') {
+    return 'index.md';
+  }
+
+  if (/\/index\.html$/i.test(normalized)) {
+    return normalized.replace(/\/index\.html$/i, '.md');
+  }
+
+  return normalized.replace(/\.html$/i, '.md');
+}
+
+export function markdownHrefForPagePath(path: string): string {
+  const normalized = normalizePagePath(path);
+  return normalized === '/' ? '/index.md' : `${normalized}.md`;
 }
 
 function injectBeforePattern(

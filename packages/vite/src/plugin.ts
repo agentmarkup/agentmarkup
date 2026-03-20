@@ -1,22 +1,35 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { readdir, readFile } from 'node:fs/promises';
+import { join, resolve as resolvePath } from 'node:path';
 import type { Plugin } from 'vite';
 import {
   collectSchemasForPage,
   filterJsonLdByExistingTypes,
+  generateMarkdownAlternateLink,
+  generatePageMarkdown,
   generateLlmsTxt,
   generateJsonLdTags,
   hasExistingJsonLdScripts,
+  injectHeadContent,
   injectJsonLdTags,
+  markdownFileNameFromHtmlFile,
   normalizePagePath,
+  patchHeadersFile,
   patchRobotsTxt,
   presetToJsonLd,
   printReport,
+  validateExistingJsonLd,
+  validateHtmlContent,
   validateLlmsTxt,
   validateRobotsTxt,
   validateSchema,
 } from '@agentmarkup/core';
 import type { AgentMarkupConfig, ValidationResult } from '@agentmarkup/core';
+
+interface AssetLike {
+  type: 'asset';
+  source: string | Uint8Array;
+}
 
 export function agentmarkup(config: AgentMarkupConfig): Plugin {
   const validationResults: ValidationResult[] = [];
@@ -25,9 +38,14 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
   let llmsTxtSections = 0;
   let llmsTxtStatus: 'generated' | 'preserved' | 'none' = 'none';
   let jsonLdPages = 0;
+  let markdownPages = 0;
+  let markdownPagesStatus: 'generated' | 'preserved' | 'none' = 'none';
   let crawlersConfigured = 0;
   let robotsTxtStatus: 'patched' | 'preserved' | 'none' = 'none';
+  let contentSignalHeadersStatus: 'generated' | 'preserved' | 'none' = 'none';
   let publicDir: string | undefined;
+  let outDir: string | undefined;
+  let writesBuildOutput = true;
   let isSsrBuild = false;
 
   return {
@@ -36,6 +54,13 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
 
     configResolved(resolvedConfig) {
       publicDir = resolvedConfig.publicDir;
+      outDir =
+        resolvedConfig.root && resolvedConfig.build.outDir
+          ? resolvePath(resolvedConfig.root, resolvedConfig.build.outDir)
+          : undefined;
+      writesBuildOutput =
+        Boolean(resolvedConfig.root && resolvedConfig.build.outDir) &&
+        resolvedConfig.build.write !== false;
       isSsrBuild = Boolean(resolvedConfig.build.ssr);
     },
 
@@ -51,7 +76,23 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
 
         const pagePath = resolvePagePath(ctx.path);
         const schemas = collectSchemasForPage(config, pagePath);
-        const hasExistingJsonLd = hasExistingJsonLdScripts(html);
+        let nextHtml = html;
+        const hasExistingJsonLd = hasExistingJsonLdScripts(nextHtml);
+
+        if (!config.validation?.disabled) {
+          validationResults.push(...validateExistingJsonLd(nextHtml, pagePath));
+        }
+
+        if (
+          isFeatureEnabled(config.markdownPages) &&
+          pagePath &&
+          !hasMarkdownAlternateLink(nextHtml)
+        ) {
+          nextHtml = injectHeadContent(
+            nextHtml,
+            generateMarkdownAlternateLink(pagePath)
+          );
+        }
 
         if (schemas.length === 0) {
           if (
@@ -67,13 +108,13 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
             });
           }
 
-          return html;
+          return nextHtml;
         }
 
         const jsonLdObjects = schemas.map(presetToJsonLd);
         const injectables = config.jsonLd?.replaceExistingTypes
           ? jsonLdObjects
-          : filterJsonLdByExistingTypes(jsonLdObjects, html);
+          : filterJsonLdByExistingTypes(jsonLdObjects, nextHtml);
 
         // Validate schemas
         if (!config.validation?.disabled) {
@@ -84,13 +125,13 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
         }
 
         if (injectables.length === 0) {
-          return html;
+          return nextHtml;
         }
 
         const tags = generateJsonLdTags(injectables);
         jsonLdPages++;
 
-        return injectJsonLdTags(html, tags);
+        return injectJsonLdTags(nextHtml, tags);
       },
     },
 
@@ -223,15 +264,135 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
           });
         }
       }
+
+      if (isFeatureEnabled(config.markdownPages)) {
+        let preservedMarkdownPages = 0;
+        const htmlAssets: Array<[string, AssetLike]> = Object.entries(bundle).flatMap(
+          ([fileName, asset]) =>
+            fileName.endsWith('.html') && isAssetLike(asset)
+              ? [[fileName, asset]]
+              : []
+        );
+
+        for (const [htmlFileName, asset] of htmlAssets) {
+          const html = getAssetText(asset.source);
+          const pagePath = resolveOutputPagePath(htmlFileName);
+          const markdownFileName = markdownFileNameFromHtmlFile(htmlFileName);
+          const markdown = generatePageMarkdown({
+            html,
+            pagePath,
+            siteUrl: config.site,
+          });
+
+          if (!markdown) {
+            continue;
+          }
+
+          const existingMarkdownAsset = getBundleAsset(bundle, markdownFileName);
+          const existingMarkdown =
+            existingMarkdownAsset ? getAssetText(existingMarkdownAsset.source) : null;
+
+          let publicMarkdown: string | null = null;
+          if (!existingMarkdown && publicDir) {
+            const publicMarkdownPath = join(publicDir, markdownFileName);
+            if (existsSync(publicMarkdownPath)) {
+              publicMarkdown = readFileSync(publicMarkdownPath, 'utf8');
+            }
+          }
+
+          const preservedMarkdown = existingMarkdown ?? publicMarkdown;
+          if (preservedMarkdown && !config.markdownPages?.replaceExisting) {
+            preservedMarkdownPages += 1;
+            if (!existingMarkdownAsset) {
+              this.emitFile({
+                type: 'asset',
+                fileName: markdownFileName,
+                source: preservedMarkdown,
+              });
+            }
+            continue;
+          }
+
+          if (existingMarkdownAsset) {
+            delete bundle[markdownFileName];
+          }
+
+          this.emitFile({
+            type: 'asset',
+            fileName: markdownFileName,
+            source: markdown,
+          });
+          markdownPages += 1;
+        }
+
+        markdownPagesStatus =
+          markdownPages > 0
+            ? 'generated'
+            : preservedMarkdownPages > 0
+              ? 'preserved'
+              : 'none';
+      }
+
+      if (isFeatureEnabled(config.contentSignalHeaders)) {
+        const headersFileName = '_headers';
+        const existingHeadersAsset = getBundleAsset(bundle, headersFileName);
+        const existingHeaders = existingHeadersAsset
+          ? getAssetText(existingHeadersAsset.source)
+          : null;
+
+        let publicHeaders: string | null = null;
+        if (!existingHeaders && publicDir) {
+          const publicHeadersPath = join(publicDir, headersFileName);
+          if (existsSync(publicHeadersPath)) {
+            publicHeaders = readFileSync(publicHeadersPath, 'utf8');
+          }
+        }
+
+        const existingHeadersText = existingHeaders ?? publicHeaders;
+        const patchedHeaders = patchHeadersFile(
+          existingHeadersText,
+          config.contentSignalHeaders
+        );
+        const preserved =
+          existingHeadersText !== null && patchedHeaders === existingHeadersText;
+
+        contentSignalHeadersStatus = preserved ? 'preserved' : 'generated';
+
+        if (preserved) {
+          if (!existingHeadersAsset && existingHeadersText) {
+            this.emitFile({
+              type: 'asset',
+              fileName: headersFileName,
+              source: existingHeadersText,
+            });
+          }
+        } else {
+          if (existingHeadersAsset) {
+            delete bundle[headersFileName];
+          }
+
+          this.emitFile({
+            type: 'asset',
+            fileName: headersFileName,
+            source: patchedHeaders,
+          });
+        }
+      }
     },
 
     /**
      * Print validation report after build completes.
      */
-    closeBundle() {
+    async closeBundle() {
       if (isSsrBuild) {
         return;
       }
+
+      const finalHtmlValidationResults = config.validation?.disabled
+        ? []
+        : await collectFinalHtmlValidationResults(
+            writesBuildOutput ? outDir : undefined
+          );
 
       printReport({
         label: '@agentmarkup/vite',
@@ -239,9 +400,12 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
         llmsTxtSections,
         llmsTxtStatus,
         jsonLdPages,
+        markdownPages,
+        markdownPagesStatus,
         crawlersConfigured,
         robotsTxtStatus,
-        validationResults,
+        contentSignalHeadersStatus,
+        validationResults: [...validationResults, ...finalHtmlValidationResults],
       });
     },
   };
@@ -253,4 +417,95 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
 function resolvePagePath(servedPath: string | undefined): string | undefined {
   if (!servedPath) return undefined;
   return normalizePagePath(servedPath);
+}
+
+function resolveOutputPagePath(fileName: string): string {
+  return normalizePagePath(fileName === 'index.html' ? '/' : `/${fileName}`);
+}
+
+function getAssetText(source: string | Uint8Array): string {
+  return typeof source === 'string'
+    ? source
+    : new TextDecoder().decode(source);
+}
+
+function getBundleAsset(
+  bundle: Record<string, unknown>,
+  fileName: string
+): AssetLike | null {
+  const entry = bundle[fileName];
+  if (!isAssetLike(entry)) {
+    return null;
+  }
+
+  return entry;
+}
+
+function isAssetLike(value: unknown): value is AssetLike {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  return (
+    'type' in value &&
+    value.type === 'asset' &&
+    'source' in value
+  );
+}
+
+function isFeatureEnabled(
+  config: { enabled?: boolean } | undefined
+): boolean {
+  return Boolean(config && config.enabled !== false);
+}
+
+function hasMarkdownAlternateLink(html: string): boolean {
+  return /<link\b[^>]*rel=(['"])alternate\1[^>]*type=(['"])text\/markdown\2/i.test(
+    html
+  );
+}
+
+async function collectFinalHtmlValidationResults(
+  outputDir: string | undefined
+): Promise<ValidationResult[]> {
+  if (!outputDir || !existsSync(outputDir)) {
+    return [];
+  }
+
+  const htmlFiles = await findHtmlFiles(outputDir);
+  const results: ValidationResult[] = [];
+
+  for (const htmlFile of htmlFiles) {
+    const html = await readFile(htmlFile, 'utf8');
+    const relativeHtmlFile = htmlFile
+      .slice(outputDir.length)
+      .replace(/^[/\\]+/, '')
+      .replace(/\\/g, '/');
+
+    results.push(
+      ...validateHtmlContent(html, resolveOutputPagePath(relativeHtmlFile))
+    );
+  }
+
+  return results;
+}
+
+async function findHtmlFiles(dir: string): Promise<string[]> {
+  const entries = await readdir(dir, { withFileTypes: true });
+  const htmlFiles: string[] = [];
+
+  for (const entry of entries) {
+    const entryPath = join(dir, entry.name);
+
+    if (entry.isDirectory()) {
+      htmlFiles.push(...(await findHtmlFiles(entryPath)));
+      continue;
+    }
+
+    if (entry.isFile() && entry.name.endsWith('.html')) {
+      htmlFiles.push(entryPath);
+    }
+  }
+
+  return htmlFiles;
 }

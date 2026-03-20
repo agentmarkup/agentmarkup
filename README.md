@@ -1,6 +1,6 @@
 # agentmarkup
 
-Build-time `llms.txt`, JSON-LD, AI crawler controls, and validation for Vite and Astro websites.
+Build-time `llms.txt`, JSON-LD, markdown mirrors, AI crawler controls, and validation for Vite and Astro websites.
 
 ## What This Repo Contains
 
@@ -42,6 +42,12 @@ export default defineConfig({
           },
         ],
       },
+      markdownPages: {
+        enabled: true,
+      },
+      contentSignalHeaders: {
+        enabled: true,
+      },
       globalSchemas: [
         {
           preset: 'webSite',
@@ -62,7 +68,10 @@ On build, the adapters can:
 
 - emit `llms.txt`
 - inject JSON-LD into generated HTML
+- validate JSON-LD already present in page HTML
+- emit page-level `.md` mirrors from final HTML output
 - patch or create `robots.txt` with AI crawler directives
+- patch or create `_headers` with `Content-Signal`
 - report deterministic validation warnings and errors in the terminal
 
 By default, agentmarkup coexists with existing machine-readable assets. If a site already has a curated `llms.txt`, matching crawler rules, or hand-authored JSON-LD for a schema type, those are preserved unless you explicitly opt into replacement.
@@ -76,8 +85,11 @@ If your site already has a custom prerender or post-build step, `@agentmarkup/co
 - Vite and Astro adapters
 - `llms.txt` generation
 - JSON-LD injection
+- existing JSON-LD validation
+- markdown page generation
 - schema presets for website and ecommerce basics
 - AI crawler `robots.txt` management
+- `Content-Signal` header generation
 - deterministic validation checks
 - reusable generation and validation helpers for custom prerender pipelines
 

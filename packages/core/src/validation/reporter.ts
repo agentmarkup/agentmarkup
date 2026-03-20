@@ -13,8 +13,11 @@ export function printReport(opts: {
   llmsTxtSections: number;
   llmsTxtStatus?: 'generated' | 'preserved' | 'none';
   jsonLdPages: number;
+  markdownPages?: number;
+  markdownPagesStatus?: 'generated' | 'preserved' | 'none';
   crawlersConfigured: number;
   robotsTxtStatus?: 'patched' | 'preserved' | 'none';
+  contentSignalHeadersStatus?: 'generated' | 'preserved' | 'none';
   validationResults: ValidationResult[];
 }): void {
   const {
@@ -23,8 +26,11 @@ export function printReport(opts: {
     llmsTxtSections,
     llmsTxtStatus = llmsTxtEntries > 0 ? 'generated' : 'none',
     jsonLdPages,
+    markdownPages = 0,
+    markdownPagesStatus = markdownPages > 0 ? 'generated' : 'none',
     crawlersConfigured,
     robotsTxtStatus = crawlersConfigured > 0 ? 'patched' : 'none',
+    contentSignalHeadersStatus = 'none',
     validationResults,
   } = opts;
 
@@ -44,6 +50,12 @@ export function printReport(opts: {
     console.log(`  ${GREEN}✓${RESET} JSON-LD injected into ${jsonLdPages} pages`);
   }
 
+  if (markdownPagesStatus === 'generated' && markdownPages > 0) {
+    console.log(`  ${GREEN}✓${RESET} Markdown pages generated (${markdownPages} files)`);
+  } else if (markdownPagesStatus === 'preserved') {
+    console.log(`  ${GREEN}✓${RESET} Markdown pages preserved (existing files retained)`);
+  }
+
   if (robotsTxtStatus === 'patched' && crawlersConfigured > 0) {
     console.log(
       `  ${GREEN}✓${RESET} robots.txt patched (${crawlersConfigured} AI crawlers configured)`
@@ -52,6 +64,12 @@ export function printReport(opts: {
     console.log(
       `  ${GREEN}✓${RESET} robots.txt left unchanged (${crawlersConfigured} AI crawlers already configured)`
     );
+  }
+
+  if (contentSignalHeadersStatus === 'generated') {
+    console.log(`  ${GREEN}✓${RESET} _headers generated with Content-Signal`);
+  } else if (contentSignalHeadersStatus === 'preserved') {
+    console.log(`  ${GREEN}✓${RESET} _headers preserved (Content-Signal already configured)`);
   }
 
   if (validationResults.length === 0) {

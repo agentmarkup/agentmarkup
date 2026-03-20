@@ -110,6 +110,22 @@ export interface LlmsTxtConfig {
   replaceExisting?: boolean;
 }
 
+export interface MarkdownPagesConfig {
+  enabled?: boolean;
+  replaceExisting?: boolean;
+}
+
+export type ContentSignalDirective = 'yes' | 'no';
+
+export interface ContentSignalHeadersConfig {
+  enabled?: boolean;
+  replaceExisting?: boolean;
+  path?: string;
+  aiTrain?: ContentSignalDirective;
+  search?: ContentSignalDirective;
+  aiInput?: ContentSignalDirective;
+}
+
 export type CrawlerDirective = 'allow' | 'disallow';
 
 export interface AiCrawlersConfig {
@@ -132,6 +148,8 @@ export interface AgentMarkupConfig {
   name: string;
   description?: string;
   llmsTxt?: LlmsTxtConfig;
+  markdownPages?: MarkdownPagesConfig;
+  contentSignalHeaders?: ContentSignalHeadersConfig;
   jsonLd?: {
     replaceExistingTypes?: boolean;
   };
