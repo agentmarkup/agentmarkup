@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      (function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t)})()
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Blog - agentmarkup</title>
+    <meta name="description" content="Technical writing about machine-readable websites, AI discoverability, structured data, llms.txt, and generative engine optimization." />
+    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
+    <link rel="canonical" href="https://agentmarkup.dev/blog/" />
+    <meta property="og:title" content="Blog - agentmarkup" />
+    <meta property="og:description" content="Technical writing about machine-readable websites, AI discoverability, and structured data." />
+    <meta property="og:url" content="https://agentmarkup.dev/blog/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="agentmarkup" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM-readable site summary" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/entries/blog-index.tsx"></script>
+  </body>
+</html>

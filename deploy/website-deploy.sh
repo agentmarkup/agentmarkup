@@ -12,4 +12,4 @@ cd "$(dirname "$0")/.."
 
 pnpm install --frozen-lockfile
 pnpm -C website build
-npx wrangler pages deploy "website/dist" --project-name="$PROJECT_NAME"
+pnpm exec wrangler pages deploy "website/dist" --project-name="$PROJECT_NAME"

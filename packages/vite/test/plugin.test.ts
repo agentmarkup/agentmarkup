@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { IndexHtmlTransformContext } from 'vite';
+import type { IndexHtmlTransformContext, ResolvedConfig } from 'vite';
 import { agentmarkup } from '../src/plugin.js';
 
 const HTML = '<html><head></head><body></body></html>';
@@ -145,5 +145,55 @@ describe('agentmarkup plugin', () => {
 
     expect(output).toContain('/about');
     expect(output).toContain('No structured data configured for this page');
+  });
+
+  it('skips HTML injection, asset emission, and reporting during SSR builds', async () => {
+    const plugin = agentmarkup({
+      site: 'https://example.com',
+      name: 'Example',
+      globalSchemas: [
+        {
+          preset: 'webSite',
+          name: 'Example',
+          url: 'https://example.com',
+        },
+      ],
+      llmsTxt: {
+        sections: [
+          {
+            title: 'Pages',
+            entries: [{ title: 'Home', url: '/' }],
+          },
+        ],
+      },
+      aiCrawlers: {
+        GPTBot: 'allow',
+      },
+    });
+
+    plugin.configResolved?.({
+      build: { ssr: true },
+      publicDir: '/tmp',
+    } as ResolvedConfig);
+
+    const result = await getTransformHandler(plugin)(HTML, {
+      path: '/',
+      filename: '/virtual/build/index.html',
+    } as IndexHtmlTransformContext);
+
+    expect(result).toBe(HTML);
+
+    const emitFile = vi.fn();
+    plugin.generateBundle?.call(
+      { emitFile } as unknown as Parameters<NonNullable<typeof plugin.generateBundle>>[0],
+      {} as Parameters<NonNullable<typeof plugin.generateBundle>>[0],
+      {}
+    );
+
+    expect(emitFile).not.toHaveBeenCalled();
+
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    plugin.closeBundle?.call(plugin);
+    expect(consoleSpy).not.toHaveBeenCalled();
   });
 });

@@ -6,12 +6,58 @@
   padding: 0;
 }
 
+:root {
+  --bg: #0a0a0a;
+  --text: #ededed;
+  --text-muted: #888;
+  --text-dim: #555;
+  --text-body: #aaa;
+  --text-doc: #bbb;
+  --text-doc-code: #ddd;
+  --border: #222;
+  --surface: #111;
+  --surface-code: #1a1a1a;
+  --link: #ccc;
+  --link-hover: #fff;
+  --line-numbers: #444;
+  --copy-btn: #666;
+  --copy-btn-border: #333;
+  --copy-btn-hover: #ccc;
+  --copy-btn-border-hover: #555;
+  --table-header: #999;
+  --credit: #777;
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg: #fafafa;
+  --text: #111;
+  --text-muted: #666;
+  --text-dim: #888;
+  --text-body: #555;
+  --text-doc: #444;
+  --text-doc-code: #333;
+  --border: #ddd;
+  --surface: #f0f0f0;
+  --surface-code: #e8e8e8;
+  --link: #444;
+  --link-hover: #000;
+  --line-numbers: #aaa;
+  --copy-btn: #999;
+  --copy-btn-border: #ccc;
+  --copy-btn-hover: #333;
+  --copy-btn-border-hover: #999;
+  --table-header: #666;
+  --credit: #888;
+  color-scheme: light;
+}
+
 body {
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
     Ubuntu, Cantarell, sans-serif;
-  background: #0a0a0a;
-  color: #ededed;
+  background: var(--bg);
+  color: var(--text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

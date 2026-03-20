@@ -56,6 +56,28 @@ describe('patchRobotsTxt', () => {
     expect(result).toContain('ClaudeBot');
     expect(result).not.toContain('GPTBot');
   });
+
+  it('leaves existing explicit crawler rules unchanged when they already match', () => {
+    const existing = [
+      'User-agent: *',
+      'Allow: /',
+      '',
+      'User-agent: GPTBot',
+      'Allow: /',
+      '',
+      'User-agent: ClaudeBot',
+      'Allow: /',
+      '',
+    ].join('\n');
+
+    const result = patchRobotsTxt(existing, {
+      GPTBot: 'allow',
+      ClaudeBot: 'allow',
+    });
+
+    expect(result).toBe(existing);
+    expect(result).not.toContain('# BEGIN agentmarkup AI crawlers');
+  });
 });
 
 describe('findBlockedCrawlers', () => {

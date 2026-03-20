@@ -1,6 +1,6 @@
 {
   "name": "@agentmarkup/vite",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Build-time llms.txt, JSON-LD, and AI crawler controls for Vite",
   "type": "module",
   "license": "MIT",
@@ -37,12 +37,19 @@
     "dist"
   ],
   "scripts": {
+    "prebuild": "pnpm -C ../core build",
     "build": "tsup",
+    "predev": "pnpm -C ../core build",
     "dev": "tsup --watch",
+    "pretest": "pnpm -C ../core build",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint src/",
+    "lint": "eslint src/ test/",
+    "pretypecheck": "pnpm -C ../core build",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@agentmarkup/core": "workspace:*"
   },
   "peerDependencies": {
     "vite": ">=5.0.0"

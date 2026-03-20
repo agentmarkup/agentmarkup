@@ -1,24 +1,34 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Plugin } from 'vite';
-import type { AgentMarkupConfig, ValidationResult } from './types.js';
-import { generateLlmsTxt } from './generators/llms-txt.js';
-import { generateJsonLdTags } from './generators/json-ld.js';
-import { patchRobotsTxt } from './generators/robots-txt.js';
-import { presetToJsonLd } from './presets/resolve.js';
-import { validateSchema } from './validation/schema.js';
-import { validateRobotsTxt } from './validation/robots.js';
-import { validateLlmsTxt } from './validation/llms-txt.js';
-import { printReport } from './validation/reporter.js';
+import {
+  collectSchemasForPage,
+  filterJsonLdByExistingTypes,
+  generateLlmsTxt,
+  generateJsonLdTags,
+  hasExistingJsonLdScripts,
+  injectJsonLdTags,
+  normalizePagePath,
+  patchRobotsTxt,
+  presetToJsonLd,
+  printReport,
+  validateLlmsTxt,
+  validateRobotsTxt,
+  validateSchema,
+} from '@agentmarkup/core';
+import type { AgentMarkupConfig, ValidationResult } from '@agentmarkup/core';
 
 export function agentmarkup(config: AgentMarkupConfig): Plugin {
   const validationResults: ValidationResult[] = [];
   let llmsTxtContent: string | null = null;
   let llmsTxtEntries = 0;
   let llmsTxtSections = 0;
+  let llmsTxtStatus: 'generated' | 'preserved' | 'none' = 'none';
   let jsonLdPages = 0;
   let crawlersConfigured = 0;
+  let robotsTxtStatus: 'patched' | 'preserved' | 'none' = 'none';
   let publicDir: string | undefined;
+  let isSsrBuild = false;
 
   return {
     name: 'agentmarkup',
@@ -26,6 +36,7 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
 
     configResolved(resolvedConfig) {
       publicDir = resolvedConfig.publicDir;
+      isSsrBuild = Boolean(resolvedConfig.build.ssr);
     },
 
     /**
@@ -34,14 +45,20 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
     transformIndexHtml: {
       order: 'post',
       handler(html, ctx) {
+        if (isSsrBuild) {
+          return html;
+        }
+
         const pagePath = resolvePagePath(ctx.path);
         const schemas = collectSchemasForPage(config, pagePath);
+        const hasExistingJsonLd = hasExistingJsonLdScripts(html);
 
         if (schemas.length === 0) {
           if (
             pagePath &&
             config.validation?.warnOnMissingSchema &&
-            !config.validation.disabled
+            !config.validation.disabled &&
+            !hasExistingJsonLd
           ) {
             validationResults.push({
               severity: 'warning',
@@ -54,6 +71,9 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
         }
 
         const jsonLdObjects = schemas.map(presetToJsonLd);
+        const injectables = config.jsonLd?.replaceExistingTypes
+          ? jsonLdObjects
+          : filterJsonLdByExistingTypes(jsonLdObjects, html);
 
         // Validate schemas
         if (!config.validation?.disabled) {
@@ -63,7 +83,11 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
           }
         }
 
-        const tags = generateJsonLdTags(jsonLdObjects);
+        if (injectables.length === 0) {
+          return html;
+        }
+
+        const tags = generateJsonLdTags(injectables);
         jsonLdPages++;
 
         return injectJsonLdTags(html, tags);
@@ -74,24 +98,70 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
      * Generate llms.txt and patch robots.txt in the build output.
      */
     generateBundle(_, bundle) {
+      if (isSsrBuild) {
+        return;
+      }
+
       // Generate llms.txt
       llmsTxtContent = generateLlmsTxt(config);
       if (llmsTxtContent) {
-        llmsTxtSections = config.llmsTxt?.sections.length ?? 0;
-        llmsTxtEntries = config.llmsTxt?.sections.reduce(
-          (sum, s) => sum + s.entries.length,
-          0
-        ) ?? 0;
+        let existingLlms: string | null = null;
+        let existingLlmsFromBundle = false;
 
-        this.emitFile({
-          type: 'asset',
-          fileName: 'llms.txt',
-          source: llmsTxtContent,
-        });
+        for (const [fileName, asset] of Object.entries(bundle)) {
+          if (fileName === 'llms.txt' && asset.type === 'asset') {
+            existingLlms =
+              typeof asset.source === 'string'
+                ? asset.source
+                : new TextDecoder().decode(asset.source);
+            existingLlmsFromBundle = true;
+            break;
+          }
+        }
 
-        // Validate llms.txt
-        if (!config.validation?.disabled) {
-          validationResults.push(...validateLlmsTxt(llmsTxtContent));
+        if (!existingLlms && publicDir) {
+          const publicLlmsPath = join(publicDir, 'llms.txt');
+          if (existsSync(publicLlmsPath)) {
+            existingLlms = readFileSync(publicLlmsPath, 'utf8');
+          }
+        }
+
+        if (existingLlms && !config.llmsTxt?.replaceExisting) {
+          llmsTxtStatus = 'preserved';
+
+          if (!existingLlmsFromBundle) {
+            this.emitFile({
+              type: 'asset',
+              fileName: 'llms.txt',
+              source: existingLlms,
+            });
+          }
+
+          if (!config.validation?.disabled) {
+            validationResults.push(...validateLlmsTxt(existingLlms));
+          }
+        } else {
+          llmsTxtStatus = 'generated';
+          llmsTxtSections = config.llmsTxt?.sections.length ?? 0;
+          llmsTxtEntries = config.llmsTxt?.sections.reduce(
+            (sum, section) => sum + section.entries.length,
+            0
+          ) ?? 0;
+
+          if (existingLlmsFromBundle) {
+            delete bundle['llms.txt'];
+          }
+
+          this.emitFile({
+            type: 'asset',
+            fileName: 'llms.txt',
+            source: llmsTxtContent,
+          });
+
+          // Validate llms.txt
+          if (!config.validation?.disabled) {
+            validationResults.push(...validateLlmsTxt(llmsTxtContent));
+          }
         }
       }
 
@@ -104,15 +174,14 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
 
         // Check for existing robots.txt in bundle
         let existingRobots: string | null = null;
+        let existingRobotsFromBundle = false;
         for (const [fileName, asset] of Object.entries(bundle)) {
           if (fileName === 'robots.txt' && asset.type === 'asset') {
             existingRobots =
               typeof asset.source === 'string'
                 ? asset.source
                 : new TextDecoder().decode(asset.source);
-
-            // Remove old and emit patched
-            delete bundle[fileName];
+            existingRobotsFromBundle = true;
             break;
           }
         }
@@ -131,11 +200,28 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
         }
 
         const patched = patchRobotsTxt(existingRobots, config.aiCrawlers);
-        this.emitFile({
-          type: 'asset',
-          fileName: 'robots.txt',
-          source: patched,
-        });
+        const preserved = existingRobots !== null && patched === existingRobots;
+        robotsTxtStatus = preserved ? 'preserved' : 'patched';
+
+        if (preserved) {
+          if (!existingRobotsFromBundle && existingRobots) {
+            this.emitFile({
+              type: 'asset',
+              fileName: 'robots.txt',
+              source: existingRobots,
+            });
+          }
+        } else {
+          if (existingRobotsFromBundle) {
+            delete bundle['robots.txt'];
+          }
+
+          this.emitFile({
+            type: 'asset',
+            fileName: 'robots.txt',
+            source: patched,
+          });
+        }
       }
     },
 
@@ -143,35 +229,22 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
      * Print validation report after build completes.
      */
     closeBundle() {
+      if (isSsrBuild) {
+        return;
+      }
+
       printReport({
+        label: '@agentmarkup/vite',
         llmsTxtEntries,
         llmsTxtSections,
+        llmsTxtStatus,
         jsonLdPages,
         crawlersConfigured,
+        robotsTxtStatus,
         validationResults,
       });
     },
   };
-}
-
-/**
- * Collect all schemas that apply to a given HTML page.
- */
-function collectSchemasForPage(
-  config: AgentMarkupConfig,
-  pagePath: string | undefined
-) {
-  const schemas = [...(config.globalSchemas ?? [])];
-
-  if (config.pages && pagePath) {
-    for (const page of config.pages) {
-      if (matchesPage(pagePath, page.path)) {
-        schemas.push(...page.schemas);
-      }
-    }
-  }
-
-  return schemas;
 }
 
 /**
@@ -180,45 +253,4 @@ function collectSchemasForPage(
 function resolvePagePath(servedPath: string | undefined): string | undefined {
   if (!servedPath) return undefined;
   return normalizePagePath(servedPath);
-}
-
-function normalizePagePath(path: string): string {
-  const cleanPath = path.split(/[?#]/, 1)[0];
-  const withoutIndex = cleanPath.replace(/\/index\.html$/i, '/');
-  const withoutHtml = withoutIndex.replace(/\.html$/i, '');
-
-  if (withoutHtml === '' || withoutHtml === '/') {
-    return '/';
-  }
-
-  return withoutHtml.endsWith('/') ? withoutHtml.slice(0, -1) : withoutHtml;
-}
-
-/**
- * Match a page path against a configured path.
- */
-function matchesPage(actual: string, configured: string): boolean {
-  return normalizePagePath(actual) === normalizePagePath(configured);
-}
-
-function injectJsonLdTags(html: string, tags: string): string {
-  return (
-    injectBeforePattern(html, tags, /<\/head\s*>/i) ??
-    injectBeforePattern(html, tags, /<body\b[^>]*>/i) ??
-    `${html}\n${tags}`
-  );
-}
-
-function injectBeforePattern(
-  html: string,
-  content: string,
-  pattern: RegExp
-): string | null {
-  const match = pattern.exec(html);
-
-  if (!match || match.index === undefined) {
-    return null;
-  }
-
-  return `${html.slice(0, match.index)}${content}\n${html.slice(match.index)}`;
 }

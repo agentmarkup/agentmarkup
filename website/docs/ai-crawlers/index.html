@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      (function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t)})()
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>How to manage AI crawlers in your robots.txt - agentmarkup</title>
+    <meta name="description" content="Allow or block AI crawlers like GPTBot, ClaudeBot, PerplexityBot, and Google-Extended in your robots.txt. agentmarkup patches your robots.txt at build time without breaking existing rules." />
+    <meta name="keywords" content="robots.txt, ai crawler, gptbot, claudebot, perplexitybot, google-extended, ccbot, vite plugin, build-time, agentmarkup" />
+    <meta name="author" content="Sebastian Cochinescu" />
+    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
+    <link rel="canonical" href="https://agentmarkup.dev/docs/ai-crawlers/" />
+    <meta property="og:title" content="How to manage AI crawlers in your robots.txt - agentmarkup" />
+    <meta property="og:description" content="Allow or block AI crawlers like GPTBot and ClaudeBot with idempotent robots.txt patching at build time." />
+    <meta property="og:url" content="https://agentmarkup.dev/docs/ai-crawlers/" />
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="agentmarkup" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM-readable site summary" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/entries/ai-crawlers.tsx"></script>
+  </body>
+</html>

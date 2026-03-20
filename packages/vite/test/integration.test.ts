@@ -268,4 +268,81 @@ describe('agentmarkup integration', () => {
     // Vite builds, so the robots.txt conflict warning cannot be tested here.
     // That path is covered by the unit test in robots-txt.test.ts.
   });
+
+  it('preserves existing llms.txt and robots.txt and skips duplicate JSON-LD types', async () => {
+    const existingLlms = '# Existing\n\n## Docs\n\n- [Guide](https://example.com/guide)\n';
+    const existingRobots = [
+      'User-agent: *',
+      'Allow: /',
+      '',
+      'User-agent: GPTBot',
+      'Allow: /',
+      '',
+      'User-agent: ClaudeBot',
+      'Allow: /',
+      '',
+    ].join('\n');
+
+    const root = await createFixture({
+      'src/main.js': 'console.log("agentmarkup preserve fixture");\n',
+      'public/llms.txt': existingLlms,
+      'public/robots.txt': existingRobots,
+      'index.html': [
+        '<!doctype html>',
+        '<html lang="en">',
+        '  <head>',
+        '    <meta charset="UTF-8" />',
+        '    <title>Home</title>',
+        '    <script type="application/ld+json">',
+        JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'WebSite',
+          name: 'Example',
+          url: 'https://example.com',
+        }),
+        '    </script>',
+        '  </head>',
+        '  <body>',
+        '    <script type="module" src="/src/main.js"></script>',
+        '  </body>',
+        '</html>',
+      ].join('\n'),
+    });
+
+    await buildFixture(
+      root,
+      {
+        site: 'https://example.com',
+        name: 'Example',
+        llmsTxt: {
+          sections: [
+            {
+              title: 'Generated',
+              entries: [{ title: 'Home', url: '/', description: 'Generated content' }],
+            },
+          ],
+        },
+        globalSchemas: [
+          {
+            preset: 'webSite',
+            name: 'Example',
+            url: 'https://example.com',
+          },
+        ],
+        aiCrawlers: {
+          GPTBot: 'allow',
+          ClaudeBot: 'allow',
+        },
+      },
+      ['index.html']
+    );
+
+    const llmsTxt = await readDistFile(root, 'llms.txt');
+    const robotsTxt = await readDistFile(root, 'robots.txt');
+    const homeHtml = await readDistFile(root, 'index.html');
+
+    expect(llmsTxt).toBe(existingLlms);
+    expect(robotsTxt).toBe(existingRobots);
+    expect(countJsonLdScripts(homeHtml)).toBe(1);
+  });
 });

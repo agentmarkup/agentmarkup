@@ -14,7 +14,9 @@ pnpm build
 
 ## Repo Layout
 
-- `packages/vite` contains the publishable `@agentmarkup/vite` package.
+- `packages/core` contains the framework-agnostic engine.
+- `packages/vite` contains the publishable `@agentmarkup/vite` adapter.
+- `packages/astro` contains the publishable `@agentmarkup/astro` adapter.
 - `website` is the dogfooding site and consumes `@agentmarkup/vite` through the workspace package boundary.
 - `examples/vite-react` is the minimal consumer example.
 
@@ -34,5 +36,6 @@ pnpm build
 
 - The website deploy is manual only.
 - Build and publish with `./deploy/website-deploy.sh [cloudflare-project-name]`.
-- The deploy script runs `pnpm install --frozen-lockfile`, builds the workspace package plus website, and uploads `website/dist` to Cloudflare Pages with Wrangler.
+- The deploy script runs `pnpm install --frozen-lockfile`, builds the workspace package plus website, and uploads `website/dist` to Cloudflare Pages with the workspace-pinned `wrangler` CLI.
 - `CLOUDFLARE_ACCOUNT_ID` must be set in the shell before running the deploy script.
+- Cloudflare Pages security headers live in `website/public/_headers`; keep them aligned with any inline scripts or third-party origins used by the site.

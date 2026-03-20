@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predev": "pnpm -C ../../packages/vite build",
     "dev": "vite",
+    "prebuild": "pnpm -C ../../packages/vite build",
     "build": "vite build",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",

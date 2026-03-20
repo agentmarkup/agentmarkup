@@ -2,16 +2,63 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script>
+      (function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t)})()
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>agentmarkup - machine-readable metadata for Vite and Astro websites</title>
     <meta
       name="description"
-      content="Vite plugin that generates llms.txt, injects schema.org JSON-LD structured data, manages AI crawler robots.txt rules, and validates everything at build time."
+      content="Build-time llms.txt, JSON-LD, AI crawler controls, and validation for Vite and Astro websites."
     />
-    <title>agentmarkup - Vite plugin for llms.txt, JSON-LD, and AI crawler controls</title>
+    <meta name="keywords" content="vite plugin, astro integration, llms.txt, json-ld, structured data, schema.org, robots.txt, ai crawler, machine-readable, seo, geo, build-time validation, ai agents, llm" />
+    <meta name="author" content="Sebastian Cochinescu" />
+    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
+
+    <link rel="canonical" href="https://agentmarkup.dev/" />
+    <link rel="alternate" hreflang="en" href="https://agentmarkup.dev/" />
+    <link rel="alternate" hreflang="x-default" href="https://agentmarkup.dev/" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="agentmarkup - machine-readable metadata for Vite and Astro websites" />
+    <meta property="og:description" content="Build-time llms.txt, JSON-LD, AI crawler controls, and validation for Vite and Astro websites." />
+    <meta property="og:url" content="https://agentmarkup.dev/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="agentmarkup" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="agentmarkup - machine-readable metadata for Vite and Astro websites" />
+    <meta name="twitter:description" content="Build-time llms.txt, JSON-LD, AI crawler controls, and validation for Vite and Astro websites." />
+
+    <!-- LLM discovery -->
+    <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM-readable site summary" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <noscript>
+      <div style="max-width:800px;margin:0 auto;padding:4rem 2rem;font-family:system-ui,sans-serif;color:#ededed;background:#0a0a0a;">
+        <h1>agentmarkup - Vite plugin for machine-readable websites</h1>
+        <p>Generate llms.txt, inject schema.org JSON-LD structured data, manage AI crawler robots.txt rules, and validate everything at build time. Zero runtime cost.</p>
+        <p><strong>Install:</strong> <code>pnpm add -D @agentmarkup/vite</code></p>
+        <h2>Features</h2>
+        <ul>
+          <li><strong>llms.txt generation</strong> - Auto-generate an llms.txt file following the llmstxt.org spec.</li>
+          <li><strong>JSON-LD structured data injection</strong> - Inject schema.org JSON-LD into every page with XSS-safe serialization. 6 built-in presets.</li>
+          <li><strong>AI crawler robots.txt management</strong> - Allow or block GPTBot, ClaudeBot, PerplexityBot, Google-Extended, CCBot.</li>
+          <li><strong>Build-time validation</strong> - Catch missing fields, incomplete schemas, and crawler conflicts before you deploy.</li>
+        </ul>
+        <h2>Schema.org presets</h2>
+        <p>webSite, organization, article, faqPage, product, offer</p>
+        <p><a href="https://github.com/agentmarkup/agentmarkup">GitHub</a> | <a href="https://www.npmjs.com/package/@agentmarkup/vite">npm</a></p>
+      </div>
+    </noscript>
   </body>
 </html>

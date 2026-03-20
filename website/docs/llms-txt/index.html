@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      (function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t)})()
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>How to generate llms.txt for your website - agentmarkup</title>
+    <meta name="description" content="Learn how to auto-generate a spec-compliant llms.txt file at build time using the agentmarkup Vite plugin. Follow the llmstxt.org standard to make your site discoverable by LLMs and AI agents." />
+    <meta name="keywords" content="llms.txt, llmstxt.org, vite plugin, ai discovery, llm, machine-readable, build-time, agentmarkup" />
+    <meta name="author" content="Sebastian Cochinescu" />
+    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
+    <link rel="canonical" href="https://agentmarkup.dev/docs/llms-txt/" />
+    <meta property="og:title" content="How to generate llms.txt for your website - agentmarkup" />
+    <meta property="og:description" content="Auto-generate a spec-compliant llms.txt file at build time to make your site discoverable by LLMs and AI agents." />
+    <meta property="og:url" content="https://agentmarkup.dev/docs/llms-txt/" />
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="agentmarkup" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM-readable site summary" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/entries/llms-txt.tsx"></script>
+  </body>
+</html>

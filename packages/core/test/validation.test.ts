@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { validateSchema } from '../src/validation/schema.js';
 import { validateLlmsTxt } from '../src/validation/llms-txt.js';
+import type { SchemaConfig } from '../src/types.js';
 
 describe('validateSchema', () => {
   it('reports missing required fields', () => {
     const results = validateSchema(
-      { preset: 'product', name: '', url: 'https://example.com' } as any,
+      { preset: 'product', name: '', url: 'https://example.com' },
       '/products/test'
     );
 
@@ -34,7 +35,7 @@ describe('validateSchema', () => {
   });
 
   it('reports missing @type on custom schemas', () => {
-    const results = validateSchema({ name: 'Test' } as any);
+    const results = validateSchema({ name: 'Test' } as unknown as SchemaConfig);
     expect(results.some((r) => r.message.includes('@type'))).toBe(true);
   });
 
