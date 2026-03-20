@@ -388,7 +388,7 @@ function Checker() {
 
       container.innerHTML = '';
     };
-  }, [handleTurnstileRenderFailure, handleTurnstileToken, turnstileChallenge]);
+  }, [turnstileChallenge]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

@@ -606,7 +606,7 @@ function assessMarkdownBody(markdown: string): { ok: boolean; detail: string } {
   const text = markdown
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/`[^`]*`/g, ' ')
-    .replace(/[>#*_()[\]\-]/g, ' ')
+    .replace(/[>#*_()[\]-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 

@@ -9,14 +9,9 @@ function getPreferredTheme(): 'dark' | 'light' {
 }
 
 function Layout({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
-  const [themeReady, setThemeReady] = useState(false)
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => getPreferredTheme())
+  const [themeReady] = useState(() => typeof window !== 'undefined')
   const [menuOpen, setMenuOpen] = useState(false)
-
-  useEffect(() => {
-    setTheme(getPreferredTheme())
-    setThemeReady(true)
-  }, [])
 
   useEffect(() => {
     if (!themeReady) return

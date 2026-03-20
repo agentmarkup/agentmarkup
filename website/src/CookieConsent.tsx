@@ -18,8 +18,8 @@ declare global {
 function initGtagStub() {
   window.dataLayer = window.dataLayer || []
   if (!window.gtag) {
-    window.gtag = function gtag() {
-      window.dataLayer.push(arguments)
+    window.gtag = function gtag(...args: unknown[]) {
+      window.dataLayer.push(args)
     }
   }
 }
@@ -67,19 +67,14 @@ function getConsent(): Consent {
 }
 
 function CookieConsent() {
-  const [consent, setConsent] = useState<Consent>(null)
-  const [consentReady, setConsentReady] = useState(false)
+  const [consent, setConsent] = useState<Consent>(() => getConsent())
+  const [consentReady] = useState(() => typeof window !== 'undefined')
 
   const reset = useCallback(() => {
     if (typeof window === 'undefined') return
     localStorage.removeItem(STORAGE_KEY)
     localStorage.removeItem(STORAGE_TS_KEY)
     setConsent(null)
-  }, [])
-
-  useEffect(() => {
-    setConsent(getConsent())
-    setConsentReady(true)
   }, [])
 
   useEffect(() => {
