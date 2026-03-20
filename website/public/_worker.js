@@ -1,49 +1,42 @@
 const CHECKER_USER_AGENT = 'agentmarkup-checker/0.3.0 (+https://agentmarkup.dev)';
-const CHECKS_SCHEMA_SQL = `
-CREATE TABLE IF NOT EXISTS checker_checks (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  requested_input TEXT NOT NULL,
-  normalized_url TEXT NOT NULL,
-  origin TEXT NOT NULL,
-  checked_at TEXT NOT NULL,
-  homepage_status INTEGER NOT NULL,
-  llms_status INTEGER NOT NULL,
-  robots_status INTEGER NOT NULL,
-  sitemap_status INTEGER,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_checker_checks_checked_at
-  ON checker_checks (checked_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_checker_checks_normalized_url
-  ON checker_checks (normalized_url);
-
-CREATE TABLE IF NOT EXISTS checker_request_events (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  ip_hash TEXT NOT NULL,
-  normalized_url TEXT NOT NULL,
-  requested_at TEXT NOT NULL,
-  challenge_passed INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_checker_request_events_ip_requested_at
-  ON checker_request_events (ip_hash, requested_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_checker_request_events_normalized_requested_at
-  ON checker_request_events (normalized_url, requested_at DESC);
-
-CREATE TABLE IF NOT EXISTS checker_cache (
-  normalized_url TEXT PRIMARY KEY,
-  response_json TEXT NOT NULL,
-  cached_at TEXT NOT NULL,
-  expires_at TEXT NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_checker_cache_expires_at
-  ON checker_cache (expires_at);
-`;
+const CHECKS_SCHEMA_STATEMENTS = [
+  `CREATE TABLE IF NOT EXISTS checker_checks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    requested_input TEXT NOT NULL,
+    normalized_url TEXT NOT NULL,
+    origin TEXT NOT NULL,
+    checked_at TEXT NOT NULL,
+    homepage_status INTEGER NOT NULL,
+    llms_status INTEGER NOT NULL,
+    robots_status INTEGER NOT NULL,
+    sitemap_status INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_checker_checks_checked_at
+    ON checker_checks (checked_at DESC)`,
+  `CREATE INDEX IF NOT EXISTS idx_checker_checks_normalized_url
+    ON checker_checks (normalized_url)`,
+  `CREATE TABLE IF NOT EXISTS checker_request_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ip_hash TEXT NOT NULL,
+    normalized_url TEXT NOT NULL,
+    requested_at TEXT NOT NULL,
+    challenge_passed INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_checker_request_events_ip_requested_at
+    ON checker_request_events (ip_hash, requested_at DESC)`,
+  `CREATE INDEX IF NOT EXISTS idx_checker_request_events_normalized_requested_at
+    ON checker_request_events (normalized_url, requested_at DESC)`,
+  `CREATE TABLE IF NOT EXISTS checker_cache (
+    normalized_url TEXT PRIMARY KEY,
+    response_json TEXT NOT NULL,
+    cached_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_checker_cache_expires_at
+    ON checker_cache (expires_at)`,
+];
 
 const FETCH_TIMEOUT_MS = 10_000;
 const MAX_RESPONSE_BYTES = 5 * 1024 * 1024;
@@ -57,6 +50,7 @@ const TURNSTILE_VERIFY_URL =
   'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 
 let checksSchemaReadyPromise;
+let checksSchemaUnavailable = false;
 
 export default {
   async fetch(request, env) {
@@ -278,7 +272,14 @@ async function applyCheckerProtection(
     };
   }
 
-  await ensureChecksSchema(env);
+  const schemaReady = await ensureChecksSchema(env);
+  if (!schemaReady) {
+    return {
+      metadata,
+      response: null,
+    };
+  }
+
   await cleanupCheckerStorage(env, checkedAt);
 
   const ipHash = await hashClientIp(readClientIp(request));
@@ -495,6 +496,10 @@ async function readCachedResponse(env, normalized, protectionMetadata) {
     return null;
   }
 
+  if (!(await ensureChecksSchema(env))) {
+    return null;
+  }
+
   const now = new Date().toISOString();
   const row = await env.CHECKS_DB.prepare(
     `
@@ -549,6 +554,10 @@ async function cacheCheckResponse(
     return;
   }
 
+  if (!(await ensureChecksSchema(env))) {
+    return;
+  }
+
   const responseJson = JSON.stringify(payload);
   const keys = targetUrl === normalized ? [normalized] : [normalized, targetUrl];
 
@@ -578,7 +587,12 @@ async function persistCheckedUrl(env, payload) {
   }
 
   try {
-    await ensureChecksSchema(env);
+    if (!(await ensureChecksSchema(env))) {
+      return {
+        persisted: false,
+        reason: 'schema-unavailable',
+      };
+    }
 
     await env.CHECKS_DB.prepare(
       `
@@ -620,11 +634,24 @@ async function persistCheckedUrl(env, payload) {
 }
 
 async function ensureChecksSchema(env) {
-  if (!checksSchemaReadyPromise) {
-    checksSchemaReadyPromise = env.CHECKS_DB.exec(CHECKS_SCHEMA_SQL);
+  if (!env?.CHECKS_DB || checksSchemaUnavailable) {
+    return false;
   }
 
-  await checksSchemaReadyPromise;
+  if (!checksSchemaReadyPromise) {
+    checksSchemaReadyPromise = env.CHECKS_DB.batch(
+      CHECKS_SCHEMA_STATEMENTS.map((statement) =>
+        env.CHECKS_DB.prepare(statement)
+      )
+    ).catch((error) => {
+      checksSchemaUnavailable = true;
+      checksSchemaReadyPromise = null;
+      console.error('checker schema initialization failed', error);
+      return null;
+    });
+  }
+
+  return (await checksSchemaReadyPromise) !== null;
 }
 
 function normalizePublicUrl(value) {
