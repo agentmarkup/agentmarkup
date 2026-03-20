@@ -1,8 +1,6 @@
 import { StrictMode, type ComponentType } from 'react'
 import { hydrateRoot } from 'react-dom/client'
 
-import './index.css'
-import './App.css'
 import Layout from './Layout'
 
 function renderPageElement(Page: ComponentType) {
