@@ -408,6 +408,11 @@ function Checker() {
             <label className="checker-label" htmlFor="checker-url">
               Website URL
             </label>
+            <p className="checker-field-note">
+              Only the root website is checked first. Enter any public page URL
+              and the checker will normalize it to the site root before
+              fetching metadata.
+            </p>
             <div className="checker-form-row">
               <input
                 id="checker-url"
@@ -538,10 +543,10 @@ function ResultCount({
 
 function ResourceCard({ resource }: { resource: ResourceStatus }) {
   return (
-    <article className={`checker-resource ${resource.ok ? 'checker-resource-ok' : 'checker-resource-problem'}`}>
+    <article className={`checker-resource checker-resource-${resource.level}`}>
       <div className="checker-resource-top">
         <h3>{resource.label}</h3>
-        <span className={`checker-resource-status ${resource.ok ? 'checker-resource-status-ok' : 'checker-resource-status-problem'}`}>
+        <span className={`checker-resource-status checker-resource-status-${resource.level}`}>
           {resource.status}
         </span>
       </div>
@@ -553,6 +558,11 @@ function ResourceCard({ resource }: { resource: ResourceStatus }) {
         </p>
       ) : null}
       <p className="checker-resource-detail">{resource.detail}</p>
+      {resource.agentmarkupHelp ? (
+        <p className="checker-agentmarkup-help">
+          <strong>How agentmarkup helps:</strong> {resource.agentmarkupHelp}
+        </p>
+      ) : null}
     </article>
   );
 }
@@ -566,6 +576,11 @@ function FindingCard({ item }: { item: AuditItem }) {
       </div>
       <p className="checker-finding-detail">{item.detail}</p>
       <p className="checker-finding-action">{item.action}</p>
+      {item.agentmarkupHelp ? (
+        <p className="checker-agentmarkup-help">
+          <strong>How agentmarkup helps:</strong> {item.agentmarkupHelp}
+        </p>
+      ) : null}
       {item.docUrl ? (
         <p className="checker-finding-doc">
           <a href={item.docUrl}>Relevant docs</a>

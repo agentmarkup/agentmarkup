@@ -91,14 +91,18 @@ export default defineConfig({
 - Validates JSON-LD already present in page HTML
 - Generates `.md` mirrors from the final HTML output
 - Patches or creates `robots.txt` with AI crawler directives
-- Patches or creates `_headers` with `Content-Signal`
+- Patches or creates `_headers` with `Content-Signal` and canonical `Link` headers for markdown mirrors
 - Validates common schema and crawler mistakes at build time
 - Warns when a page looks like a thin client-rendered HTML shell
 - Re-exports `@agentmarkup/core` helpers for custom pipelines
 
 By default, the Astro adapter coexists with existing machine-readable assets. If a page already contains JSON-LD for a schema type, or the site already ships a curated `llms.txt` or matching crawler rules, those are preserved unless you opt into replacement.
 
-Markdown mirrors and `_headers` follow the same rule: existing files are preserved unless you opt into replacement with `markdownPages.replaceExisting` or `contentSignalHeaders.replaceExisting`.
+Markdown mirrors stay directly fetchable for agents, while their `_headers` entries point search engines back at the HTML page as canonical. Existing files are still preserved unless you opt into replacement with `markdownPages.replaceExisting` or `contentSignalHeaders.replaceExisting`.
+
+When markdown mirrors are enabled, the adapter also writes canonical `Link` headers for those `.md` files so search engines can keep the HTML route as the preferred indexed URL without making the markdown mirror unavailable to direct fetchers.
+
+When markdown mirrors are enabled, same-site page entries in `llms.txt` automatically point at the generated `.md` mirrors by default. Set `llmsTxt.preferMarkdownMirrors: false` if you want `llms.txt` to keep linking to HTML routes instead.
 
 ## Maintainer
 

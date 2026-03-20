@@ -11,6 +11,7 @@ import type {
   AuditItem,
   AuditLevel,
   RemoteResource,
+  ResourceLevel,
   ResourceStatus,
   SiteAnalysis,
   SiteCheckResponse,
@@ -28,6 +29,31 @@ const TARGET_CRAWLERS = {
   PerplexityBot: 'allow',
   'Google-Extended': 'allow',
   CCBot: 'allow',
+} as const;
+
+const AGENTMARKUP = {
+  llms:
+    'agentmarkup can generate /llms.txt at build time and add the homepage discovery link automatically.',
+  jsonLd:
+    'agentmarkup can inject and validate homepage WebSite and Organization JSON-LD at build time.',
+  markdown:
+    'agentmarkup can generate markdown mirrors from final HTML and advertise them with a markdown alternate link.',
+  markdownOptional:
+    'agentmarkup can still add markdown mirrors for cleaner LLM fetches, but this page already serves meaningful raw HTML.',
+  crawlers:
+    'agentmarkup can patch robots.txt with explicit AI crawler directives and emit Content-Signal headers.',
+  thinHtml:
+    'agentmarkup can add llms.txt, JSON-LD, crawler rules, and markdown mirrors, but thin raw HTML still needs a prerender or other final-HTML step.',
+  sitemap:
+    'agentmarkup does not generate sitemaps, but it pairs well with a published sitemap and explicit crawler metadata.',
+  reachability:
+    'agentmarkup can layer on llms.txt, JSON-LD, markdown mirrors, and crawler controls, but the page still needs to be publicly reachable first.',
+  metadata:
+    'agentmarkup complements canonical tags, descriptions, language, and headings with llms.txt, JSON-LD, markdown mirrors, and crawler controls, but you still need to author those page basics yourself.',
+  indexing:
+    'agentmarkup complements crawler controls, but indexing directives such as noindex still need to be managed in your app or hosting layer.',
+  general:
+    'agentmarkup adds machine-readable metadata, markdown mirrors, and crawler controls around the page, but some issues still need a direct site or hosting fix.',
 } as const;
 
 export function analyzeSiteCheck(result: SiteCheckResponse): SiteAnalysis {
@@ -327,6 +353,8 @@ function analyzeJsonLd(html: string, items: AuditItem[]): void {
 }
 
 function analyzeMarkdown(result: SiteCheckResponse, items: AuditItem[]): void {
+  const homepageNeedsMarkdown = resourceNeedsMarkdownMirror(result.homepage);
+
   analyzeMarkdownResource(
     result.homepageMarkdown,
     {
@@ -336,8 +364,11 @@ function analyzeMarkdown(result: SiteCheckResponse, items: AuditItem[]): void {
       action:
         'Publish a richer markdown mirror for the homepage so LLM fetches get more than just metadata.',
     },
-    items
+    items,
+    { required: homepageNeedsMarkdown }
   );
+
+  const samplePageNeedsMarkdown = resourceNeedsMarkdownMirror(result.samplePage);
 
   if (result.samplePage?.ok && result.samplePage.body && looksLikeHtml(result.samplePage)) {
     for (const validationResult of validateHtmlContent(
@@ -364,7 +395,8 @@ function analyzeMarkdown(result: SiteCheckResponse, items: AuditItem[]): void {
         action:
           'Generate markdown for important linked pages so an LLM that follows one link can fetch useful body content.',
       },
-      items
+      items,
+      { required: samplePageNeedsMarkdown }
     );
   }
 }
@@ -482,9 +514,16 @@ function analyzeSitemap(result: SiteCheckResponse, items: AuditItem[]): void {
 }
 
 function buildResourceStatuses(result: SiteCheckResponse): ResourceStatus[] {
+  const homepageNeedsMarkdown = resourceNeedsMarkdownMirror(result.homepage);
+  const samplePageNeedsMarkdown = resourceNeedsMarkdownMirror(result.samplePage);
   const resources: ResourceStatus[] = [
     buildResourceStatus('homepage', 'Homepage', result.homepage),
-    buildResourceStatus('homepageMarkdown', 'Homepage markdown', result.homepageMarkdown),
+    buildMarkdownResourceStatus(
+      'homepageMarkdown',
+      'Homepage markdown',
+      result.homepageMarkdown,
+      homepageNeedsMarkdown
+    ),
     buildResourceStatus('llmsTxt', 'llms.txt', result.llmsTxt),
     buildResourceStatus('robotsTxt', 'robots.txt', result.robotsTxt),
     buildResourceStatus('sitemap', 'Sitemap', result.sitemap),
@@ -498,10 +537,11 @@ function buildResourceStatuses(result: SiteCheckResponse): ResourceStatus[] {
 
   if (result.samplePageMarkdown) {
     resources.push(
-      buildResourceStatus(
+      buildMarkdownResourceStatus(
         'samplePageMarkdown',
         'Sample linked markdown',
-        result.samplePageMarkdown
+        result.samplePageMarkdown,
+        samplePageNeedsMarkdown
       )
     );
   }
@@ -514,19 +554,24 @@ function buildResourceStatus(
   label: string,
   resource: RemoteResource | null
 ): ResourceStatus {
+  const level = inferResourceLevel(key, resource);
+
   if (!resource) {
     return {
       key,
+      level,
       label,
       url: null,
       status: 'Not checked',
       detail: 'This resource was not fetched.',
       ok: false,
+      agentmarkupHelp: inferResourceAgentmarkupHelp(key, level),
     };
   }
 
   return {
     key,
+    level,
     label,
     url: resource.finalUrl || resource.requestedUrl,
     status: resource.ok ? `HTTP ${resource.status}` : resource.status ? `HTTP ${resource.status}` : 'Request failed',
@@ -534,6 +579,64 @@ function buildResourceStatus(
       ? `Fetched ${resource.finalUrl || resource.requestedUrl}`
       : buildFetchFailureDetail(resource, label),
     ok: resource.ok,
+    agentmarkupHelp: inferResourceAgentmarkupHelp(key, level),
+  };
+}
+
+function buildMarkdownResourceStatus(
+  key: Extract<ResourceStatus['key'], 'homepageMarkdown' | 'samplePageMarkdown'>,
+  label: string,
+  resource: RemoteResource | null,
+  required: boolean
+): ResourceStatus {
+  if (!resource || !resource.ok || !resource.body) {
+    const level: ResourceLevel = required
+      ? resource?.status === 404
+        ? 'warning'
+        : 'error'
+      : 'info';
+    const detail = resource
+      ? required
+        ? buildFetchFailureDetail(resource, 'markdown resource')
+        : `${buildFetchFailureDetail(resource, 'markdown resource')} The paired HTML already looks substantial, so this mirror is optional.`
+      : required
+        ? 'The checker did not fetch a markdown resource here.'
+        : 'The checker did not fetch a markdown resource here. The paired HTML already looks substantial, so this mirror is optional.';
+
+    return {
+      key,
+      level,
+      label,
+      url: resource?.finalUrl || resource?.requestedUrl || null,
+      status: resource?.status ? `HTTP ${resource.status}` : required ? 'Request failed' : 'Optional',
+      detail,
+      ok: false,
+      agentmarkupHelp: required ? AGENTMARKUP.markdown : AGENTMARKUP.markdownOptional,
+    };
+  }
+
+  const markdownScore = assessMarkdownBody(resource.body);
+  if (!markdownScore.ok) {
+    return {
+      key,
+      level: 'warning',
+      label,
+      url: resource.finalUrl || resource.requestedUrl,
+      status: `HTTP ${resource.status}`,
+      detail: markdownScore.detail,
+      ok: false,
+      agentmarkupHelp: AGENTMARKUP.markdown,
+    };
+  }
+
+  return {
+    key,
+    level: 'pass',
+    label,
+    url: resource.finalUrl || resource.requestedUrl,
+    status: `HTTP ${resource.status}`,
+    detail: `Fetched ${resource.finalUrl} and found readable markdown content.`,
+    ok: true,
   };
 }
 
@@ -557,9 +660,16 @@ function analyzeMarkdownResource(
     thinTitle: string;
     action: string;
   },
-  items: AuditItem[]
+  items: AuditItem[],
+  options: {
+    required: boolean;
+  }
 ): void {
   if (!resource || !resource.ok || !resource.body) {
+    if (!options.required) {
+      return;
+    }
+
     push(items, {
       level: resource?.status === 404 ? 'warning' : 'error',
       title: copy.missingTitle,
@@ -621,6 +731,15 @@ function assessMarkdownBody(markdown: string): { ok: boolean; detail: string } {
     ok: true,
     detail: 'Readable markdown content is available.',
   };
+}
+
+function resourceNeedsMarkdownMirror(resource: RemoteResource | null): boolean {
+  if (!resource?.ok || !resource.body || !looksLikeHtml(resource)) {
+    return false;
+  }
+
+  return validateHtmlContent(resource.body, resource.finalUrl || resource.requestedUrl)
+    .length > 0;
 }
 
 function getJsonLdTypes(html: string | null): string[] {
@@ -709,5 +828,124 @@ function countByLevel(items: AuditItem[]): Record<AuditLevel, number> {
 }
 
 function push(items: AuditItem[], item: AuditItem): void {
-  items.push(item);
+  items.push(
+    item.agentmarkupHelp
+      ? item
+      : {
+          ...item,
+          agentmarkupHelp: inferAuditAgentmarkupHelp(item),
+        }
+  );
+}
+
+function inferResourceLevel(
+  key: ResourceStatus['key'],
+  resource: RemoteResource | null
+): ResourceLevel {
+  if (!resource) {
+    switch (key) {
+      case 'sitemap':
+        return 'warning';
+      case 'samplePage':
+      case 'samplePageMarkdown':
+        return 'info';
+      default:
+        return 'warning';
+    }
+  }
+
+  if (resource.ok) {
+    return 'pass';
+  }
+
+  switch (key) {
+    case 'homepage':
+      return 'error';
+    case 'llmsTxt':
+    case 'robotsTxt':
+      return resource.status === 404 ? 'warning' : 'error';
+    case 'sitemap':
+    case 'samplePage':
+      return 'warning';
+    default:
+      return resource.status === 404 ? 'warning' : 'error';
+  }
+}
+
+function inferResourceAgentmarkupHelp(
+  key: ResourceStatus['key'],
+  level: ResourceLevel
+): string | undefined {
+  switch (key) {
+    case 'homepage':
+      return AGENTMARKUP.reachability;
+    case 'homepageMarkdown':
+    case 'samplePageMarkdown':
+      return level === 'info' ? AGENTMARKUP.markdownOptional : AGENTMARKUP.markdown;
+    case 'llmsTxt':
+      return AGENTMARKUP.llms;
+    case 'robotsTxt':
+      return AGENTMARKUP.crawlers;
+    case 'sitemap':
+      return AGENTMARKUP.sitemap;
+    case 'samplePage':
+      return AGENTMARKUP.reachability;
+    default:
+      return AGENTMARKUP.general;
+  }
+}
+
+function inferAuditAgentmarkupHelp(item: AuditItem): string {
+  const title = item.title.toLowerCase();
+
+  if (title.includes('markdown')) {
+    return AGENTMARKUP.markdown;
+  }
+
+  if (title.includes('llms.txt')) {
+    return AGENTMARKUP.llms;
+  }
+
+  if (
+    title.includes('json-ld') ||
+    title.includes('website schema') ||
+    title.includes('organization schema')
+  ) {
+    return AGENTMARKUP.jsonLd;
+  }
+
+  if (title.includes('robots.txt') || title.includes('ai crawler')) {
+    return AGENTMARKUP.crawlers;
+  }
+
+  if (title.includes('sitemap')) {
+    return AGENTMARKUP.sitemap;
+  }
+
+  if (title.includes('thin html')) {
+    return AGENTMARKUP.thinHtml;
+  }
+
+  if (
+    title.includes('canonical') ||
+    title.includes('meta description') ||
+    title.includes('lang attribute') ||
+    title.includes('missing an h1')
+  ) {
+    return AGENTMARKUP.metadata;
+  }
+
+  if (title.includes('noindex')) {
+    return AGENTMARKUP.indexing;
+  }
+
+  if (
+    title.includes('reachable') ||
+    title.includes('could not be fetched') ||
+    title.includes('does not look like html')
+  ) {
+    return AGENTMARKUP.reachability;
+  }
+
+  return AGENTMARKUP.general;
 }

@@ -155,10 +155,10 @@ export default defineConfig({
     agentmarkup({
       site: siteUrl,
       name: 'agentmarkup',
-      description: 'Make your markup agent-ready. Build-time llms.txt, JSON-LD, AI crawler controls, and validation for modern websites.',
+      description: 'Make your markup agent-ready. Build-time llms.txt, JSON-LD, markdown mirrors, AI crawler controls, and validation for modern websites.',
 
       llmsTxt: {
-        instructions: 'agentmarkup is an open-source package family for Vite and Astro that makes websites machine-readable for LLMs and AI agents. It generates llms.txt, injects JSON-LD structured data, manages AI crawler robots.txt directives, and validates everything at build time.',
+        instructions: 'agentmarkup is an open-source package family for Vite and Astro that makes websites machine-readable for LLMs and AI agents. It generates llms.txt, injects JSON-LD structured data, creates markdown mirrors from final HTML, manages AI crawler robots.txt directives, and validates everything at build time.',
         sections: [
           {
             title: 'Documentation',
@@ -172,7 +172,7 @@ export default defineConfig({
           {
             title: 'Guides',
             entries: [
-              { title: 'Website checker', url: '/checker/', description: 'Check any public site for llms.txt, JSON-LD, robots.txt, sitemap discovery, and machine-readable basics' },
+              { title: 'Website checker', url: '/checker/', description: 'Check any public site for llms.txt, JSON-LD, robots.txt, sitemap discovery, markdown mirrors, and machine-readable basics' },
               { title: 'How to generate llms.txt', url: '/docs/llms-txt/', description: 'Generate a spec-compliant llms.txt file at build time for AI model discovery' },
               { title: 'How to add JSON-LD structured data', url: '/docs/json-ld/', description: 'Inject schema.org JSON-LD with type-safe presets and XSS-safe serialization' },
               { title: 'How to manage AI crawlers', url: '/docs/ai-crawlers/', description: 'Allow or block AI crawlers like GPTBot and ClaudeBot via robots.txt' },
@@ -195,9 +195,9 @@ export default defineConfig({
             title: 'Features',
             entries: [
               { title: 'llms.txt Generation', url: '/llms.txt', description: 'Auto-generates /llms.txt at build time following the llmstxt.org spec' },
-              { title: 'JSON-LD Injection', url: '/', description: 'Injects structured data into HTML with XSS-safe serialization and type-safe presets' },
+              { title: 'JSON-LD Injection', url: '/docs/json-ld/', description: 'Injects structured data into HTML with XSS-safe serialization and type-safe presets' },
               { title: 'AI Crawler Management', url: '/robots.txt', description: 'Generates or patches robots.txt with directives for GPTBot, ClaudeBot, and others' },
-              { title: 'Build-Time Validation', url: '/', description: 'Catches missing JSON-LD fields, crawler conflicts, and malformed llms.txt during build' },
+              { title: 'Build-Time Validation', url: '/checker/', description: 'Catches missing JSON-LD fields, crawler conflicts, malformed llms.txt, and thin HTML during build' },
             ],
           },
         ],

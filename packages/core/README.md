@@ -14,10 +14,13 @@ pnpm add -D @agentmarkup/core
 
 The helpers are coexistence-friendly: `patchRobotsTxt()` leaves matching manual crawler rules untouched, and adapters built on core can preserve curated `llms.txt` files or existing JSON-LD by default.
 
+When `markdownPages.enabled` is on, `generateLlmsTxt()` prefers same-site markdown mirror URLs for page entries by default so agents discover the cleaner fetch path first. Set `llmsTxt.preferMarkdownMirrors: false` to keep HTML URLs in `llms.txt`.
+
 ```ts
 import {
   generateContentSignalHeaders,
   generateLlmsTxt,
+  generateMarkdownCanonicalHeaders,
   generatePageMarkdown,
   generateJsonLdTags,
   patchRobotsTxt,
@@ -64,6 +67,13 @@ const headers = generateContentSignalHeaders({
   aiInput: 'yes',
 });
 
+const markdownCanonicalHeaders = generateMarkdownCanonicalHeaders([
+  {
+    markdownPath: '/pricing.md',
+    canonicalUrl: 'https://example.com/pricing',
+  },
+]);
+
 const llmsIssues = validateLlmsTxt(llms ?? '');
 const robotsIssues = validateRobotsTxt(robots, {
   GPTBot: 'allow',
@@ -82,6 +92,7 @@ const schemaIssues = validateExistingJsonLd(builtHtml, '/pricing/');
 - schema.org preset builders
 - AI crawler `robots.txt` generation and patching
 - `Content-Signal` header generation and patching
+- canonical `Link` header generation for markdown mirrors
 - deterministic schema and crawler validation
 
 ## Maintainer

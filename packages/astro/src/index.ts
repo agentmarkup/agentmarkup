@@ -14,6 +14,7 @@ import {
   injectHeadContent,
   injectJsonLdTags,
   markdownFileNameFromHtmlFile,
+  patchMarkdownCanonicalHeaders,
   patchHeadersFile,
   normalizePagePath,
   patchRobotsTxt,
@@ -25,7 +26,11 @@ import {
   validateRobotsTxt,
   validateSchema,
 } from '@agentmarkup/core';
-import type { AgentMarkupConfig, ValidationResult } from '@agentmarkup/core';
+import type {
+  AgentMarkupConfig,
+  MarkdownCanonicalHeaderEntry,
+  ValidationResult,
+} from '@agentmarkup/core';
 
 export * from '@agentmarkup/core';
 
@@ -37,6 +42,8 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
   let jsonLdPages = 0;
   let markdownPages = 0;
   let markdownPagesStatus: 'generated' | 'preserved' | 'none' = 'none';
+  let markdownCanonicalHeadersCount = 0;
+  let markdownCanonicalHeadersStatus: 'generated' | 'preserved' | 'none' = 'none';
   let crawlersConfigured = 0;
   let robotsTxtStatus: 'patched' | 'preserved' | 'none' = 'none';
   let contentSignalHeadersStatus: 'generated' | 'preserved' | 'none' = 'none';
@@ -122,6 +129,7 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
 
         if (isFeatureEnabled(config.markdownPages)) {
           let preservedMarkdownPages = 0;
+          const markdownCanonicalEntries: MarkdownCanonicalHeaderEntry[] = [];
 
           for (const htmlFile of htmlFiles) {
             const relativeHtmlPath = relative(outDir, htmlFile).replace(/\\/g, '/');
@@ -148,6 +156,10 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
 
             if (existingMarkdown && !config.markdownPages?.replaceExisting) {
               preservedMarkdownPages += 1;
+              markdownCanonicalEntries.push({
+                markdownPath: `/${markdownFileName}`,
+                canonicalUrl: buildCanonicalUrl(config.site, pagePath),
+              });
 
               if (!existingOutputMarkdown) {
                 await writeFile(outputMarkdownPath, existingMarkdown, 'utf8');
@@ -156,6 +168,10 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
             }
 
             await writeFile(outputMarkdownPath, markdown, 'utf8');
+            markdownCanonicalEntries.push({
+              markdownPath: `/${markdownFileName}`,
+              canonicalUrl: buildCanonicalUrl(config.site, pagePath),
+            });
             markdownPages += 1;
           }
 
@@ -165,6 +181,29 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
               : preservedMarkdownPages > 0
                 ? 'preserved'
                 : 'none';
+
+          if (markdownCanonicalEntries.length > 0) {
+            const outputHeadersPath = join(outDir, '_headers');
+            const existingOutputHeaders = await readTextFileIfExists(outputHeadersPath);
+            const existingHeaders =
+              existingOutputHeaders ??
+              (publicDir ? await readTextFileIfExists(join(publicDir, '_headers')) : null);
+
+            const patchedHeaders = patchMarkdownCanonicalHeaders(
+              existingHeaders,
+              markdownCanonicalEntries
+            );
+            const preserved =
+              existingHeaders !== null &&
+              patchedHeaders === ensureTrailingNewline(existingHeaders);
+
+            markdownCanonicalHeadersCount = markdownCanonicalEntries.length;
+            markdownCanonicalHeadersStatus = preserved ? 'preserved' : 'generated';
+
+            if (!preserved || !existingOutputFileExists(outputHeadersPath)) {
+              await writeFile(outputHeadersPath, patchedHeaders, 'utf8');
+            }
+          }
         }
 
         const llmsTxtContent = generateLlmsTxt(config);
@@ -240,7 +279,8 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
             config.contentSignalHeaders
           );
           const preserved =
-            existingHeaders !== null && patchedHeaders === existingHeaders;
+            existingHeaders !== null &&
+            patchedHeaders === ensureTrailingNewline(existingHeaders);
 
           contentSignalHeadersStatus = preserved ? 'preserved' : 'generated';
 
@@ -257,6 +297,8 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
           jsonLdPages,
           markdownPages,
           markdownPagesStatus,
+          markdownCanonicalHeadersCount,
+          markdownCanonicalHeadersStatus,
           crawlersConfigured,
           robotsTxtStatus,
           contentSignalHeadersStatus,
@@ -301,6 +343,11 @@ function pagePathFromOutputFile(outDir: string, filePath: string): string {
   return normalizePagePath(candidatePath);
 }
 
+function buildCanonicalUrl(siteUrl: string, pagePath: string): string {
+  const base = siteUrl.replace(/\/$/, '');
+  return pagePath === '/' ? `${base}/` : `${base}${pagePath}`;
+}
+
 function existingOutputFileExists(filePath: string): boolean {
   return existsSync(filePath);
 }
@@ -315,4 +362,8 @@ function hasMarkdownAlternateLink(html: string): boolean {
   return /<link\b[^>]*rel=(['"])alternate\1[^>]*type=(['"])text\/markdown\2/i.test(
     html
   );
+}
+
+function ensureTrailingNewline(value: string): string {
+  return value.endsWith('\n') ? value : `${value}\n`;
 }

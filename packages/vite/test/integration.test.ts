@@ -182,7 +182,7 @@ describe('agentmarkup integration', () => {
     const faqHtml = await readDistFile(root, 'faq/index.html');
 
     expect(llmsTxt).toContain('# Example');
-    expect(llmsTxt).toContain('[FAQ](https://example.com/faq)');
+    expect(llmsTxt).toContain('[FAQ](https://example.com/faq.md)');
 
     expect(robotsTxt).toContain('User-agent: *\nAllow: /');
     expect(robotsTxt).toContain('Sitemap: https://example.com/sitemap.xml');
@@ -205,6 +205,10 @@ describe('agentmarkup integration', () => {
     expect(homeMarkdown).toContain('# Home');
     expect(faqMarkdown).toContain('# FAQ');
     expect(headers).toContain('Content-Signal: ai-train=yes, search=yes, ai-input=yes');
+    expect(headers).toContain('/index.md');
+    expect(headers).toContain('Link: <https://example.com/>; rel="canonical"');
+    expect(headers).toContain('/faq.md');
+    expect(headers).toContain('Link: <https://example.com/faq>; rel="canonical"');
   });
 
   it('reports validation warnings during a real Vite build', async () => {
@@ -458,5 +462,41 @@ describe('agentmarkup integration', () => {
     expect(llmsTxt).toBe(existingLlms);
     expect(robotsTxt).toBe(existingRobots);
     expect(countJsonLdScripts(homeHtml)).toBe(1);
+  });
+
+  it('emits markdown canonical headers even without Content-Signal enabled', async () => {
+    const root = await createFixture({
+      'src/main.js': 'console.log("agentmarkup markdown headers fixture");\n',
+      'index.html': [
+        '<!doctype html>',
+        '<html lang="en">',
+        '  <head>',
+        '    <meta charset="UTF-8" />',
+        '    <title>Home</title>',
+        '  </head>',
+        '  <body>',
+        '    <main><h1>Home</h1><p>Readable body copy for markdown output.</p></main>',
+        '    <script type="module" src="/src/main.js"></script>',
+        '  </body>',
+        '</html>',
+      ].join('\n'),
+    });
+
+    await buildFixture(
+      root,
+      {
+        site: 'https://example.com',
+        name: 'Example',
+        markdownPages: {
+          enabled: true,
+        },
+      },
+      ['index.html']
+    );
+
+    const headers = await readDistFile(root, '_headers');
+    expect(headers).toContain('/index.md');
+    expect(headers).toContain('Link: <https://example.com/>; rel="canonical"');
+    expect(headers).not.toContain('Content-Signal:');
   });
 });

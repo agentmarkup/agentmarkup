@@ -89,6 +89,82 @@ describe('generateLlmsTxt', () => {
     expect(result).toContain('https://github.com/example');
   });
 
+  it('prefers markdown mirrors for same-site page routes when markdown generation is enabled', () => {
+    const result = generateLlmsTxt(
+      makeConfig({
+        llmsTxt: {
+          sections: [
+            {
+              title: 'Pages',
+              entries: [
+                { title: 'Home', url: '/' },
+                { title: 'Docs', url: '/docs/start/' },
+                { title: 'Guide', url: 'https://example.com/guides/intro' },
+              ],
+            },
+          ],
+        },
+        markdownPages: {
+          enabled: true,
+        },
+      })
+    );
+
+    expect(result).toContain('https://example.com/index.md');
+    expect(result).toContain('https://example.com/docs/start.md');
+    expect(result).toContain('https://example.com/guides/intro.md');
+  });
+
+  it('keeps same-site non-html files unchanged when markdown generation is enabled', () => {
+    const result = generateLlmsTxt(
+      makeConfig({
+        llmsTxt: {
+          sections: [
+            {
+              title: 'Files',
+              entries: [
+                { title: 'llms', url: '/llms.txt' },
+                { title: 'robots', url: '/robots.txt' },
+                { title: 'feed', url: '/feed.xml' },
+                { title: 'markdown', url: '/docs/start.md' },
+              ],
+            },
+          ],
+        },
+        markdownPages: {
+          enabled: true,
+        },
+      })
+    );
+
+    expect(result).toContain('https://example.com/llms.txt');
+    expect(result).toContain('https://example.com/robots.txt');
+    expect(result).toContain('https://example.com/feed.xml');
+    expect(result).toContain('https://example.com/docs/start.md');
+  });
+
+  it('allows opting out of markdown mirror URLs in llms.txt', () => {
+    const result = generateLlmsTxt(
+      makeConfig({
+        llmsTxt: {
+          preferMarkdownMirrors: false,
+          sections: [
+            {
+              title: 'Pages',
+              entries: [{ title: 'Docs', url: '/docs/start/' }],
+            },
+          ],
+        },
+        markdownPages: {
+          enabled: true,
+        },
+      })
+    );
+
+    expect(result).toContain('https://example.com/docs/start/');
+    expect(result).not.toContain('https://example.com/docs/start.md');
+  });
+
   it('handles trailing slash on site URL', () => {
     const result = generateLlmsTxt(
       makeConfig({

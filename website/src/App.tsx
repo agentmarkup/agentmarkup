@@ -72,6 +72,43 @@ function Home() {
         <p className="tagline">Build-time llms.txt, JSON-LD, markdown mirrors, AI crawler controls, Content-Signal headers, and validation for Vite and Astro websites.</p>
         <p className="subtitle">Zero runtime cost. Type-safe. Open source.</p>
 
+        <section className="hero-checker" aria-labelledby="hero-checker-title">
+          <div className="hero-checker-copy">
+            <h2 id="hero-checker-title">Run the website checker first</h2>
+            <p>
+              Check any public site for llms.txt, JSON-LD, markdown mirrors,
+              robots.txt, sitemap discovery, canonical tags, and thin HTML
+              before you install anything.
+            </p>
+          </div>
+          <form className="hero-checker-form" action="/checker/" method="get">
+            <label className="hero-checker-label" htmlFor="hero-checker-url">
+              Website URL
+            </label>
+            <p className="hero-checker-note">
+              Only the root website is checked first. Enter any public page URL
+              and the checker will normalize it to the site root before
+              fetching metadata.
+            </p>
+            <div className="checker-form-row hero-checker-row">
+              <input
+                id="hero-checker-url"
+                className="checker-input"
+                type="url"
+                name="url"
+                placeholder="https://example.com"
+                inputMode="url"
+                autoComplete="url"
+                spellCheck={false}
+                required
+              />
+              <button className="checker-submit" type="submit">
+                Check website
+              </button>
+            </div>
+          </form>
+        </section>
+
         <div className="fw-tabs-hero">
           <button className={fw === 'vite' ? 'fw-tab active' : 'fw-tab'} onClick={() => setFw('vite')}>Vite</button>
           <button className={fw === 'astro' ? 'fw-tab active' : 'fw-tab'} onClick={() => setFw('astro')}>Astro</button>
@@ -152,8 +189,8 @@ function Home() {
             src="/agentmarkup-build-output.webp"
             alt="Terminal output from a recent agentmarkup.dev build showing llms.txt generation, JSON-LD injection, markdown page generation, _headers patching, and a clean validation report"
             className="output-screenshot"
-            width="880"
-            height="424"
+            width="820"
+            height="460"
             loading="lazy"
           />
         </section>

@@ -15,6 +15,8 @@ export function printReport(opts: {
   jsonLdPages: number;
   markdownPages?: number;
   markdownPagesStatus?: 'generated' | 'preserved' | 'none';
+  markdownCanonicalHeadersCount?: number;
+  markdownCanonicalHeadersStatus?: 'generated' | 'preserved' | 'none';
   crawlersConfigured: number;
   robotsTxtStatus?: 'patched' | 'preserved' | 'none';
   contentSignalHeadersStatus?: 'generated' | 'preserved' | 'none';
@@ -28,6 +30,9 @@ export function printReport(opts: {
     jsonLdPages,
     markdownPages = 0,
     markdownPagesStatus = markdownPages > 0 ? 'generated' : 'none',
+    markdownCanonicalHeadersCount = 0,
+    markdownCanonicalHeadersStatus =
+      markdownCanonicalHeadersCount > 0 ? 'generated' : 'none',
     crawlersConfigured,
     robotsTxtStatus = crawlersConfigured > 0 ? 'patched' : 'none',
     contentSignalHeadersStatus = 'none',
@@ -70,6 +75,19 @@ export function printReport(opts: {
     console.log(`  ${GREEN}✓${RESET} _headers generated with Content-Signal`);
   } else if (contentSignalHeadersStatus === 'preserved') {
     console.log(`  ${GREEN}✓${RESET} _headers preserved (Content-Signal already configured)`);
+  }
+
+  if (
+    markdownCanonicalHeadersStatus === 'generated' &&
+    markdownCanonicalHeadersCount > 0
+  ) {
+    console.log(
+      `  ${GREEN}✓${RESET} _headers generated with markdown canonicals (${markdownCanonicalHeadersCount} files)`
+    );
+  } else if (markdownCanonicalHeadersStatus === 'preserved') {
+    console.log(
+      `  ${GREEN}✓${RESET} _headers preserved (markdown canonicals already configured)`
+    );
   }
 
   if (validationResults.length === 0) {

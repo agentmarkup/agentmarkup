@@ -71,10 +71,12 @@ On build, the adapters can:
 - validate JSON-LD already present in page HTML
 - emit page-level `.md` mirrors from final HTML output
 - patch or create `robots.txt` with AI crawler directives
-- patch or create `_headers` with `Content-Signal`
+- patch or create `_headers` with `Content-Signal` and canonical `Link` headers for markdown mirrors
 - report deterministic validation warnings and errors in the terminal
 
 By default, agentmarkup coexists with existing machine-readable assets. If a site already has a curated `llms.txt`, matching crawler rules, or hand-authored JSON-LD for a schema type, those are preserved unless you explicitly opt into replacement.
+
+When markdown mirrors are enabled, same-site page entries in `llms.txt` now default to the generated `.md` URLs so cold agents discover the cleaner fetch path first. Set `llmsTxt.preferMarkdownMirrors: false` if you want `llms.txt` to keep pointing at HTML routes instead.
 
 If your site already has a custom prerender or post-build step, `@agentmarkup/core` exposes reusable `llms.txt`, JSON-LD, and `robots.txt` helpers so you can keep one final output pipeline instead of duplicating that logic.
 

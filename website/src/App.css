@@ -108,6 +108,60 @@ header h1 {
   margin-top: 0.5rem;
 }
 
+.hero-checker {
+  margin: 2rem auto 1.75rem;
+  padding: 1.4rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at top left, rgba(92, 164, 201, 0.12), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent),
+    var(--surface);
+  text-align: left;
+}
+
+.hero-checker-copy h2 {
+  font-size: 1.15rem;
+  margin-bottom: 0.5rem;
+}
+
+.hero-checker-copy p,
+.hero-checker-note,
+.checker-field-note {
+  color: var(--text-body);
+}
+
+.hero-checker-copy p {
+  font-size: 0.98rem;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+.hero-checker-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.hero-checker-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.hero-checker-note,
+.checker-field-note {
+  font-size: 0.92rem;
+  line-height: 1.5;
+  margin-bottom: 0.15rem;
+}
+
+.hero-checker-row {
+  margin-top: 0.1rem;
+}
+
 /* Framework tabs */
 .fw-tabs-hero {
   display: flex;
@@ -663,9 +717,11 @@ h2 {
 
 .checker-note,
 .checker-summary-text,
+.checker-field-note,
 .checker-resource-detail,
 .checker-finding-detail,
-.checker-finding-action {
+.checker-finding-action,
+.checker-agentmarkup-help {
   color: var(--text-body);
 }
 
@@ -787,16 +843,27 @@ h2 {
   letter-spacing: 0.04em;
 }
 
+.checker-resource-status-pass,
 .checker-resource-status-ok,
 .checker-level-pass {
   background: rgba(74, 165, 105, 0.14);
   color: #7cd69b;
 }
 
-.checker-resource-status-problem,
+.checker-resource-status-warning,
 .checker-level-warning {
   background: rgba(196, 158, 61, 0.14);
   color: #e0be62;
+}
+
+.checker-resource-status-info {
+  background: rgba(74, 133, 165, 0.14);
+  color: #89c7ea;
+}
+
+.checker-resource-status-error {
+  background: rgba(191, 78, 78, 0.14);
+  color: #f08a8a;
 }
 
 .checker-finding-error .checker-level,
@@ -805,12 +872,21 @@ h2 {
   color: #f08a8a;
 }
 
-.checker-resource-problem {
+.checker-resource-warning {
   border-color: #6f5a25;
 }
 
+.checker-resource-pass,
 .checker-resource-ok {
   border-color: #2f6b48;
+}
+
+.checker-resource-info {
+  border-color: #355f73;
+}
+
+.checker-resource-error {
+  border-color: #7b3131;
 }
 
 .checker-finding-warning {
@@ -831,6 +907,17 @@ h2 {
 
 .checker-finding-action {
   margin-bottom: 0.5rem;
+}
+
+.checker-agentmarkup-help {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.92rem;
+}
+
+.checker-agentmarkup-help strong {
+  color: var(--text-heading);
 }
 
 .doc-table {
@@ -1274,6 +1361,10 @@ h2 {
   .checker-form-row,
   .checker-summary {
     flex-direction: column;
+  }
+
+  .hero-checker {
+    padding: 1.1rem;
   }
 
   .checker-counts,

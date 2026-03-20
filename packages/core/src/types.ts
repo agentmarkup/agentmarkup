@@ -108,6 +108,7 @@ export interface LlmsTxtConfig {
   instructions?: string;
   sections: LlmsTxtSection[];
   replaceExisting?: boolean;
+  preferMarkdownMirrors?: boolean;
 }
 
 export interface MarkdownPagesConfig {

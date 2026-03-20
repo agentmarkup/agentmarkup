@@ -1,6 +1,6 @@
 {
   "name": "@agentmarkup/core",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Framework-agnostic llms.txt, JSON-LD, markdown mirrors, headers, AI crawler controls, and validation",
   "type": "module",
   "license": "MIT",

@@ -3,6 +3,7 @@ import {
   generateContentSignalHeaders,
   generateJsonLdTags,
   generateLlmsTxt,
+  generateMarkdownCanonicalHeaders,
   generatePageMarkdown,
   patchRobotsTxt,
   presetToJsonLd,
@@ -99,5 +100,17 @@ describe('manual pipeline helpers', () => {
   it('builds Content-Signal headers through the public API', () => {
     const headers = generateContentSignalHeaders();
     expect(headers).toContain('Content-Signal: ai-train=yes, search=yes, ai-input=yes');
+  });
+
+  it('builds markdown canonical headers through the public API', () => {
+    const headers = generateMarkdownCanonicalHeaders([
+      {
+        markdownPath: '/faq.md',
+        canonicalUrl: 'https://example.com/faq',
+      },
+    ]);
+
+    expect(headers).toContain('/faq.md');
+    expect(headers).toContain('Link: <https://example.com/faq>; rel="canonical"');
   });
 });

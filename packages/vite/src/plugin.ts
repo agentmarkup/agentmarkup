@@ -14,6 +14,7 @@ import {
   injectJsonLdTags,
   markdownFileNameFromHtmlFile,
   normalizePagePath,
+  patchMarkdownCanonicalHeaders,
   patchHeadersFile,
   patchRobotsTxt,
   presetToJsonLd,
@@ -24,7 +25,11 @@ import {
   validateRobotsTxt,
   validateSchema,
 } from '@agentmarkup/core';
-import type { AgentMarkupConfig, ValidationResult } from '@agentmarkup/core';
+import type {
+  AgentMarkupConfig,
+  MarkdownCanonicalHeaderEntry,
+  ValidationResult,
+} from '@agentmarkup/core';
 
 interface AssetLike {
   type: 'asset';
@@ -40,6 +45,8 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
   let jsonLdPages = 0;
   let markdownPages = 0;
   let markdownPagesStatus: 'generated' | 'preserved' | 'none' = 'none';
+  let markdownCanonicalHeadersCount = 0;
+  let markdownCanonicalHeadersStatus: 'generated' | 'preserved' | 'none' = 'none';
   let crawlersConfigured = 0;
   let robotsTxtStatus: 'patched' | 'preserved' | 'none' = 'none';
   let contentSignalHeadersStatus: 'generated' | 'preserved' | 'none' = 'none';
@@ -267,6 +274,7 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
 
       if (isFeatureEnabled(config.markdownPages)) {
         let preservedMarkdownPages = 0;
+        const markdownCanonicalEntries: MarkdownCanonicalHeaderEntry[] = [];
         const htmlAssets: Array<[string, AssetLike]> = Object.entries(bundle).flatMap(
           ([fileName, asset]) =>
             fileName.endsWith('.html') && isAssetLike(asset)
@@ -303,6 +311,10 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
           const preservedMarkdown = existingMarkdown ?? publicMarkdown;
           if (preservedMarkdown && !config.markdownPages?.replaceExisting) {
             preservedMarkdownPages += 1;
+            markdownCanonicalEntries.push({
+              markdownPath: `/${markdownFileName}`,
+              canonicalUrl: buildCanonicalUrl(config.site, pagePath),
+            });
             if (!existingMarkdownAsset) {
               this.emitFile({
                 type: 'asset',
@@ -322,6 +334,10 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
             fileName: markdownFileName,
             source: markdown,
           });
+          markdownCanonicalEntries.push({
+            markdownPath: `/${markdownFileName}`,
+            canonicalUrl: buildCanonicalUrl(config.site, pagePath),
+          });
           markdownPages += 1;
         }
 
@@ -331,43 +347,76 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
             : preservedMarkdownPages > 0
               ? 'preserved'
               : 'none';
+
+        if (markdownCanonicalEntries.length > 0) {
+          const headersFileName = '_headers';
+          const headersPatch = resolveHeadersPatchInputs(
+            bundle,
+            publicDir,
+            headersFileName
+          );
+          const existingHeadersText = headersPatch.existingHeadersText;
+          const patchedHeaders = patchMarkdownCanonicalHeaders(
+            existingHeadersText,
+            markdownCanonicalEntries
+          );
+          const preserved =
+            existingHeadersText !== null &&
+            patchedHeaders === ensureTrailingNewline(existingHeadersText);
+
+          markdownCanonicalHeadersCount = markdownCanonicalEntries.length;
+          markdownCanonicalHeadersStatus = preserved ? 'preserved' : 'generated';
+
+          if (preserved) {
+            if (!headersPatch.existingHeadersAsset && existingHeadersText) {
+              this.emitFile({
+                type: 'asset',
+                fileName: headersFileName,
+                source: ensureTrailingNewline(existingHeadersText),
+              });
+            }
+          } else {
+            if (headersPatch.existingHeadersAsset) {
+              delete bundle[headersFileName];
+            }
+
+            this.emitFile({
+              type: 'asset',
+              fileName: headersFileName,
+              source: patchedHeaders,
+            });
+          }
+        }
       }
 
       if (isFeatureEnabled(config.contentSignalHeaders)) {
         const headersFileName = '_headers';
-        const existingHeadersAsset = getBundleAsset(bundle, headersFileName);
-        const existingHeaders = existingHeadersAsset
-          ? getAssetText(existingHeadersAsset.source)
-          : null;
-
-        let publicHeaders: string | null = null;
-        if (!existingHeaders && publicDir) {
-          const publicHeadersPath = join(publicDir, headersFileName);
-          if (existsSync(publicHeadersPath)) {
-            publicHeaders = readFileSync(publicHeadersPath, 'utf8');
-          }
-        }
-
-        const existingHeadersText = existingHeaders ?? publicHeaders;
+        const headersPatch = resolveHeadersPatchInputs(
+          bundle,
+          publicDir,
+          headersFileName
+        );
+        const existingHeadersText = headersPatch.existingHeadersText;
         const patchedHeaders = patchHeadersFile(
           existingHeadersText,
           config.contentSignalHeaders
         );
         const preserved =
-          existingHeadersText !== null && patchedHeaders === existingHeadersText;
+          existingHeadersText !== null &&
+          patchedHeaders === ensureTrailingNewline(existingHeadersText);
 
         contentSignalHeadersStatus = preserved ? 'preserved' : 'generated';
 
         if (preserved) {
-          if (!existingHeadersAsset && existingHeadersText) {
+          if (!headersPatch.existingHeadersAsset && existingHeadersText) {
             this.emitFile({
               type: 'asset',
               fileName: headersFileName,
-              source: existingHeadersText,
+              source: ensureTrailingNewline(existingHeadersText),
             });
           }
         } else {
-          if (existingHeadersAsset) {
+          if (headersPatch.existingHeadersAsset) {
             delete bundle[headersFileName];
           }
 
@@ -402,6 +451,8 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
         jsonLdPages,
         markdownPages,
         markdownPagesStatus,
+        markdownCanonicalHeadersCount,
+        markdownCanonicalHeadersStatus,
         crawlersConfigured,
         robotsTxtStatus,
         contentSignalHeadersStatus,
@@ -423,6 +474,11 @@ function resolveOutputPagePath(fileName: string): string {
   return normalizePagePath(fileName === 'index.html' ? '/' : `/${fileName}`);
 }
 
+function buildCanonicalUrl(siteUrl: string, pagePath: string): string {
+  const base = siteUrl.replace(/\/$/, '');
+  return pagePath === '/' ? `${base}/` : `${base}${pagePath}`;
+}
+
 function getAssetText(source: string | Uint8Array): string {
   return typeof source === 'string'
     ? source
@@ -439,6 +495,37 @@ function getBundleAsset(
   }
 
   return entry;
+}
+
+function resolveHeadersPatchInputs(
+  bundle: Record<string, unknown>,
+  publicDir: string | undefined,
+  headersFileName: string
+): {
+  existingHeadersAsset: AssetLike | null;
+  existingHeadersText: string | null;
+} {
+  const existingHeadersAsset = getBundleAsset(bundle, headersFileName);
+  const existingHeaders = existingHeadersAsset
+    ? getAssetText(existingHeadersAsset.source)
+    : null;
+
+  let publicHeaders: string | null = null;
+  if (!existingHeaders && publicDir) {
+    const publicHeadersPath = join(publicDir, headersFileName);
+    if (existsSync(publicHeadersPath)) {
+      publicHeaders = readFileSync(publicHeadersPath, 'utf8');
+    }
+  }
+
+  return {
+    existingHeadersAsset,
+    existingHeadersText: existingHeaders ?? publicHeaders,
+  };
+}
+
+function ensureTrailingNewline(value: string): string {
+  return value.endsWith('\n') ? value : `${value}\n`;
 }
 
 function isAssetLike(value: unknown): value is AssetLike {

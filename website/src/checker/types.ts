@@ -1,4 +1,5 @@
 export type AuditLevel = 'pass' | 'warning' | 'error';
+export type ResourceLevel = AuditLevel | 'info';
 
 export interface RemoteResource {
   requestedUrl: string;
@@ -56,6 +57,7 @@ export interface AuditItem {
   detail: string;
   action: string;
   docUrl?: string;
+  agentmarkupHelp?: string;
 }
 
 export interface ResourceStatus {
@@ -67,11 +69,13 @@ export interface ResourceStatus {
     | 'sitemap'
     | 'samplePage'
     | 'samplePageMarkdown';
+  level: ResourceLevel;
   label: string;
   url: string | null;
   status: string;
   detail: string;
   ok: boolean;
+  agentmarkupHelp?: string;
 }
 
 export interface SiteAnalysis {

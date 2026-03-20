@@ -133,9 +133,13 @@ describe('@agentmarkup/astro', () => {
     expect(faqHtml).toContain('href="/faq.md"');
 
     expect(llmsTxt).toContain('# Example');
-    expect(llmsTxt).toContain('[FAQ](https://example.com/faq)');
+    expect(llmsTxt).toContain('[FAQ](https://example.com/faq.md)');
     expect(faqMarkdown).toContain('# FAQ');
     expect(headers).toContain('Content-Signal: ai-train=yes, search=yes, ai-input=yes');
+    expect(headers).toContain('/index.md');
+    expect(headers).toContain('Link: <https://example.com/>; rel="canonical"');
+    expect(headers).toContain('/faq.md');
+    expect(headers).toContain('Link: <https://example.com/faq>; rel="canonical"');
 
     expect(robotsTxt).toContain('Sitemap: https://example.com/sitemap.xml');
     expect(robotsTxt).toContain('# BEGIN agentmarkup AI crawlers');
@@ -249,5 +253,35 @@ describe('@agentmarkup/astro', () => {
     expect((homeHtml.match(/application\/ld\+json/g) ?? [])).toHaveLength(1);
     expect(llmsTxt).toBe(existingLlms);
     expect(robotsTxt).toBe(existingRobots);
+  });
+
+  it('writes markdown canonical headers even without Content-Signal enabled', async () => {
+    const root = await createFixture({
+      'dist/index.html': [
+        '<html>',
+        '  <head><title>Home</title></head>',
+        '  <body><main><h1>Home</h1><p>Readable body copy for markdown output.</p></main></body>',
+        '</html>',
+      ].join('\n'),
+    });
+
+    const integration = agentmarkup({
+      site: 'https://example.com',
+      name: 'Example',
+      markdownPages: {
+        enabled: true,
+      },
+    });
+
+    await integration.hooks['astro:build:done']?.({
+      dir: pathToFileURL(join(root, 'dist/')),
+      routes: [],
+      pages: [{ pathname: '/' }],
+    } as AstroBuildDoneArgs);
+
+    const headers = await readFile(join(root, 'dist', '_headers'), 'utf8');
+    expect(headers).toContain('/index.md');
+    expect(headers).toContain('Link: <https://example.com/>; rel="canonical"');
+    expect(headers).not.toContain('Content-Signal:');
   });
 });

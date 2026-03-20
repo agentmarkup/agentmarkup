@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   generateContentSignalHeaderValue,
   generateContentSignalHeaders,
+  generateMarkdownCanonicalHeaders,
   patchHeadersFile,
+  patchMarkdownCanonicalHeaders,
 } from '../src/generators/headers.js';
 
 describe('Content-Signal headers', () => {
@@ -29,7 +31,7 @@ describe('Content-Signal headers', () => {
       '',
     ].join('\n');
 
-    const patched = patchHeadersFile(existing);
+    const patched = patchHeadersFile(existing, {});
 
     expect(patched).toContain('X-Content-Type-Options: nosniff');
     expect(patched).toContain('/llms.txt');
@@ -48,6 +50,73 @@ describe('Content-Signal headers', () => {
       '',
     ].join('\n');
 
-    expect(patchHeadersFile(existing)).toBe(existing);
+    expect(patchHeadersFile(existing, {})).toBe(existing);
+  });
+
+  it('creates markdown canonical headers for markdown mirrors', () => {
+    const headers = generateMarkdownCanonicalHeaders([
+      {
+        markdownPath: '/index.md',
+        canonicalUrl: 'https://example.com/',
+      },
+      {
+        markdownPath: '/faq.md',
+        canonicalUrl: 'https://example.com/faq',
+      },
+    ]);
+
+    expect(headers).toContain('# BEGIN agentmarkup Markdown canonicals');
+    expect(headers).toContain('/index.md');
+    expect(headers).toContain('Link: <https://example.com/>; rel="canonical"');
+    expect(headers).toContain('/faq.md');
+    expect(headers).toContain('Link: <https://example.com/faq>; rel="canonical"');
+  });
+
+  it('patches markdown canonical headers without losing previous rules', () => {
+    const existing = [
+      '/*',
+      '  X-Content-Type-Options: nosniff',
+      '',
+      '/llms.txt',
+      '  Cache-Control: public, max-age=300',
+      '',
+    ].join('\n');
+
+    const patched = patchMarkdownCanonicalHeaders(existing, [
+      {
+        markdownPath: '/pricing.md',
+        canonicalUrl: 'https://example.com/pricing',
+      },
+    ]);
+
+    expect(patched).toContain('X-Content-Type-Options: nosniff');
+    expect(patched).toContain('/pricing.md');
+    expect(patched).toContain(
+      'Link: <https://example.com/pricing>; rel="canonical"'
+    );
+  });
+
+  it('preserves existing matching markdown canonical rules without markers', () => {
+    const existing = [
+      '/index.md',
+      '  Link: <https://example.com/>; rel="canonical"',
+      '',
+      '/faq.md',
+      '  Link: <https://example.com/faq>; rel="canonical"',
+      '',
+    ].join('\n');
+
+    expect(
+      patchMarkdownCanonicalHeaders(existing, [
+        {
+          markdownPath: '/index.md',
+          canonicalUrl: 'https://example.com/',
+        },
+        {
+          markdownPath: '/faq.md',
+          canonicalUrl: 'https://example.com/faq',
+        },
+      ])
+    ).toBe(existing);
   });
 });

@@ -53,8 +53,11 @@ export {
 export {
   generateContentSignalHeaderValue,
   generateContentSignalHeaders,
+  generateMarkdownCanonicalHeaders,
   patchHeadersFile,
+  patchMarkdownCanonicalHeaders,
 } from './generators/headers.js';
+export type { MarkdownCanonicalHeaderEntry } from './generators/headers.js';
 export {
   buildWebSite,
   buildOrganization,
