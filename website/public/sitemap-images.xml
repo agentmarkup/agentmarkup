@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>https://agentmarkup.dev/</loc>
+    <image:image>
+      <image:loc>https://agentmarkup.dev/og-image.png</image:loc>
+      <image:title>agentmarkup - make your website machine-readable</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://agentmarkup.dev/agentmarkup-build-output.webp</image:loc>
+      <image:title>agentmarkup build output showing llms.txt generation, JSON-LD injection, and robots.txt patching</image:title>
+    </image:image>
+  </url>
+</urlset>

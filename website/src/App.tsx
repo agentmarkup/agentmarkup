@@ -152,8 +152,16 @@ function Home() {
         </section>
 
         <section className="output">
-          <h2>Build output</h2>
-          <CodeBlock code={buildOutputs[fw]} />
+          <h2>Build output from this website</h2>
+          <p className="output-note">This is the actual output from building agentmarkup.dev with <code>@agentmarkup/vite</code>.</p>
+          <img
+            src="/agentmarkup-build-output.webp"
+            alt="agentmarkup build output showing llms.txt generated with 17 entries, JSON-LD injected into 13 pages, robots.txt patched with 5 AI crawlers configured, and no issues found"
+            className="output-screenshot"
+            width="880"
+            height="424"
+            loading="lazy"
+          />
         </section>
 
         <section className="packages">

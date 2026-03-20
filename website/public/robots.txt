@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://agentmarkup.dev/sitemap.xml
+Sitemap: https://agentmarkup.dev/sitemap-images.xml

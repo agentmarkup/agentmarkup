@@ -325,6 +325,26 @@ h2 {
   margin-bottom: 4rem;
 }
 
+.output-note {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.output-note code {
+  font-size: 0.85em;
+  background: var(--surface-code);
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+}
+
+.output-screenshot {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
 /* Code block component */
 .code-block {
   position: relative;
