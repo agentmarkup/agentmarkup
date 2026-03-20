@@ -21,6 +21,10 @@ interface OutputChunkLike extends BundleEntryLike {
 }
 
 type OutputBundleLike = Record<string, BundleEntryLike>
+type MessagePortLike = {
+  close?: () => void
+  unref?: () => void
+}
 
 const SOURCE_ENTRY_SCRIPT_RE =
   /<script\b(?=[^>]*\btype="module\b)(?=[^>]*\bsrc="([^"]+)")[^>]*><\/script>/i
@@ -49,6 +53,7 @@ export function websitePrerender(): Plugin {
       }
     },
     async writeBundle() {
+      const activeHandlesBeforeWrite = getActiveHandlesSnapshot()
       const outDir = resolve(config.root, config.build.outDir)
       const htmlFiles = await findHtmlFiles(outDir)
 
@@ -115,6 +120,8 @@ export function websitePrerender(): Plugin {
           }
         }),
       )
+
+      closeNewMessagePorts(activeHandlesBeforeWrite)
     },
   }
 }
@@ -165,4 +172,32 @@ function pagePathFromOutputFile(relativeHtmlPath: string): string {
       : `/${relativeHtmlPath.replace(/\/index\.html$/i, '/').replace(/\.html$/i, '')}`
 
   return normalizePagePath(candidatePath)
+}
+
+function getActiveHandlesSnapshot(): Set<object> {
+  return new Set(getActiveHandles())
+}
+
+function closeNewMessagePorts(previousHandles: Set<object>) {
+  for (const handle of getActiveHandles()) {
+    if (previousHandles.has(handle)) {
+      continue
+    }
+
+    if (handle.constructor?.name !== 'MessagePort') {
+      continue
+    }
+
+    const messagePort = handle as MessagePortLike
+    messagePort.unref?.()
+    messagePort.close?.()
+  }
+}
+
+function getActiveHandles(): object[] {
+  const processWithActiveHandles = process as NodeJS.Process & {
+    _getActiveHandles?: () => object[]
+  }
+
+  return processWithActiveHandles._getActiveHandles?.() ?? []
 }
