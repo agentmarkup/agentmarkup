@@ -1,0 +1,25 @@
+# OS
+.DS_Store
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment
+.env
+.env*.local
+
+# Editor / AI tool settings
+.claude/
+
+# Test artifacts
+**/test/.tmp/
+
+# Internal docs
+/AGENTS.md
+/CLAUDE.md
+/agents.md
+/claude.md
+planning-docs/

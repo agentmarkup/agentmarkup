@@ -1,0 +1,232 @@
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 4rem 2rem;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 4rem;
+}
+
+header h1 {
+  font-size: 2.25rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.tagline {
+  font-size: 1.25rem;
+  color: #888;
+}
+
+.subtitle {
+  font-size: 1rem;
+  color: #555;
+  margin-top: 0.5rem;
+}
+
+.install-hero {
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  display: inline-block;
+  font-size: 0.95rem;
+  margin-top: 1.5rem;
+}
+
+main {
+  flex: 1;
+}
+
+.about {
+  margin-bottom: 3rem;
+}
+
+.about p {
+  color: #aaa;
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+h2 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2rem;
+  margin-bottom: 4rem;
+}
+
+.feature {
+  padding: 1.5rem;
+  border: 1px solid #222;
+  border-radius: 8px;
+}
+
+.feature h2 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.feature p {
+  color: #aaa;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.feature a {
+  color: #ccc;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.feature a:hover {
+  color: #fff;
+}
+
+.presets {
+  margin-bottom: 4rem;
+}
+
+.presets-description {
+  color: #888;
+  margin-bottom: 1rem;
+}
+
+.preset-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.preset {
+  font-family: 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.75rem;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 4px;
+  color: #ccc;
+}
+
+.example {
+  margin-bottom: 4rem;
+}
+
+.output {
+  margin-bottom: 4rem;
+}
+
+/* Code block component */
+.code-block {
+  position: relative;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 8px;
+  overflow: auto;
+}
+
+.code-block pre {
+  margin: 0;
+  padding: 1rem 1rem 1rem 0;
+  overflow-x: auto;
+}
+
+.code-block code {
+  display: flex;
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+.line-numbers {
+  display: flex;
+  flex-direction: column;
+  text-align: right;
+  padding-right: 1rem;
+  padding-left: 1rem;
+  color: #444;
+  user-select: none;
+  flex-shrink: 0;
+  position: sticky;
+  left: 0;
+  background: #111;
+}
+
+.code-content {
+  white-space: pre;
+}
+
+.copy-btn {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  background: transparent;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #666;
+  cursor: pointer;
+  padding: 4px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, border-color 0.15s;
+  z-index: 1;
+}
+
+.copy-btn:hover {
+  color: #ccc;
+  border-color: #555;
+}
+
+footer {
+  text-align: center;
+  padding-top: 2rem;
+  border-top: 1px solid #222;
+}
+
+.footer-links {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+footer a {
+  color: #888;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+footer a:hover {
+  color: #fff;
+}
+
+.credit {
+  color: #777;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 600px) {
+  .features {
+    grid-template-columns: 1fr;
+  }
+
+  header h1 {
+    font-size: 1.5rem;
+  }
+
+  .code-block code {
+    font-size: 0.7rem;
+  }
+}

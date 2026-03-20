@@ -1,0 +1,31 @@
+export { agentmarkup } from './plugin.js';
+export type {
+  AgentMarkupConfig,
+  SchemaConfig,
+  SchemaPreset,
+  CustomSchema,
+  WebSiteSchema,
+  OrganizationSchema,
+  ArticleSchema,
+  FaqPageSchema,
+  ProductSchema,
+  OfferSchema,
+  OfferData,
+  LlmsTxtConfig,
+  LlmsTxtSection,
+  LlmsTxtEntry,
+  AiCrawlersConfig,
+  CrawlerDirective,
+  PageConfig,
+  ValidationResult,
+  ValidationSeverity,
+} from './types.js';
+export {
+  buildWebSite,
+  buildOrganization,
+  buildArticle,
+  buildFaqPage,
+  buildProduct,
+  buildOffer,
+  presetToJsonLd,
+} from './presets/index.js';
