@@ -1,7 +1,7 @@
 {
   "name": "@agentmarkup/core",
-  "version": "0.3.0",
-  "description": "Framework-agnostic llms.txt, JSON-LD, and AI crawler generation for machine-readable websites",
+  "version": "0.3.1",
+  "description": "Framework-agnostic llms.txt, JSON-LD, markdown mirrors, headers, AI crawler controls, and validation",
   "type": "module",
   "license": "MIT",
   "author": "Sebastian Cochinescu <hello@animafelix.com> (https://animafelix.com)",
@@ -17,11 +17,16 @@
   "keywords": [
     "llms-txt",
     "json-ld",
+    "markdown",
     "schema-org",
     "structured-data",
     "robots-txt",
+    "content-signal",
+    "headers",
     "ai-crawler",
-    "machine-readable"
+    "machine-readable",
+    "validation",
+    "geo"
   ],
   "exports": {
     ".": {
