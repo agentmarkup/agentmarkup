@@ -223,8 +223,8 @@ function Home() {
             src="/agentmarkup-build-output.webp"
             alt="Terminal output from a recent agentmarkup.dev build showing llms.txt generation, JSON-LD injection, markdown page generation, Content-Signal headers, markdown canonical headers, and a clean validation report"
             className="output-screenshot"
-            width="964"
-            height="500"
+            width="974"
+            height="534"
             loading="lazy"
           />
         </section>

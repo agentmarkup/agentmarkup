@@ -60,7 +60,7 @@ function Layout({ children }: { children: React.ReactNode }) {
     <>
       <nav className="site-nav">
         <div className="nav-inner">
-          <a href="/" className="nav-brand">agentmarkup</a>
+          <a href="/" className="nav-brand"><img src="/favicon-32x32.png" alt="" width="26" height="26" className="nav-logo" />agentmarkup</a>
           <div className="nav-right">
             <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
               {theme === 'dark' ? (

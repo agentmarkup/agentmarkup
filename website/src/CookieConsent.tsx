@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useSyncExternalStore } from 'react'
+import { useEffect, useCallback, useRef, useSyncExternalStore } from 'react'
 
 const STORAGE_KEY = 'agentmarkup-cookie-consent'
 const STORAGE_TS_KEY = 'agentmarkup-cookie-consent-ts'
@@ -13,6 +13,9 @@ declare global {
     dataLayer: unknown[]
     gtag: (...args: unknown[]) => void
     resetCookieConsent?: () => void
+    __agentmarkupGaReady?: boolean
+    __agentmarkupGaInitialized?: boolean
+    __agentmarkupGaScriptPromise?: Promise<void>
   }
 }
 
@@ -25,43 +28,78 @@ function initGtagStub() {
   }
 }
 
-function injectGAScript() {
-  if (document.querySelector(`script[src*="googletagmanager"]`)) return
-  const s = document.createElement('script')
-  s.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`
-  s.async = true
-  document.head.appendChild(s)
+function loadGAScript() {
+  initGtagStub()
+
+  if (window.__agentmarkupGaReady) {
+    return Promise.resolve()
+  }
+
+  if (window.__agentmarkupGaScriptPromise) {
+    return window.__agentmarkupGaScriptPromise
+  }
+
+  const existing = document.querySelector<HTMLScriptElement>(
+    `script[src="https://www.googletagmanager.com/gtag/js?id=${GA_ID}"]`,
+  )
+
+  window.__agentmarkupGaScriptPromise = new Promise<void>((resolve, reject) => {
+    const handleLoad = () => {
+      window.__agentmarkupGaReady = true
+      resolve()
+    }
+
+    const handleError = () => {
+      window.__agentmarkupGaScriptPromise = undefined
+      reject(new Error('Failed to load Google Analytics script'))
+    }
+
+    if (existing) {
+      if (existing.dataset.loaded === 'true') {
+        handleLoad()
+        return
+      }
+
+      existing.addEventListener('load', () => {
+        existing.dataset.loaded = 'true'
+        handleLoad()
+      }, { once: true })
+      existing.addEventListener('error', handleError, { once: true })
+      return
+    }
+
+    const script = document.createElement('script')
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`
+    script.async = true
+    script.addEventListener('load', () => {
+      script.dataset.loaded = 'true'
+      handleLoad()
+    }, { once: true })
+    script.addEventListener('error', handleError, { once: true })
+    document.head.appendChild(script)
+  })
+
+  return window.__agentmarkupGaScriptPromise
 }
 
 function bootstrapGA() {
   initGtagStub()
-  // Set default consent to denied
-  window.gtag('consent', 'default', {
-    ad_storage: 'denied',
-    analytics_storage: 'denied',
-    ad_user_data: 'denied',
-    ad_personalization: 'denied',
-  })
+  if (window.__agentmarkupGaInitialized) return
+
   window.gtag('js', new Date())
   window.gtag('config', GA_ID, {
     send_page_view: false,
+    allow_google_signals: true,
   })
-}
-
-function grantConsent() {
-  initGtagStub()
-  window.gtag('consent', 'update', {
-    analytics_storage: 'granted',
-  })
+  window.__agentmarkupGaInitialized = true
 }
 
 function trackPageView() {
   initGtagStub()
-  window.gtag('config', GA_ID, {
+  window.gtag('event', 'page_view', {
     page_path: `${window.location.pathname}${window.location.search}${window.location.hash}`,
     page_location: window.location.href,
     page_title: document.title,
-    send_page_view: true,
   })
 }
 
@@ -119,6 +157,7 @@ function subscribeConsent(onStoreChange: () => void) {
 
 function CookieConsent() {
   const consent = useSyncExternalStore(subscribeConsent, getConsent, () => null)
+  const lastTrackedPageRef = useRef<string | null>(null)
 
   const reset = useCallback(() => {
     if (typeof window === 'undefined') return
@@ -131,20 +170,36 @@ function CookieConsent() {
   useEffect(() => {
     syncConsentDocumentState(consent)
 
-    // Always bootstrap gtag stub so consent default is set
-    bootstrapGA()
+    window.resetCookieConsent = reset
+    let cancelled = false
 
     if (consent === 'accepted') {
       ;(window as unknown as Record<string, unknown>)[`ga-disable-${GA_ID}`] = false
-      injectGAScript()
-      grantConsent()
-      trackPageView()
+
+      void loadGAScript()
+        .then(() => {
+          if (cancelled) return
+          bootstrapGA()
+
+          const pageKey = `${window.location.pathname}${window.location.search}${window.location.hash}`
+          if (lastTrackedPageRef.current !== pageKey) {
+            trackPageView()
+            lastTrackedPageRef.current = pageKey
+          }
+        })
+        .catch((error) => {
+          console.warn('Google Analytics failed to initialize', error)
+        })
     } else if (consent === 'declined') {
       ;(window as unknown as Record<string, unknown>)[`ga-disable-${GA_ID}`] = true
+      lastTrackedPageRef.current = null
+    } else {
+      ;(window as unknown as Record<string, unknown>)[`ga-disable-${GA_ID}`] = true
+      lastTrackedPageRef.current = null
     }
 
-    window.resetCookieConsent = reset
     return () => {
+      cancelled = true
       if (window.resetCookieConsent === reset) {
         delete window.resetCookieConsent
       }
@@ -162,7 +217,6 @@ function CookieConsent() {
     localStorage.setItem(STORAGE_KEY, 'declined')
     localStorage.setItem(STORAGE_TS_KEY, String(Date.now()))
     syncConsentDocumentState('declined')
-    // Disable GA for this page
     ;(window as unknown as Record<string, unknown>)[`ga-disable-${GA_ID}`] = true
     window.dispatchEvent(new Event(CONSENT_CHANGE_EVENT))
   }

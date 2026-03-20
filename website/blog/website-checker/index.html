@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <script>(function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+    <script>(function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t);document.documentElement.style.backgroundColor=t==='light'?'#fafafa':'#0a0a0a';document.documentElement.style.colorScheme=t})()</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Is your website ready for AI? Free LLM discoverability checker - agentmarkup</title>
     <meta name="description" content="Check if your website has llms.txt, JSON-LD structured data, AI crawler robots.txt rules, markdown mirrors, and sitemap. Free audit tool for AI discoverability - works for e-commerce and brand websites." />

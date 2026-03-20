@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <script>(function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+    <script>(function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t);document.documentElement.style.backgroundColor=t==='light'?'#fafafa':'#0a0a0a';document.documentElement.style.colorScheme=t})()</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sebastian Cochinescu - Developer of agentmarkup</title>
     <meta name="description" content="Sebastian Cochinescu is the developer of agentmarkup, an open-source toolkit for making websites machine-readable. Also founder of Anima Felix." />

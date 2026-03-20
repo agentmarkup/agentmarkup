@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <script>(function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t)})()</script>
+    <script>(function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t);document.documentElement.style.backgroundColor=t==='light'?'#fafafa':'#0a0a0a';document.documentElement.style.colorScheme=t})()</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Build-time markdown mirrors for agent readability: how they compare to Cloudflare's approach - agentmarkup</title>
     <meta name="description" content="Build-time markdown generation for AI readability, including where it helps, where it is optional, and how it compares to Cloudflare runtime extraction." />
