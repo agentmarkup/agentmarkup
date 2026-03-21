@@ -115,6 +115,25 @@ Contribution guidelines live in [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 Website deploys are manual via `./deploy/website-deploy.sh`.
 
+## Codex Skill
+
+This repo includes a repo-local Codex skill at `.agents/skills/agentmarkup-audit` for auditing and improving machine-readable website metadata.
+
+Use it to:
+
+- determine final-output ownership
+- recommend `@agentmarkup/vite`, `@agentmarkup/astro`, or `@agentmarkup/core`
+- audit `llms.txt`, `llms-full.txt`, JSON-LD, `robots.txt`, `_headers`, and markdown mirrors
+- compare a site or repo against the same expectations used by the website checker
+
+This skill is repo tooling, not part of the published package runtime surface.
+
+Example prompt:
+
+```text
+Use the repo-local agentmarkup-audit skill on this repo or site. Determine who owns the final HTML, audit llms.txt, llms-full.txt, JSON-LD, robots.txt, _headers, and tell me whether markdown mirrors plus @agentmarkup/vite, @agentmarkup/astro, or @agentmarkup/core are the right fit.
+```
+
 ## Maintainer
 
 Copyright (c) 2026 [Sebastian Cochinescu](https://www.cochinescu.com). MIT License.
