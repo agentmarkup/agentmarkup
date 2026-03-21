@@ -194,6 +194,29 @@ function Home() {
           </div>
         </section>
 
+        <section className="checker-cta">
+          <div className="checker-cta-card">
+            <h2>Repo-local Codex skill</h2>
+            <p>
+              This repo also includes a repo-local Codex skill at
+              {' '}<code>.agents/skills/agentmarkup-audit</code>{' '}
+              for auditing final-output ownership, llms.txt, llms-full.txt,
+              JSON-LD, robots.txt, <code>_headers</code>, and whether markdown
+              mirrors help. It stays separate from the published packages and
+              uses the website checker as guidance rather than a runtime
+              dependency.
+            </p>
+            <a
+              className="checker-cta-link"
+              href="https://github.com/agentmarkup/agentmarkup/tree/main/.agents/skills/agentmarkup-audit"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              View the Codex skill in GitHub
+            </a>
+          </div>
+        </section>
+
         <section className="presets">
           <h2>Schema.org presets</h2>
           <p className="presets-description">Type-safe builders for common structured data types. Apply globally or per-page.</p>

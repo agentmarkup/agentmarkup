@@ -1,0 +1,4 @@
+interface:
+  display_name: "agentmarkup Audit"
+  short_description: "Audit agent-ready website metadata"
+  default_prompt: "Use $agentmarkup-audit to audit this repo or site for final-output ownership, llms.txt, llms-full.txt, JSON-LD, robots.txt, _headers, and markdown-mirror fit."
