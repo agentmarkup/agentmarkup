@@ -24,8 +24,8 @@ function AuthorProfile() {
             He is also the founder of <a href="https://animafelix.com" target="_blank" rel="noopener noreferrer">Anima Felix</a>, an anxiety support app that uses agentmarkup in production.
           </p>
           <ul>
-            <li><a href="https://www.cochinescu.com" target="_blank" rel="noopener noreferrer">cochinescu.com</a></li>
-            <li><a href="https://github.com/nichochar" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+            <li><a href={author.externalUrl} target="_blank" rel="noopener noreferrer">cochinescu.com</a></li>
+            <li><a href={author.githubUrl} target="_blank" rel="noopener noreferrer">GitHub</a></li>
           </ul>
         </section>
 

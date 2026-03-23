@@ -3,6 +3,7 @@ export const author = {
   role: 'Developer of agentmarkup',
   profilePath: '/authors/sebastian-cochinescu/',
   externalUrl: 'https://www.cochinescu.com',
+  githubUrl: 'https://github.com/cochinescu',
   bio: 'Builder of developer tools for machine-readable websites. Developer of agentmarkup. Founder of Anima Felix.',
 }
 

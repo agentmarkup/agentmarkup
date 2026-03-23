@@ -85,7 +85,7 @@ const informationalPages = [
           '@type': 'Person',
           name: author.name,
           url: `${siteUrl}${author.profilePath}`,
-          sameAs: [author.externalUrl, 'https://github.com/nichochar'],
+          sameAs: [author.externalUrl, author.githubUrl],
         },
       },
     ],
