@@ -17,8 +17,8 @@ function AuthorProfile() {
             on his own projects: making websites machine-readable for LLMs and
             AI agents required juggling separate tools for llms.txt, JSON-LD,
             robots.txt, markdown mirrors, headers, and validation. agentmarkup
-            combines that build-time surface into one toolkit for Vite and
-            Astro.
+            combines that build-time surface into one toolkit for Vite, Astro,
+            and Next.js.
           </p>
           <p>
             He is also the founder of <a href="https://animafelix.com" target="_blank" rel="noopener noreferrer">Anima Felix</a>, an anxiety support app that uses agentmarkup in production.

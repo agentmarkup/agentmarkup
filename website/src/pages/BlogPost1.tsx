@@ -15,7 +15,7 @@ function WhyLlmsTxtMatters() {
         <section>
           <h2>The shift from search engines to AI answers</h2>
           <p>
-            For two decades, the path to online visibility was clear: optimize for Google, get ranked, get clicked. That model is not going away, but it is being joined by a second discovery channel. When someone asks ChatGPT "what is the best leather wallet under $100" or asks Perplexity "how do I add structured data to my Vite site," the answer comes from synthesized web content, not a list of blue links.
+            For two decades, the path to online visibility was clear: optimize for Google, get ranked, get clicked. That model is not going away, but it is being joined by a second discovery channel. When someone asks ChatGPT "what is the best leather wallet under $100" or asks Perplexity "how do I add structured data to my website," the answer comes from synthesized web content, not a list of blue links.
           </p>
           <p>
             The question for website owners is no longer just "can Google index my pages?" but also "can an LLM understand what my site is about?"

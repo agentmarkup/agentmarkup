@@ -281,7 +281,7 @@ function Home() {
 
         <section className="output">
           <h2>Build output from this website</h2>
-          <p className="output-note">This is a recent build output from agentmarkup.dev with <code>@agentmarkup/vite</code>. The exact page and entry counts change as the docs site grows.</p>
+          <p className="output-note">This is a recent build output from agentmarkup.dev, which currently uses <code>@agentmarkup/vite</code>. The same output types are available through the Astro and Next.js adapters; the exact page and entry counts change as the docs site grows.</p>
           <img
             src="/agentmarkup-build-output.webp"
             alt="Terminal output from a recent agentmarkup.dev build showing llms.txt generation, JSON-LD injection, markdown page generation, Content-Signal headers, markdown canonical headers, and a clean validation report"
@@ -297,15 +297,15 @@ function Home() {
           <div className="package-grid">
             <div className="package-card">
               <h3><a href="https://www.npmjs.com/package/@agentmarkup/vite" target="_blank" rel="noopener noreferrer">@agentmarkup/vite</a></h3>
-              <p className="package-desc">Vite plugin. Works with React, Vue, Svelte, or plain HTML.</p>
+              <p className="package-desc">Vite plugin for final-output builds on React, Vue, Svelte, or plain HTML sites.</p>
             </div>
             <div className="package-card">
               <h3><a href="https://www.npmjs.com/package/@agentmarkup/astro" target="_blank" rel="noopener noreferrer">@agentmarkup/astro</a></h3>
-              <p className="package-desc">Astro integration. Works with any Astro project.</p>
+              <p className="package-desc">Astro integration for sites where Astro owns the built HTML output.</p>
             </div>
             <div className="package-card">
               <h3><a href="https://www.npmjs.com/package/@agentmarkup/next" target="_blank" rel="noopener noreferrer">@agentmarkup/next</a></h3>
-              <p className="package-desc">Next.js adapter. Best for static export, prerendered HTML, and server deployments with build output. Fully dynamic SSR routes should use <code>@agentmarkup/core</code> in app code.</p>
+              <p className="package-desc">Next.js adapter. Best for static export, prerendered HTML, and server deployments with build output. Fully dynamic SSR routes should use <code>@agentmarkup/core</code> in app code. <a href="/blog/nextjs-llms-txt-json-ld/">Read the Next.js guide</a>.</p>
             </div>
             <div className="package-card">
               <h3><a href="https://www.npmjs.com/package/@agentmarkup/core" target="_blank" rel="noopener noreferrer">@agentmarkup/core</a></h3>

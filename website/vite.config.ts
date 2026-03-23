@@ -121,6 +121,7 @@ export default defineConfig({
         'docs-json-ld': resolve(__dirname, 'docs/json-ld/index.html'),
         'docs-ai-crawlers': resolve(__dirname, 'docs/ai-crawlers/index.html'),
         'blog-index': resolve(__dirname, 'blog/index.html'),
+        'blog-nextjs-llms-txt-json-ld': resolve(__dirname, 'blog/nextjs-llms-txt-json-ld/index.html'),
         'blog-when-markdown-mirrors-help': resolve(__dirname, 'blog/when-markdown-mirrors-help/index.html'),
         'blog-why-llms-txt': resolve(__dirname, 'blog/why-llms-txt-matters/index.html'),
         'blog-what-is-geo': resolve(__dirname, 'blog/what-is-geo/index.html'),
@@ -138,6 +139,7 @@ export default defineConfig({
         'prerender-docs-json-ld': resolve(__dirname, 'src/entries/json-ld.tsx'),
         'prerender-docs-ai-crawlers': resolve(__dirname, 'src/entries/ai-crawlers.tsx'),
         'prerender-blog-index': resolve(__dirname, 'src/entries/blog-index.tsx'),
+        'prerender-blog-nextjs-llms-txt-json-ld': resolve(__dirname, 'src/entries/blog-post-10.tsx'),
         'prerender-blog-when-markdown-mirrors-help': resolve(__dirname, 'src/entries/blog-post-9.tsx'),
         'prerender-blog-why-llms-txt': resolve(__dirname, 'src/entries/blog-post-1.tsx'),
         'prerender-blog-what-is-geo': resolve(__dirname, 'src/entries/blog-post-2.tsx'),
@@ -185,6 +187,7 @@ export default defineConfig({
           {
             title: 'Blog',
             entries: [
+              { title: 'Next.js guide', url: '/blog/nextjs-llms-txt-json-ld/', description: 'How to add llms.txt, JSON-LD, AI crawler controls, and validation to Next.js with @agentmarkup/next' },
               { title: 'When markdown mirrors help', url: '/blog/when-markdown-mirrors-help/', description: 'Practical guide to when generated markdown mirrors help and when HTML is already enough' },
               { title: 'Why llms.txt matters', url: '/blog/why-llms-txt-matters/', description: 'How llms.txt makes your website discoverable by AI systems like ChatGPT and Perplexity' },
               { title: 'What is GEO?', url: '/blog/what-is-geo/', description: 'Generative Engine Optimization explained for developers - what is real and what is hype' },

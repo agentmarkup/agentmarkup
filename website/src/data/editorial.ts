@@ -16,6 +16,13 @@ export interface BlogPostMeta {
 
 export const blogPosts: BlogPostMeta[] = [
   {
+    slug: 'nextjs-llms-txt-json-ld',
+    title: 'How to add llms.txt, JSON-LD, and AI crawler controls to Next.js',
+    description: 'Use @agentmarkup/next to generate llms.txt, inject JSON-LD, manage AI crawler rules, and understand the dynamic SSR boundary in Next.js.',
+    date: '2026-03-23',
+    readingTime: '8 min read',
+  },
+  {
     slug: 'when-markdown-mirrors-help',
     title: 'When markdown mirrors help, and when they do not',
     description: 'A practical guide to when generated markdown mirrors add signal, when HTML is already enough, and how to avoid unnecessary downsides.',

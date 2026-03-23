@@ -21,6 +21,32 @@ const presetsExample = `const agentmarkupConfig = {
   ],
 }`
 
+const integrationExample = `// Vite
+import { defineConfig } from 'vite'
+import { agentmarkup } from '@agentmarkup/vite'
+
+export default defineConfig({
+  plugins: [agentmarkup(agentmarkupConfig)],
+})
+
+// Astro
+import { defineConfig } from 'astro/config'
+import { agentmarkup } from '@agentmarkup/astro'
+
+export default defineConfig({
+  integrations: [agentmarkup(agentmarkupConfig)],
+})
+
+// Next.js
+import type { NextConfig } from 'next'
+import { withAgentmarkup } from '@agentmarkup/next'
+
+const nextConfig: NextConfig = {
+  output: 'export',
+}
+
+export default withAgentmarkup(agentmarkupConfig, nextConfig)`
+
 const customExample = `pages: [
   {
     path: '/products/wallets',
@@ -50,7 +76,7 @@ function JsonLd() {
       <article className="doc-page">
         <h1>How to add JSON-LD structured data to your website</h1>
         <p className="doc-intro">
-          JSON-LD (JavaScript Object Notation for Linked Data) is the format Google, Bing, and other search engines use to understand your page content. agentmarkup injects schema.org JSON-LD into your HTML pages at build time with XSS-safe serialization and type-safe presets.
+          JSON-LD (JavaScript Object Notation for Linked Data) is the format Google, Bing, and other search engines use to understand your page content. agentmarkup injects schema.org JSON-LD into your HTML pages at build time for Vite, Astro, and Next.js with XSS-safe serialization and type-safe presets.
         </p>
 
         <section>
@@ -86,9 +112,17 @@ function JsonLd() {
         <section>
           <h2>Using presets</h2>
           <p>
-            Apply schemas globally (every page) or per-page. Global schemas like <code>webSite</code> and <code>organization</code> go in <code>globalSchemas</code>. Page-specific schemas go in <code>pages</code>.
+            Apply schemas globally (every page) or per-page. Global schemas like <code>webSite</code> and <code>organization</code> go in <code>globalSchemas</code>. Page-specific schemas go in <code>pages</code>. The schema config is adapter-agnostic, so the same object works with <code>@agentmarkup/vite</code>, <code>@agentmarkup/astro</code>, and <code>@agentmarkup/next</code>.
           </p>
           <CodeBlock code={presetsExample} />
+        </section>
+
+        <section>
+          <h2>Framework wrappers</h2>
+          <p>
+            After defining the shared schema config, pass it into the adapter for the framework that owns your final output:
+          </p>
+          <CodeBlock code={integrationExample} />
         </section>
 
         <section>

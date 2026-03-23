@@ -31,6 +31,11 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://agentmarkup.dev/blog/nextjs-llms-txt-json-ld/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://agentmarkup.dev/blog/why-llms-txt-matters/</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>

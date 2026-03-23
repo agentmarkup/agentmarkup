@@ -1,35 +1,55 @@
 import CodeBlock from '../CodeBlock'
 
-const example = `import { defineConfig } from 'vite'
+const configExample = `// shared agentmarkup config
+const agentmarkupConfig = {
+  site: 'https://example.com',
+  name: 'My Website',
+  description: 'A short description of your website.',
+  llmsTxt: {
+    instructions: 'Optional instructions for LLMs visiting this site.',
+    sections: [
+      {
+        title: 'Pages',
+        entries: [
+          { title: 'About', url: '/about', description: 'About us' },
+          { title: 'Blog', url: '/blog', description: 'Latest posts' },
+        ],
+      },
+    ],
+  },
+  llmsFullTxt: {
+    enabled: true,
+  },
+  markdownPages: {
+    enabled: true,
+  },
+}`
+
+const integrationExample = `// Vite
+import { defineConfig } from 'vite'
 import { agentmarkup } from '@agentmarkup/vite'
 
 export default defineConfig({
-  plugins: [
-    agentmarkup({
-      site: 'https://example.com',
-      name: 'My Website',
-      description: 'A short description of your website.',
-      llmsTxt: {
-        instructions: 'Optional instructions for LLMs visiting this site.',
-        sections: [
-          {
-            title: 'Pages',
-            entries: [
-              { title: 'About', url: '/about', description: 'About us' },
-              { title: 'Blog', url: '/blog', description: 'Latest posts' },
-            ],
-          },
-        ],
-      },
-      llmsFullTxt: {
-        enabled: true,
-      },
-      markdownPages: {
-        enabled: true,
-      },
-    }),
-  ],
-})`
+  plugins: [agentmarkup(agentmarkupConfig)],
+})
+
+// Astro
+import { defineConfig } from 'astro/config'
+import { agentmarkup } from '@agentmarkup/astro'
+
+export default defineConfig({
+  integrations: [agentmarkup(agentmarkupConfig)],
+})
+
+// Next.js
+import type { NextConfig } from 'next'
+import { withAgentmarkup } from '@agentmarkup/next'
+
+const nextConfig: NextConfig = {
+  output: 'export',
+}
+
+export default withAgentmarkup(agentmarkupConfig, nextConfig)`
 
 const output = `# My Website
 
@@ -99,9 +119,17 @@ function LlmsTxt() {
         <section>
           <h2>Configuration</h2>
           <p>
-            Add the <code>llmsTxt</code> option to your agentmarkup plugin configuration. Define sections and entries that describe the pages on your site.
+            The <code>llmsTxt</code> config itself is shared across the first-party adapters. Define sections and entries that describe the pages on your site once, then pass the same config into Vite, Astro, or Next.js.
           </p>
-          <CodeBlock code={example} />
+          <CodeBlock code={configExample} />
+        </section>
+
+        <section>
+          <h2>Framework wrappers</h2>
+          <p>
+            Once you have the shared config object, wire it into the adapter that owns your final build output:
+          </p>
+          <CodeBlock code={integrationExample} />
         </section>
 
         <section>
