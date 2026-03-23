@@ -9,17 +9,17 @@ function BlogFooter({ currentSlug }: { currentSlug: string }) {
       <section className="blog-cta">
         <h2>Make your website machine-readable</h2>
         <p>
-          agentmarkup is an open-source build-time toolkit for Vite and Astro
-          that generates llms.txt, injects JSON-LD structured data, creates
-          optional markdown mirrors from final HTML when raw pages need a
-          cleaner agent-facing fetch path, manages AI crawler robots.txt rules,
-          patches optional Content-Signal and canonical mirror headers, and
-          validates everything at build time. Zero runtime cost.
+          agentmarkup is an open-source build-time toolkit for Vite, Astro, and
+          Next.js that generates llms.txt, injects JSON-LD structured data,
+          creates optional markdown mirrors from final HTML when raw pages need
+          a cleaner agent-facing fetch path, manages AI crawler robots.txt
+          rules, patches optional Content-Signal and canonical mirror headers,
+          and validates everything at build time. Zero runtime cost.
         </p>
         <div className="blog-cta-actions">
           <a href="/" className="blog-cta-link">Learn more</a>
           <a href="https://github.com/agentmarkup/agentmarkup" target="_blank" rel="noopener noreferrer" className="blog-cta-link">GitHub</a>
-          <pre className="blog-cta-install"><code>pnpm add -D @agentmarkup/vite  # or @agentmarkup/astro</code></pre>
+          <pre className="blog-cta-install"><code>pnpm add -D @agentmarkup/vite  # or @agentmarkup/astro or @agentmarkup/next</code></pre>
         </div>
       </section>
 

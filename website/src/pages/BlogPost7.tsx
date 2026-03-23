@@ -73,14 +73,14 @@ function MarkdownPages() {
             Enable the feature in your config and it runs at build time on
             every HTML page in your output:
           </p>
-          <CodeBlock code={`// vite.config.ts or astro.config.mjs
-agentmarkup({
+          <CodeBlock code={`// shared agentmarkup config
+const agentmarkupConfig = {
   site: 'https://example.com',
   name: 'My Site',
   markdownPages: {
     enabled: true,
   },
-})`} />
+}`} />
           <p>The converter:</p>
           <ol>
             <li>Extracts the page title, meta description, and canonical URL from the HTML head</li>
@@ -205,7 +205,7 @@ llms.txt is a proposed standard that gives LLMs a structured overview of your we
             markdown mirrors as mandatory. They are a tactical option, not the
             whole product.
           </p>
-          <CodeBlock code={`pnpm add -D @agentmarkup/vite  # or @agentmarkup/astro`} />
+          <CodeBlock code={`pnpm add -D @agentmarkup/vite  # or @agentmarkup/astro or @agentmarkup/next`} />
         </section>
       </article>
       <BlogFooter currentSlug="markdown-mirrors" />

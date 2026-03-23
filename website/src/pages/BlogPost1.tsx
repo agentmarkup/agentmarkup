@@ -88,7 +88,7 @@ function WhyLlmsTxtMatters() {
           <p>
             With agentmarkup, you configure your site structure once and the plugin generates llms.txt, injects JSON-LD, and patches robots.txt on every build:
           </p>
-          <CodeBlock code={`pnpm add -D @agentmarkup/vite  # or @agentmarkup/astro`} />
+          <CodeBlock code={`pnpm add -D @agentmarkup/vite  # or @agentmarkup/astro or @agentmarkup/next`} />
           <p>
             Read the <a href="/docs/llms-txt/">full llms.txt guide</a> for configuration details.
           </p>

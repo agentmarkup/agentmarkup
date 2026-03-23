@@ -189,6 +189,42 @@ describe('generateLlmsTxt', () => {
     expect(result).not.toContain('https://example.com//about');
   });
 
+  it('throws a descriptive error when config.site is not an absolute url', () => {
+    expect(() =>
+      generateLlmsTxt(
+        makeConfig({
+          site: 'example.com',
+          llmsTxt: {
+            sections: [
+              {
+                title: 'Pages',
+                entries: [{ title: 'About', url: '/about' }],
+              },
+            ],
+          },
+        })
+      )
+    ).toThrow(/Invalid config\.site "example\.com"/);
+  });
+
+  it('rejects non-http schemes for config.site', () => {
+    expect(() =>
+      generateLlmsTxt(
+        makeConfig({
+          site: 'file:///tmp/example',
+          llmsTxt: {
+            sections: [
+              {
+                title: 'Pages',
+                entries: [{ title: 'About', url: '/about' }],
+              },
+            ],
+          },
+        })
+      )
+    ).toThrow(/Expected an absolute http\(s\) URL/);
+  });
+
   it('generates llms-full.txt with inlined same-site markdown content', () => {
     const result = generateLlmsFullTxt(
       makeConfig({

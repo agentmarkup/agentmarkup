@@ -136,7 +136,7 @@ function BrandAwarenessLlm() {
             <li>Write clear, structured page content using the guidelines above</li>
           </ol>
           <p>
-            Tools like <a href="https://github.com/agentmarkup/agentmarkup" target="_blank" rel="noopener noreferrer">agentmarkup</a> handle steps 1-3 and 5 automatically at build time for Vite and Astro websites. The content and FAQ writing is on you, but the technical infrastructure should not be.
+            Tools like <a href="https://github.com/agentmarkup/agentmarkup" target="_blank" rel="noopener noreferrer">agentmarkup</a> handle steps 1-3 and 5 automatically at build time for Vite, Astro, and Next.js websites. The content and FAQ writing is on you, but the technical infrastructure should not be.
           </p>
         </section>
 

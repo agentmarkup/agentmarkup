@@ -2,7 +2,7 @@
 
 Build-time `llms.txt`, optional `llms-full.txt`, JSON-LD, markdown mirrors, AI crawler controls, and validation for Vite websites.
 
-`@agentmarkup/vite` is the Vite adapter in the `agentmarkup` package family. Framework-agnostic helpers live in `@agentmarkup/core`, and Astro sites use `@agentmarkup/astro`.
+`@agentmarkup/vite` is the Vite adapter in the `agentmarkup` package family. Framework-agnostic helpers live in `@agentmarkup/core`, Astro sites use `@agentmarkup/astro`, and Next.js sites use `@agentmarkup/next`.
 
 ## Install
 

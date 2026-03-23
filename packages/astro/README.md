@@ -2,6 +2,8 @@
 
 Build-time `llms.txt`, optional `llms-full.txt`, JSON-LD, markdown mirrors, AI crawler `robots.txt`, headers, and validation for Astro websites.
 
+`@agentmarkup/astro` is the Astro adapter in the `agentmarkup` package family. Framework-agnostic helpers live in `@agentmarkup/core`, Vite sites use `@agentmarkup/vite`, and Next.js sites use `@agentmarkup/next`.
+
 ## Install
 
 ```bash

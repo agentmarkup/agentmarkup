@@ -120,17 +120,17 @@ function JsonLdGuide() {
             The problem with both tools: they check after deployment. If your structured data is broken, you do not find out until someone tests a live URL. Build-time validation catches these problems before they reach production.
           </p>
           <p>
-            Tools like <a href="https://github.com/agentmarkup/agentmarkup" target="_blank" rel="noopener noreferrer">agentmarkup</a> validate required fields, check for common mistakes, and warn about incomplete schemas during your Vite or Astro build. See the <a href="/docs/json-ld/">JSON-LD documentation</a> for details.
+            Tools like <a href="https://github.com/agentmarkup/agentmarkup" target="_blank" rel="noopener noreferrer">agentmarkup</a> validate required fields, check for common mistakes, and warn about incomplete schemas during your build. See the <a href="/docs/json-ld/">JSON-LD documentation</a> for details.
           </p>
         </section>
 
         <section>
-          <h2>Adding JSON-LD to Vite and Astro sites</h2>
+          <h2>Adding JSON-LD with agentmarkup</h2>
           <p>
             You can add JSON-LD manually by writing script tags in your HTML. For sites with multiple pages and schema types, a build-time approach is more maintainable:
           </p>
-          <CodeBlock code={`// vite.config.ts or astro.config.mjs
-agentmarkup({
+          <CodeBlock code={`// shared agentmarkup config
+const agentmarkupConfig = {
   site: 'https://myshop.com',
   name: 'My Shop',
   globalSchemas: [
@@ -149,9 +149,9 @@ agentmarkup({
       }],
     },
   ],
-})`} />
+}`} />
           <p>
-            Global schemas are injected into every page. Per-page schemas are injected only on matching paths. All output is XSS-safe and validated at build time.
+            Global schemas are injected into every page. Per-page schemas are injected only on matching paths. Use this shared config object with the adapter for Vite, Astro, or Next.js. All output is XSS-safe and validated at build time.
           </p>
         </section>
 

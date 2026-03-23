@@ -1,6 +1,6 @@
 import CodeBlock from '../CodeBlock'
 
-const presetsExample = `agentmarkup({
+const presetsExample = `const agentmarkupConfig = {
   site: 'https://myshop.com',
   name: 'My Shop',
   globalSchemas: [
@@ -19,7 +19,7 @@ const presetsExample = `agentmarkup({
       }],
     },
   ],
-})`
+}`
 
 const customExample = `pages: [
   {
@@ -50,7 +50,7 @@ function JsonLd() {
       <article className="doc-page">
         <h1>How to add JSON-LD structured data to your website</h1>
         <p className="doc-intro">
-          JSON-LD (JavaScript Object Notation for Linked Data) is the format Google, Bing, and other search engines use to understand your page content. agentmarkup injects schema.org JSON-LD into your HTML pages at build time for Vite and Astro with XSS-safe serialization and type-safe presets.
+          JSON-LD (JavaScript Object Notation for Linked Data) is the format Google, Bing, and other search engines use to understand your page content. agentmarkup injects schema.org JSON-LD into your HTML pages at build time with XSS-safe serialization and type-safe presets.
         </p>
 
         <section>

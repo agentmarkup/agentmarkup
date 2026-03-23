@@ -130,7 +130,7 @@ function EcommerceLlmOptimization() {
         <section>
           <h2>Automating it with agentmarkup</h2>
           <p>
-            <a href="https://github.com/agentmarkup/agentmarkup" target="_blank" rel="noopener noreferrer">agentmarkup</a> generates llms.txt, injects Product/Organization/FAQ JSON-LD, and manages AI crawler rules at build time. For e-commerce sites on Vite or Astro, it handles the entire machine-readability stack in one plugin.
+            <a href="https://github.com/agentmarkup/agentmarkup" target="_blank" rel="noopener noreferrer">agentmarkup</a> generates llms.txt, injects Product/Organization/FAQ JSON-LD, and manages AI crawler rules at build time. For e-commerce sites on Vite, Astro, or Next.js, it handles the entire machine-readability stack in one adapter.
           </p>
           <CodeBlock code={`agentmarkup({
   site: 'https://myshop.com',

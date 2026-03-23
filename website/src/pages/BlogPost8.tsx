@@ -152,9 +152,9 @@ function WebsiteCheckerGuide() {
             If the checker finds issues, the documentation guides on this site
             explain how to fix each one. Or install{' '}
             <a href="https://github.com/agentmarkup/agentmarkup" target="_blank" rel="noopener noreferrer">agentmarkup</a>{' '}
-            for Vite or Astro and it handles llms.txt, JSON-LD, robots.txt,
-            markdown mirrors, optional headers, and validation automatically at
-            build time.
+            for Vite, Astro, or Next.js and it handles llms.txt, JSON-LD,
+            robots.txt, markdown mirrors, optional headers, and validation
+            automatically at build time.
           </p>
         </section>
       </article>

@@ -53,6 +53,22 @@ describe('Content-Signal headers', () => {
     expect(patchHeadersFile(existing, {})).toBe(existing);
   });
 
+  it('rejects Content-Signal paths with control characters', () => {
+    expect(() =>
+      generateContentSignalHeaders({
+        path: '/*\n/evil',
+      })
+    ).toThrow(/Invalid contentSignalHeaders\.path/);
+  });
+
+  it('rejects runtime Content-Signal directive values outside yes or no', () => {
+    expect(() =>
+      generateContentSignalHeaders({
+        aiTrain: 'maybe' as 'yes',
+      })
+    ).toThrow(/Invalid contentSignalHeaders\.aiTrain "maybe"/);
+  });
+
   it('creates markdown canonical headers for markdown mirrors', () => {
     const headers = generateMarkdownCanonicalHeaders([
       {
@@ -118,5 +134,16 @@ describe('Content-Signal headers', () => {
         },
       ])
     ).toBe(existing);
+  });
+
+  it('rejects markdown canonical entries with control characters', () => {
+    expect(() =>
+      generateMarkdownCanonicalHeaders([
+        {
+          markdownPath: '/faq.md\n/x',
+          canonicalUrl: 'https://example.com/faq',
+        },
+      ])
+    ).toThrow(/Invalid markdown canonical markdownPath/);
   });
 });

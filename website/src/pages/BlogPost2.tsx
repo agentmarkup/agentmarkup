@@ -120,11 +120,11 @@ function WhatIsGeo() {
           <h2>Automating GEO with agentmarkup</h2>
           <p>
             <a href="https://github.com/agentmarkup/agentmarkup" target="_blank" rel="noopener noreferrer">agentmarkup</a>{' '}
-            is an open-source toolkit for Vite and Astro that handles all of
-            the above at build time. One config can generate llms.txt, inject
-            JSON-LD, emit markdown mirrors, patch robots.txt and host-friendly
-            headers, and validate everything. No runtime code, no SaaS, no
-            recurring cost.
+            is an open-source package family with adapters for Vite, Astro, and
+            Next.js that handles all of the above at build time. One config can
+            generate llms.txt, inject JSON-LD, emit markdown mirrors, patch
+            robots.txt and host-friendly headers, and validate everything. No
+            runtime code, no SaaS, no recurring cost.
           </p>
           <p>
             It does not promise AI rankings. It gives you the tools to make your site machine-readable and lets you decide what that means for your business.

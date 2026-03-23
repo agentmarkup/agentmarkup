@@ -1,4 +1,7 @@
-import type { ContentSignalHeadersConfig } from '../types.js';
+import type {
+  ContentSignalDirective,
+  ContentSignalHeadersConfig,
+} from '../types.js';
 
 const CONTENT_SIGNAL_MARKER_START = '# BEGIN agentmarkup Content-Signal';
 const CONTENT_SIGNAL_MARKER_END = '# END agentmarkup Content-Signal';
@@ -13,9 +16,9 @@ export interface MarkdownCanonicalHeaderEntry {
 export function generateContentSignalHeaderValue(
   config: ContentSignalHeadersConfig = {}
 ): string {
-  const aiTrain = config.aiTrain ?? 'yes';
-  const search = config.search ?? 'yes';
-  const aiInput = config.aiInput ?? 'yes';
+  const aiTrain = normalizeContentSignalDirective(config.aiTrain, 'aiTrain');
+  const search = normalizeContentSignalDirective(config.search, 'search');
+  const aiInput = normalizeContentSignalDirective(config.aiInput, 'aiInput');
 
   return `ai-train=${aiTrain}, search=${search}, ai-input=${aiInput}`;
 }
@@ -23,7 +26,7 @@ export function generateContentSignalHeaderValue(
 export function generateContentSignalHeaders(
   config: ContentSignalHeadersConfig = {}
 ): string {
-  const path = config.path ?? '/*';
+  const path = normalizeContentSignalPath(config.path ?? '/*');
   const value = generateContentSignalHeaderValue(config);
 
   return [
@@ -114,8 +117,14 @@ function normalizeMarkdownCanonicalEntries(
   const byPath = new Map<string, MarkdownCanonicalHeaderEntry>();
 
   for (const entry of entries) {
-    const markdownPath = entry.markdownPath.trim();
-    const canonicalUrl = entry.canonicalUrl.trim();
+    const markdownPath = sanitizeHeadersLineValue(
+      entry.markdownPath,
+      'markdown canonical markdownPath'
+    );
+    const canonicalUrl = sanitizeHeadersLineValue(
+      entry.canonicalUrl,
+      'markdown canonical canonicalUrl'
+    );
 
     if (!markdownPath || !canonicalUrl) {
       continue;
@@ -163,7 +172,7 @@ function hasMatchingContentSignalHeaders(
   existing: string,
   config: ContentSignalHeadersConfig
 ): boolean {
-  const path = (config.path ?? '/*').trim();
+  const path = normalizeContentSignalPath(config.path ?? '/*');
   const expectedValue = generateContentSignalHeaderValue(config).toLowerCase();
   const lines = existing.split('\n');
 
@@ -193,6 +202,52 @@ function hasMatchingContentSignalHeaders(
   }
 
   return hasExpectedValue;
+}
+
+function normalizeContentSignalDirective(
+  directive: ContentSignalDirective | undefined,
+  field: 'aiTrain' | 'search' | 'aiInput'
+): ContentSignalDirective {
+  const value = directive ?? 'yes';
+
+  if (value === 'yes' || value === 'no') {
+    return value;
+  }
+
+  throw new Error(
+    `[agentmarkup/core] Invalid contentSignalHeaders.${field} "${String(
+      value
+    )}". Expected "yes" or "no".`
+  );
+}
+
+function normalizeContentSignalPath(path: string): string {
+  const normalized = sanitizeHeadersLineValue(path, 'contentSignalHeaders.path');
+
+  if (!normalized) {
+    throw new Error(
+      '[agentmarkup/core] Invalid contentSignalHeaders.path "". Expected a non-empty _headers path.'
+    );
+  }
+
+  return normalized;
+}
+
+function sanitizeHeadersLineValue(value: string, field: string): string {
+  if (hasControlCharacters(value)) {
+    throw new Error(
+      `[agentmarkup/core] Invalid ${field} "${value}". _headers values must not contain control characters or newlines.`
+    );
+  }
+
+  return value.trim();
+}
+
+function hasControlCharacters(value: string): boolean {
+  return Array.from(value).some((char) => {
+    const code = char.charCodeAt(0);
+    return code <= 0x1f || code === 0x7f;
+  });
 }
 
 function hasMatchingMarkdownCanonicalHeaders(

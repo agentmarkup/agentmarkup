@@ -354,15 +354,33 @@ function decodeHtmlEntities(value: string): string {
     const normalized = entity.toLowerCase();
 
     if (normalized.startsWith('#x')) {
-      return String.fromCodePoint(Number.parseInt(normalized.slice(2), 16));
+      return decodeNumericEntity(entity, normalized.slice(2), 16);
     }
 
     if (normalized.startsWith('#')) {
-      return String.fromCodePoint(Number.parseInt(normalized.slice(1), 10));
+      return decodeNumericEntity(entity, normalized.slice(1), 10);
     }
 
     return ENTITY_MAP[normalized] ?? `&${entity};`;
   });
+}
+
+function decodeNumericEntity(
+  originalEntity: string,
+  value: string,
+  radix: 10 | 16
+): string {
+  const codePoint = Number.parseInt(value, radix);
+  if (
+    !Number.isInteger(codePoint) ||
+    codePoint < 0 ||
+    codePoint > 0x10ffff ||
+    (codePoint >= 0xd800 && codePoint <= 0xdfff)
+  ) {
+    return `&${originalEntity};`;
+  }
+
+  return String.fromCodePoint(codePoint);
 }
 
 function extractCodeBlock(innerHtml: string): {
@@ -399,5 +417,9 @@ function normalizeCodeBlockText(value: string): string {
 }
 
 function escapeAttribute(value: string): string {
-  return value.replace(/"/g, '&quot;');
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }

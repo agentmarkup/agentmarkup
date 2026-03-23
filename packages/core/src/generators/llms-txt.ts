@@ -129,6 +129,8 @@ export function resolveLlmsTxtSections(
     return [];
   }
 
+  assertValidSiteUrl(config.site);
+
   return config.llmsTxt.sections.map((section) => ({
     title: section.title,
     entries: section.entries.map((entry) => resolveLlmsTxtEntry(config, entry)),
@@ -242,6 +244,19 @@ function resolveUrl(site: string, path: string): string {
   const base = site.replace(/\/$/, '');
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   return `${base}${cleanPath}`;
+}
+
+function assertValidSiteUrl(siteUrl: string): void {
+  try {
+    const url = new URL(siteUrl);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      throw new Error('unsupported-protocol');
+    }
+  } catch {
+    throw new Error(
+      `[agentmarkup/core] Invalid config.site "${siteUrl}". Expected an absolute http(s) URL like "https://example.com".`
+    );
+  }
 }
 
 function isSameSiteUrl(siteUrl: string, resolvedUrl: string): boolean {

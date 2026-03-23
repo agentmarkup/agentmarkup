@@ -132,6 +132,7 @@ describe('agentmarkup plugin', () => {
 
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
+    plugin.buildStart?.call(plugin);
     await getTransformHandler(plugin)(HTML, {
       path: '/about',
       filename: '/virtual/build/about/index.html',
@@ -145,6 +146,129 @@ describe('agentmarkup plugin', () => {
 
     expect(output).toContain('/about');
     expect(output).toContain('No structured data configured for this page');
+  });
+
+  it('resets validation state between build runs', async () => {
+    const plugin = agentmarkup({
+      site: 'https://example.com',
+      name: 'Example',
+      validation: {
+        warnOnMissingSchema: true,
+      },
+    });
+
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    plugin.buildStart?.call(plugin);
+    await getTransformHandler(plugin)(HTML, {
+      path: '/about',
+      filename: '/virtual/build/about/index.html',
+    } as IndexHtmlTransformContext);
+    await plugin.closeBundle?.call(plugin);
+
+    const firstOutput = consoleSpy.mock.calls
+      .map((args) => args.map(String).join(' '))
+      .join('\n');
+    expect(firstOutput).toContain('/about');
+
+    consoleSpy.mockClear();
+
+    plugin.buildStart?.call(plugin);
+    await plugin.closeBundle?.call(plugin);
+
+    const secondOutput = consoleSpy.mock.calls
+      .map((args) => args.map(String).join(' '))
+      .join('\n');
+
+    expect(secondOutput).not.toContain('/about');
+    expect(secondOutput).not.toContain('No structured data configured for this page');
+  });
+
+  it('resets generated artifact counters between build runs', async () => {
+    const plugin = agentmarkup({
+      site: 'https://example.com',
+      name: 'Example',
+      llmsTxt: {
+        sections: [
+          {
+            title: 'Pages',
+            entries: [{ title: 'Home', url: '/' }],
+          },
+        ],
+      },
+    });
+
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const emitFile = vi.fn();
+    const bundle = {};
+
+    plugin.buildStart?.call(plugin);
+    plugin.generateBundle?.call(
+      { emitFile } as unknown as Parameters<NonNullable<typeof plugin.generateBundle>>[0],
+      {} as Parameters<NonNullable<typeof plugin.generateBundle>>[0],
+      bundle
+    );
+    await plugin.closeBundle?.call(plugin);
+
+    const firstOutput = consoleSpy.mock.calls
+      .map((args) => args.map(String).join(' '))
+      .join('\n');
+    expect(firstOutput).toContain('llms.txt generated (1 entries, 1 sections)');
+
+    consoleSpy.mockClear();
+
+    plugin.buildStart?.call(plugin);
+    await plugin.closeBundle?.call(plugin);
+
+    const secondOutput = consoleSpy.mock.calls
+      .map((args) => args.map(String).join(' '))
+      .join('\n');
+    expect(secondOutput).not.toContain('llms.txt generated');
+  });
+
+  it('also resets build state when configResolved runs again', async () => {
+    const plugin = agentmarkup({
+      site: 'https://example.com',
+      name: 'Example',
+      llmsTxt: {
+        sections: [
+          {
+            title: 'Pages',
+            entries: [{ title: 'Home', url: '/' }],
+          },
+        ],
+      },
+    });
+
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const emitFile = vi.fn();
+    const bundle = {};
+
+    plugin.buildStart?.call(plugin);
+    plugin.generateBundle?.call(
+      { emitFile } as unknown as Parameters<NonNullable<typeof plugin.generateBundle>>[0],
+      {} as Parameters<NonNullable<typeof plugin.generateBundle>>[0],
+      bundle
+    );
+    await plugin.closeBundle?.call(plugin);
+
+    consoleSpy.mockClear();
+
+    plugin.configResolved?.({
+      root: '/tmp/agentmarkup-vite',
+      publicDir: '/tmp/agentmarkup-vite/public',
+      build: {
+        outDir: 'dist',
+        write: true,
+        ssr: false,
+      },
+    } as ResolvedConfig);
+    await plugin.closeBundle?.call(plugin);
+
+    const output = consoleSpy.mock.calls
+      .map((args) => args.map(String).join(' '))
+      .join('\n');
+    expect(output).not.toContain('llms.txt generated');
   });
 
   it('validates existing JSON-LD even without configured schemas', async () => {

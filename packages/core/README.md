@@ -12,6 +12,8 @@ pnpm add -D @agentmarkup/core
 
 `@agentmarkup/core` is for adapter authors and for sites that already own a custom prerender or post-build pipeline.
 
+The package family also includes dedicated adapters for Vite, Astro, and Next.js when those frameworks own enough of the final build output.
+
 The helpers are coexistence-friendly: `patchRobotsTxt()` leaves matching manual crawler rules untouched, and adapters built on core can preserve curated `llms.txt` files or existing JSON-LD by default.
 
 When `markdownPages.enabled` is on, `generateLlmsTxt()` prefers same-site markdown mirror URLs for page entries by default so agents discover the cleaner fetch path first. This is usually most useful when the raw HTML is thin or noisy. Set `llmsTxt.preferMarkdownMirrors: false` to keep HTML URLs in `llms.txt`.

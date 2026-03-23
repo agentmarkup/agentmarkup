@@ -86,7 +86,7 @@ function LlmsTxt() {
         <section>
           <h2>Why generate llms.txt at build time?</h2>
           <p>
-            Manually maintaining an llms.txt file means keeping it in sync with your actual pages, remembering the correct markdown format, and resolving relative URLs to absolute ones. agentmarkup handles all of this automatically during your Vite or Astro build.
+            Manually maintaining an llms.txt file means keeping it in sync with your actual pages, remembering the correct markdown format, and resolving relative URLs to absolute ones. agentmarkup handles all of this automatically during your build.
           </p>
           <ul>
             <li>Your llms.txt is always in sync with your site configuration</li>

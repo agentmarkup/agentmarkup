@@ -36,7 +36,7 @@ const informationalPages = [
         '@type': 'WebPage',
         name: 'How to generate llms.txt for your website',
         url: `${siteUrl}/docs/llms-txt/`,
-        description: 'Learn how to auto-generate a spec-compliant llms.txt file at build time using agentmarkup with Vite or Astro.',
+        description: 'Learn how to auto-generate a spec-compliant llms.txt file at build time using agentmarkup with Vite, Astro, or Next.js.',
       },
     ],
   },
@@ -47,7 +47,7 @@ const informationalPages = [
         '@type': 'WebPage',
         name: 'How to add JSON-LD structured data to your website',
         url: `${siteUrl}/docs/json-ld/`,
-        description: 'Learn how to inject schema.org JSON-LD structured data at build time using agentmarkup for Vite or Astro.',
+        description: 'Learn how to inject schema.org JSON-LD structured data at build time using agentmarkup for Vite, Astro, or Next.js.',
       },
     ],
   },
@@ -160,7 +160,7 @@ export default defineConfig({
       description: 'Make your markup agent-ready. Build-time llms.txt, optional llms-full.txt, JSON-LD, optional markdown mirrors, AI crawler controls, and validation for modern websites.',
 
       llmsTxt: {
-        instructions: 'agentmarkup is an open-source package family for Vite and Astro that makes websites machine-readable for LLMs and AI agents. It generates llms.txt, optional llms-full.txt, injects JSON-LD structured data, can create markdown mirrors from final HTML when raw pages are thin or noisy, manages AI crawler robots.txt directives, and validates everything at build time.',
+        instructions: 'agentmarkup is an open-source package family for Vite, Astro, and Next.js that makes websites machine-readable for LLMs and AI agents. It generates llms.txt, optional llms-full.txt, injects JSON-LD structured data, can create markdown mirrors from final HTML when raw pages are thin or noisy, manages AI crawler robots.txt directives, and validates everything at build time.',
         sections: [
           {
             title: 'Documentation',
@@ -169,6 +169,7 @@ export default defineConfig({
               { title: 'Codex Skill', url: 'https://github.com/agentmarkup/agentmarkup/tree/main/.agents/skills/agentmarkup-audit', description: 'Repo-local Codex skill for auditing final-output ownership, llms.txt, JSON-LD, robots.txt, _headers, and markdown-mirror fit' },
               { title: 'Vite Package', url: 'https://www.npmjs.com/package/@agentmarkup/vite', description: 'Install with pnpm add -D @agentmarkup/vite' },
               { title: 'Astro Package', url: 'https://www.npmjs.com/package/@agentmarkup/astro', description: 'Install with pnpm add -D @agentmarkup/astro' },
+              { title: 'Next.js Package', url: 'https://www.npmjs.com/package/@agentmarkup/next', description: 'Install with pnpm add -D @agentmarkup/next' },
               { title: 'Core Package', url: 'https://www.npmjs.com/package/@agentmarkup/core', description: 'Reuse generators and validators in custom prerender pipelines' },
             ],
           },
@@ -236,6 +237,7 @@ export default defineConfig({
             'https://github.com/agentmarkup/agentmarkup',
             'https://www.npmjs.com/package/@agentmarkup/vite',
             'https://www.npmjs.com/package/@agentmarkup/astro',
+            'https://www.npmjs.com/package/@agentmarkup/next',
             'https://www.npmjs.com/package/@agentmarkup/core',
           ],
         },
@@ -251,7 +253,7 @@ export default defineConfig({
               applicationCategory: 'DeveloperApplication',
               operatingSystem: 'Any',
               url: siteUrl,
-              description: 'Build-time llms.txt, optional llms-full.txt, JSON-LD, optional markdown mirrors, AI crawler controls, Content-Signal headers, and validation for Vite and Astro websites.',
+              description: 'Build-time llms.txt, optional llms-full.txt, JSON-LD, optional markdown mirrors, AI crawler controls, Content-Signal headers, and validation for Vite, Astro, and Next.js websites.',
               offers: {
                 '@type': 'Offer',
                 price: '0',

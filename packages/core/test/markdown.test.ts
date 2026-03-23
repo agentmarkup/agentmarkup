@@ -113,6 +113,27 @@ describe('generatePageMarkdown', () => {
     expect(markdown).toContain("const label = 'agentmarkup';");
     expect(markdown).toContain('```ts');
   });
+
+  it('leaves malformed numeric entities unchanged instead of throwing', () => {
+    const markdown = generatePageMarkdown({
+      html: [
+        '<html>',
+        '<head><title>Broken Entities</title></head>',
+        '<body>',
+        '<main>',
+        '<pre><code>&#abc; &#99999999; &#55296;</code></pre>',
+        '</main>',
+        '</body>',
+        '</html>',
+      ].join(''),
+      pagePath: '/broken-entities/',
+      siteUrl: 'https://example.com',
+    });
+
+    expect(markdown).toContain('&#abc;');
+    expect(markdown).toContain('&#99999999;');
+    expect(markdown).toContain('&#55296;');
+  });
 });
 
 describe('generateMarkdownAlternateLink', () => {
@@ -120,5 +141,13 @@ describe('generateMarkdownAlternateLink', () => {
     const link = generateMarkdownAlternateLink('/docs/llms-txt/');
     expect(link).toContain('type="text/markdown"');
     expect(link).toContain('href="/docs/llms-txt.md"');
+  });
+
+  it('escapes dangerous attribute characters in the generated href', () => {
+    const link = generateMarkdownAlternateLink('/docs/"<&>');
+    expect(link).toContain('&quot;');
+    expect(link).toContain('&lt;');
+    expect(link).toContain('&gt;');
+    expect(link).toContain('&amp;');
   });
 });

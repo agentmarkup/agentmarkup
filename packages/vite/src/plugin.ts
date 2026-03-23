@@ -65,11 +65,31 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
   let writesBuildOutput = true;
   let isSsrBuild = false;
 
+  function resetBuildState(): void {
+    validationResults.length = 0;
+    llmsTxtContent = null;
+    llmsTxtEntries = 0;
+    llmsTxtSections = 0;
+    llmsTxtStatus = 'none';
+    llmsFullTxtEntries = 0;
+    llmsFullTxtStatus = 'none';
+    jsonLdPages = 0;
+    markdownPages = 0;
+    markdownPagesStatus = 'none';
+    markdownCanonicalHeadersCount = 0;
+    markdownCanonicalHeadersStatus = 'none';
+    crawlersConfigured = 0;
+    robotsTxtStatus = 'none';
+    contentSignalHeadersStatus = 'none';
+    pendingMarkdownCanonicalEntries = [];
+  }
+
   return {
     name: 'agentmarkup',
     enforce: 'post',
 
     configResolved(resolvedConfig) {
+      resetBuildState();
       publicDir = resolvedConfig.publicDir;
       outDir =
         resolvedConfig.root && resolvedConfig.build.outDir
@@ -79,6 +99,10 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
         Boolean(resolvedConfig.root && resolvedConfig.build.outDir) &&
         resolvedConfig.build.write !== false;
       isSsrBuild = Boolean(resolvedConfig.build.ssr);
+    },
+
+    buildStart() {
+      resetBuildState();
     },
 
     /**

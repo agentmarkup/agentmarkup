@@ -1,7 +1,7 @@
 {
-  "name": "@agentmarkup/vite",
+  "name": "@agentmarkup/next",
   "version": "0.4.0",
-  "description": "Build-time llms.txt, llms-full.txt, JSON-LD, markdown mirrors, headers, AI crawler controls, and validation for Vite",
+  "description": "Build-time llms.txt, llms-full.txt, JSON-LD, markdown mirrors, headers, AI crawler controls, and validation for Next.js",
   "type": "module",
   "license": "MIT",
   "author": "Sebastian Cochinescu <hello@animafelix.com> (https://animafelix.com)",
@@ -12,10 +12,10 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/agentmarkup/agentmarkup",
-    "directory": "packages/vite"
+    "directory": "packages/next"
   },
   "keywords": [
-    "vite-plugin",
+    "nextjs",
     "llms-txt",
     "llms-full",
     "json-ld",
@@ -27,7 +27,6 @@
     "headers",
     "ai-crawler",
     "machine-readable",
-    "seo",
     "validation",
     "geo"
   ],
@@ -58,13 +57,12 @@
     "@agentmarkup/core": "workspace:*"
   },
   "peerDependencies": {
-    "vite": ">=5.0.0"
+    "next": ">=15.0.0"
   },
   "devDependencies": {
-    "vite": "^6.2.0",
-    "vitest": "^3.0.0",
+    "eslint": "^9.0.0",
     "tsup": "^8.4.0",
     "typescript": "^5.7.0",
-    "eslint": "^9.0.0"
+    "vitest": "^3.0.0"
   }
 }

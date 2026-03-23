@@ -71,6 +71,7 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
         const resolvedLlmsSections = resolveLlmsTxtSections(config);
         const markdownByUrl: Record<string, string> = {};
         const availableMarkdownUrls = new Set<string>();
+        const finalHtmlByFile = new Map<string, string>();
         const advertiseLlmsTxt =
           Boolean(config.llmsTxt) ||
           Boolean(publicDir && existsSync(join(publicDir, 'llms.txt')));
@@ -126,6 +127,7 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
             if (nextHtml !== html) {
               await writeFile(htmlFile, nextHtml, 'utf8');
             }
+            finalHtmlByFile.set(htmlFile, nextHtml);
             continue;
           }
 
@@ -144,12 +146,14 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
             if (nextHtml !== html) {
               await writeFile(htmlFile, nextHtml, 'utf8');
             }
+            finalHtmlByFile.set(htmlFile, nextHtml);
             continue;
           }
 
           const tags = generateJsonLdTags(injectables);
           nextHtml = injectJsonLdTags(nextHtml, tags);
           await writeFile(htmlFile, nextHtml, 'utf8');
+          finalHtmlByFile.set(htmlFile, nextHtml);
           jsonLdPages += 1;
         }
 
@@ -161,7 +165,7 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
             const relativeHtmlPath = relative(outDir, htmlFile).replace(/\\/g, '/');
             const markdownFileName = markdownFileNameFromHtmlFile(relativeHtmlPath);
             const outputMarkdownPath = join(outDir, markdownFileName);
-            const html = await readFile(htmlFile, 'utf8');
+            const html = finalHtmlByFile.get(htmlFile) ?? await readFile(htmlFile, 'utf8');
             const pagePath = pagePathFromOutputFile(outDir, htmlFile);
             const markdownAbsoluteUrl = buildAbsoluteMarkdownUrl(config.site, pagePath);
             const markdown = generatePageMarkdown({
@@ -402,11 +406,20 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
 }
 
 async function readTextFileIfExists(filePath: string): Promise<string | null> {
-  if (!existsSync(filePath)) {
-    return null;
-  }
+  try {
+    return await readFile(filePath, 'utf8');
+  } catch (error: unknown) {
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      error.code === 'ENOENT'
+    ) {
+      return null;
+    }
 
-  return readFile(filePath, 'utf8');
+    throw error;
+  }
 }
 
 async function findHtmlFiles(rootDir: string): Promise<string[]> {
