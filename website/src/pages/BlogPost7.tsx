@@ -205,7 +205,50 @@ llms.txt is a proposed standard that gives LLMs a structured overview of your we
             markdown mirrors as mandatory. They are a tactical option, not the
             whole product.
           </p>
-          <CodeBlock code={`pnpm add -D @agentmarkup/vite  # or @agentmarkup/astro or @agentmarkup/next`} />
+          <CodeBlock code={`pnpm add -D @agentmarkup/next  # or @agentmarkup/vite or @agentmarkup/astro`} />
+        </section>
+
+        <section>
+          <h2>Verify the protective headers in production</h2>
+          <p>
+            agentmarkup generates two sets of headers for markdown mirrors in
+            the <code>_headers</code> file. Both are important for keeping
+            search engines and agents on the right page.
+          </p>
+          <p>
+            <strong>Canonical Link headers</strong> tell search engines that
+            the <code>.md</code> file is a mirror of the HTML page, not a
+            separate indexable URL. Each mirror gets its own entry:
+          </p>
+          <CodeBlock code={`# from the generated _headers file
+/blog/my-post.md
+  Link: <https://example.com/blog/my-post>; rel="canonical"`} />
+          <p>
+            <strong>Content-Signal headers</strong> tell agents whether they
+            are allowed to use the content for training, search, and input.
+            agentmarkup generates a wildcard rule that covers all paths
+            including <code>.md</code> files:
+          </p>
+          <CodeBlock code={`/*
+  Content-Signal: ai-train=yes, search=yes, ai-input=yes`} />
+          <p>
+            These headers only work if your hosting platform actually serves
+            them. Cloudflare Pages, Netlify, and Vercel all support{' '}
+            <code>_headers</code> files, but the behavior can vary. After
+            deploying, verify that the headers are present on a live{' '}
+            <code>.md</code> URL:
+          </p>
+          <CodeBlock code={`curl -I https://yoursite.com/blog/my-post.md
+
+# look for these in the response:
+# Link: <https://yoursite.com/blog/my-post>; rel="canonical"
+# Content-Signal: ai-train=yes, search=yes, ai-input=yes`} />
+          <p>
+            If the <code>Link</code> header is missing, your host may not be
+            applying path-specific <code>_headers</code> rules to{' '}
+            <code>.md</code> files. Check your platform documentation or add
+            equivalent headers through server configuration.
+          </p>
         </section>
       </article>
       <BlogFooter currentSlug="markdown-mirrors" />
