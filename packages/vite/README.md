@@ -1,6 +1,6 @@
 # @agentmarkup/vite
 
-Build-time `llms.txt`, optional `llms-full.txt`, JSON-LD, markdown mirrors, AI crawler controls, and validation for Vite websites.
+Build-time `llms.txt`, optional `llms-full.txt`, optional A2A Agent Cards, JSON-LD, markdown mirrors, AI crawler controls, and validation for Vite websites.
 
 `@agentmarkup/vite` is the Vite adapter in the `agentmarkup` package family. Framework-agnostic helpers live in `@agentmarkup/core`, Astro sites use `@agentmarkup/astro`, and Next.js sites use `@agentmarkup/next`.
 
@@ -94,6 +94,7 @@ export default defineConfig({
 
 ## What It Does
 
+- Generates optional `/.well-known/agent-card.json` for existing A2A services
 - Generates `/llms.txt` from config
 - Generates optional `/llms-full.txt` with inlined same-site markdown content
 - Injects the homepage `llms.txt` discovery link automatically
@@ -114,6 +115,8 @@ Markdown mirrors are optional. They are usually most useful for thin, noisy, or 
 When markdown mirrors are enabled, same-site page entries in `llms.txt` automatically point at the generated `.md` mirrors by default. Set `llmsTxt.preferMarkdownMirrors: false` if you want `llms.txt` to keep linking to HTML routes instead.
 
 Enable `llmsFullTxt` when you want a richer companion file for agents that can consume more than the compact `llms.txt` manifest. The generated `llms-full.txt` keeps the same section structure but inlines same-site markdown mirror content when those mirrors exist.
+
+Enable `agentCard` when you already run a real A2A-compatible agent service and want this build to publish its discovery file at `/.well-known/agent-card.json`. agentmarkup only emits and validates the static Agent Card. It does not implement the A2A runtime server or transport endpoints for you. When enabled, provide a `version`, at least one `supportedInterfaces` entry, and a non-empty description through either the top-level `description` or `agentCard.description`.
 
 The adapter assumes Vite controls the final HTML output. If a framework does an additional server-render or prerender pass after Vite finishes, use `@agentmarkup/core` in that final step or reach for a dedicated adapter instead of assuming JSON-LD injection will carry through automatically.
 

@@ -99,28 +99,28 @@ export default withAgentmarkup(
   nextConfig,
 )`
 
-type Framework = 'vite' | 'astro' | 'next'
+type Framework = 'next' | 'vite' | 'astro'
 
 const installCommands: Record<Framework, string> = {
+  next: 'pnpm add -D @agentmarkup/next',
   vite: 'pnpm add -D @agentmarkup/vite',
   astro: 'pnpm add -D @agentmarkup/astro',
-  next: 'pnpm add -D @agentmarkup/next',
 }
 
 const examples: Record<Framework, string> = {
+  next: nextExample,
   vite: viteExample,
   astro: astroExample,
-  next: nextExample,
 }
 
 const configFiles: Record<Framework, string> = {
+  next: 'next.config.ts',
   vite: 'vite.config.ts',
   astro: 'astro.config.mjs',
-  next: 'next.config.ts',
 }
 
 function Home() {
-  const [fw, setFw] = useState<Framework>('vite')
+  const [fw, setFw] = useState<Framework>('next')
   const [checkerUrl, setCheckerUrl] = useState('')
 
   function handleHeroCheckerSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -138,7 +138,7 @@ function Home() {
     <>
       <header>
         <h1>Make your website machine-readable for LLMs and AI agents</h1>
-        <p className="tagline">Build-time llms.txt, JSON-LD, markdown mirrors, AI crawler controls, Content-Signal headers, and validation for Vite, Astro, and Next.js websites.</p>
+        <p className="tagline">Build-time llms.txt, optional A2A Agent Cards, JSON-LD, markdown mirrors, AI crawler controls, Content-Signal headers, and validation for Next.js, Vite, and Astro websites.</p>
         <p className="subtitle">Zero runtime cost. Type-safe. Open source.</p>
 
         <section className="hero-checker" aria-labelledby="hero-checker-title">
@@ -182,9 +182,9 @@ function Home() {
         </section>
 
         <div className="fw-tabs-hero">
+          <button className={fw === 'next' ? 'fw-tab active' : 'fw-tab'} onClick={() => setFw('next')}>Next.js</button>
           <button className={fw === 'vite' ? 'fw-tab active' : 'fw-tab'} onClick={() => setFw('vite')}>Vite</button>
           <button className={fw === 'astro' ? 'fw-tab active' : 'fw-tab'} onClick={() => setFw('astro')}>Astro</button>
-          <button className={fw === 'next' ? 'fw-tab active' : 'fw-tab'} onClick={() => setFw('next')}>Next.js</button>
         </div>
         <pre className="install-hero"><code>{installCommands[fw]}</code></pre>
       </header>
@@ -192,7 +192,7 @@ function Home() {
       <main>
         <section className="about">
           <p>
-            agentmarkup makes your website understandable by LLMs and AI agents. It generates <a href="/docs/llms-txt/">llms.txt</a> and optional <code>llms-full.txt</code> files, injects <a href="/docs/json-ld/">schema.org JSON-LD</a>, can generate <a href="/blog/markdown-mirrors/">markdown mirrors</a> from final HTML when raw pages are thin or noisy, manages <a href="/docs/ai-crawlers/">AI crawler robots.txt rules</a>, patches host-friendly headers with Content-Signal directives and markdown canonicals, and validates the final output at build time. Same core config, same feature set, whether you use Vite, Astro, or Next.js.
+            agentmarkup makes your website understandable by LLMs and AI agents. It generates <a href="/docs/llms-txt/">llms.txt</a> and optional <code>llms-full.txt</code> files, can emit an optional <code>/.well-known/agent-card.json</code> for an existing A2A service, injects <a href="/docs/json-ld/">schema.org JSON-LD</a>, can generate <a href="/blog/markdown-mirrors/">markdown mirrors</a> from final HTML when raw pages are thin or noisy, manages <a href="/docs/ai-crawlers/">AI crawler robots.txt rules</a>, patches host-friendly headers with Content-Signal directives and markdown canonicals, and validates the final output at build time. Same core config, same feature set, whether you use Next.js, Vite, or Astro.
           </p>
         </section>
 
@@ -200,6 +200,10 @@ function Home() {
           <div className="feature">
             <h2>llms.txt generation</h2>
             <p>Auto-generate an llms.txt file following the <a href="https://llmstxt.org" target="_blank" rel="noopener noreferrer">llmstxt.org</a> spec, inject the homepage discovery link automatically, and optionally emit <code>llms-full.txt</code> with inlined same-site markdown context.</p>
+          </div>
+          <div className="feature">
+            <h2>Optional A2A Agent Card</h2>
+            <p>Publish <code>/.well-known/agent-card.json</code> for an existing A2A-compatible agent service from the same build pipeline. agentmarkup handles the static discovery file and validation, not the runtime A2A server.</p>
           </div>
           <div className="feature">
             <h2>JSON-LD structured data</h2>
@@ -271,9 +275,9 @@ function Home() {
 
         <section className="example">
           <div className="fw-tabs">
+            <button className={fw === 'next' ? 'fw-tab active' : 'fw-tab'} onClick={() => setFw('next')}>Next.js</button>
             <button className={fw === 'vite' ? 'fw-tab active' : 'fw-tab'} onClick={() => setFw('vite')}>Vite</button>
             <button className={fw === 'astro' ? 'fw-tab active' : 'fw-tab'} onClick={() => setFw('astro')}>Astro</button>
-            <button className={fw === 'next' ? 'fw-tab active' : 'fw-tab'} onClick={() => setFw('next')}>Next.js</button>
           </div>
           <h2>Add to {configFiles[fw]}</h2>
           <CodeBlock code={examples[fw]} />
@@ -296,16 +300,16 @@ function Home() {
           <h2>All packages</h2>
           <div className="package-grid">
             <div className="package-card">
+              <h3><a href="https://www.npmjs.com/package/@agentmarkup/next" target="_blank" rel="noopener noreferrer">@agentmarkup/next</a></h3>
+              <p className="package-desc">Next.js adapter. Best for static export, prerendered HTML, and server deployments with build output. Fully dynamic SSR routes should use <code>@agentmarkup/core</code> in app code. <a href="/blog/nextjs-llms-txt-json-ld/">Read the Next.js guide</a>.</p>
+            </div>
+            <div className="package-card">
               <h3><a href="https://www.npmjs.com/package/@agentmarkup/vite" target="_blank" rel="noopener noreferrer">@agentmarkup/vite</a></h3>
               <p className="package-desc">Vite plugin for final-output builds on React, Vue, Svelte, or plain HTML sites.</p>
             </div>
             <div className="package-card">
               <h3><a href="https://www.npmjs.com/package/@agentmarkup/astro" target="_blank" rel="noopener noreferrer">@agentmarkup/astro</a></h3>
               <p className="package-desc">Astro integration for sites where Astro owns the built HTML output.</p>
-            </div>
-            <div className="package-card">
-              <h3><a href="https://www.npmjs.com/package/@agentmarkup/next" target="_blank" rel="noopener noreferrer">@agentmarkup/next</a></h3>
-              <p className="package-desc">Next.js adapter. Best for static export, prerendered HTML, and server deployments with build output. Fully dynamic SSR routes should use <code>@agentmarkup/core</code> in app code. <a href="/blog/nextjs-llms-txt-json-ld/">Read the Next.js guide</a>.</p>
             </div>
             <div className="package-card">
               <h3><a href="https://www.npmjs.com/package/@agentmarkup/core" target="_blank" rel="noopener noreferrer">@agentmarkup/core</a></h3>
@@ -337,7 +341,7 @@ function Home() {
 
           <details>
             <summary>What does agentmarkup actually do?</summary>
-            <p>It adds machine-readable build output: an <code>llms.txt</code> file, optional <code>llms-full.txt</code> context, the homepage <code>llms.txt</code> discovery link, <code>&lt;script type="application/ld+json"&gt;</code> tags with structured data, optional markdown mirrors for built pages, <code>robots.txt</code> rules for AI crawlers, and optional <code>_headers</code> entries or server header rules with Content-Signal plus markdown-canonical directives. It also validates the final output and warns you about thin HTML, schema issues, broken markdown discovery, and crawler conflicts.</p>
+            <p>It adds machine-readable build output: an <code>llms.txt</code> file, optional <code>llms-full.txt</code> context, an optional <code>/.well-known/agent-card.json</code> for an existing A2A service, the homepage <code>llms.txt</code> discovery link, <code>&lt;script type="application/ld+json"&gt;</code> tags with structured data, optional markdown mirrors for built pages, <code>robots.txt</code> rules for AI crawlers, and optional <code>_headers</code> entries or server header rules with Content-Signal plus markdown-canonical directives. It also validates the final output and warns you about thin HTML, schema issues, broken markdown discovery, and crawler conflicts.</p>
           </details>
 
           <details>
@@ -351,13 +355,13 @@ function Home() {
           </details>
 
           <details>
-            <summary>Is the config the same for Vite, Astro, and Next.js?</summary>
-            <p>The shared <code>AgentMarkupConfig</code> object is the same across all three adapters. The difference is the integration point: Vite uses <code>plugins</code>, Astro uses <code>integrations</code>, and Next.js uses <code>withAgentmarkup(config, nextConfig)</code>. All three run on the same core engine under the hood.</p>
+            <summary>Is the config the same for Next.js, Vite, and Astro?</summary>
+            <p>The shared <code>AgentMarkupConfig</code> object is the same across all three adapters. The difference is the integration point: Next.js uses <code>withAgentmarkup(config, nextConfig)</code>, Vite uses <code>plugins</code>, and Astro uses <code>integrations</code>. All three run on the same core engine under the hood.</p>
           </details>
 
           <details>
             <summary>What is @agentmarkup/core for?</summary>
-            <p>The core package contains the generators and validators without any framework binding. Use it if you have a custom build script, a prerender pipeline, or a route that needs direct integration instead of an adapter-owned build step. The Vite, Astro, and Next packages use core internally.</p>
+            <p>The core package contains the generators and validators without any framework binding. Use it if you have a custom build script, a prerender pipeline, or a route that needs direct integration instead of an adapter-owned build step. The Next.js, Vite, and Astro packages use core internally.</p>
           </details>
 
           <details>

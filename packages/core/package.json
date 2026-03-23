@@ -1,7 +1,7 @@
 {
   "name": "@agentmarkup/core",
-  "version": "0.4.0",
-  "description": "Framework-agnostic llms.txt, llms-full.txt, JSON-LD, markdown mirrors, headers, AI crawler controls, and validation",
+  "version": "0.5.0",
+  "description": "Framework-agnostic llms.txt, llms-full.txt, A2A Agent Cards, JSON-LD, markdown mirrors, headers, AI crawler controls, and validation",
   "type": "module",
   "license": "MIT",
   "author": "Sebastian Cochinescu <hello@animafelix.com> (https://animafelix.com)",
@@ -17,6 +17,8 @@
   "keywords": [
     "llms-txt",
     "llms-full",
+    "a2a",
+    "agent-card",
     "json-ld",
     "markdown",
     "schema-org",
@@ -26,6 +28,7 @@
     "headers",
     "ai-crawler",
     "machine-readable",
+    "seo",
     "validation",
     "geo"
   ],

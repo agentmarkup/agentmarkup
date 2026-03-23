@@ -84,6 +84,7 @@ export interface ProcessNextBuildOptions {
 
 export interface ProcessNextBuildResult {
   mode: 'export' | 'server';
+  agentCardStatus: 'generated' | 'preserved' | 'none';
   llmsTxtEntries: number;
   llmsTxtSections: number;
   llmsTxtStatus: 'generated' | 'preserved' | 'none';

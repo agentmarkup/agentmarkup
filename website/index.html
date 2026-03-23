@@ -10,12 +10,12 @@
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <title>agentmarkup - machine-readable websites for Vite, Astro, and Next.js</title>
+    <title>agentmarkup - machine-readable websites for Next.js, Vite, and Astro</title>
     <meta
       name="description"
-      content="Build-time llms.txt, optional llms-full.txt, JSON-LD, markdown mirrors, AI crawler controls, Content-Signal headers, validation, and a free website checker for Vite, Astro, and Next.js."
+      content="Build-time llms.txt, optional llms-full.txt, optional A2A Agent Cards, JSON-LD, markdown mirrors, AI crawler controls, Content-Signal headers, validation, and a free website checker for Next.js, Vite, and Astro."
     />
-    <meta name="keywords" content="vite plugin, astro integration, nextjs plugin, next.js, llms.txt, llms-full.txt, json-ld, structured data, schema.org, robots.txt, markdown mirrors, content-signal, ai crawler, machine-readable, seo, geo, build-time validation, ai agents, llm, website checker" />
+    <meta name="keywords" content="vite plugin, astro integration, nextjs plugin, next.js, llms.txt, llms-full.txt, a2a, agent card, json-ld, structured data, schema.org, robots.txt, markdown mirrors, content-signal, ai crawler, machine-readable, seo, geo, build-time validation, ai agents, llm, website checker" />
     <meta name="author" content="Sebastian Cochinescu" />
     <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
 
@@ -24,8 +24,8 @@
     <link rel="alternate" hreflang="x-default" href="https://agentmarkup.dev/" />
 
     <!-- Open Graph -->
-    <meta property="og:title" content="agentmarkup - machine-readable websites for Vite, Astro, and Next.js" />
-    <meta property="og:description" content="Build-time llms.txt, optional llms-full.txt, JSON-LD, markdown mirrors, AI crawler controls, Content-Signal headers, validation, and a free website checker." />
+    <meta property="og:title" content="agentmarkup - machine-readable websites for Next.js, Vite, and Astro" />
+    <meta property="og:description" content="Build-time llms.txt, optional llms-full.txt, optional A2A Agent Cards, JSON-LD, markdown mirrors, AI crawler controls, Content-Signal headers, validation, and a free website checker." />
     <meta property="og:url" content="https://agentmarkup.dev/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="agentmarkup" />
@@ -33,8 +33,8 @@
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="agentmarkup - machine-readable websites for Vite, Astro, and Next.js" />
-    <meta name="twitter:description" content="Build-time llms.txt, optional llms-full.txt, JSON-LD, markdown mirrors, AI crawler controls, Content-Signal headers, validation, and a free website checker." />
+    <meta name="twitter:title" content="agentmarkup - machine-readable websites for Next.js, Vite, and Astro" />
+    <meta name="twitter:description" content="Build-time llms.txt, optional llms-full.txt, optional A2A Agent Cards, JSON-LD, markdown mirrors, AI crawler controls, Content-Signal headers, validation, and a free website checker." />
     <meta name="twitter:image" content="https://agentmarkup.dev/og-image.png" />
 
     <!-- OG image -->
@@ -56,12 +56,13 @@
 
     <noscript>
       <div style="max-width:800px;margin:0 auto;padding:4rem 2rem;font-family:system-ui,sans-serif;color:#ededed;background:#0a0a0a;">
-        <h1>agentmarkup - machine-readable websites for Vite, Astro, and Next.js</h1>
-        <p>Generate llms.txt and optional llms-full.txt, inject schema.org JSON-LD, create markdown mirrors from final HTML, manage AI crawler robots.txt rules, patch Content-Signal headers, and validate everything at build time. Zero runtime cost.</p>
-        <p><strong>Install:</strong> <code>pnpm add -D @agentmarkup/vite</code>, <code>@agentmarkup/astro</code>, or <code>@agentmarkup/next</code></p>
+        <h1>agentmarkup - machine-readable websites for Next.js, Vite, and Astro</h1>
+        <p>Generate llms.txt and optional llms-full.txt, emit an optional A2A Agent Card for existing agent services, inject schema.org JSON-LD, create markdown mirrors from final HTML, manage AI crawler robots.txt rules, patch Content-Signal headers, and validate everything at build time. Zero runtime cost.</p>
+        <p><strong>Install:</strong> <code>pnpm add -D @agentmarkup/next</code>, <code>@agentmarkup/vite</code>, or <code>@agentmarkup/astro</code></p>
         <h2>Features</h2>
         <ul>
           <li><strong>llms manifests</strong> - Auto-generate llms.txt, inject its discovery link, and optionally emit llms-full.txt with expanded same-site context.</li>
+          <li><strong>A2A Agent Card</strong> - Publish <code>/.well-known/agent-card.json</code> for an existing A2A service from the same build pipeline.</li>
           <li><strong>JSON-LD structured data injection</strong> - Inject schema.org JSON-LD into every page with XSS-safe serialization. 6 built-in presets.</li>
           <li><strong>AI crawler robots.txt management</strong> - Allow or block GPTBot, ClaudeBot, PerplexityBot, Google-Extended, CCBot.</li>
           <li><strong>Markdown mirrors</strong> - Generate cleaned <code>.md</code> companions for built pages so fetch-based agents can read the content directly.</li>
@@ -70,7 +71,7 @@
         </ul>
         <h2>Schema.org presets</h2>
         <p>webSite, organization, article, faqPage, product, offer</p>
-        <p><a href="https://github.com/agentmarkup/agentmarkup">GitHub</a> | <a href="https://www.npmjs.com/package/@agentmarkup/vite">@agentmarkup/vite</a> | <a href="https://www.npmjs.com/package/@agentmarkup/astro">@agentmarkup/astro</a> | <a href="https://www.npmjs.com/package/@agentmarkup/next">@agentmarkup/next</a> | <a href="https://www.npmjs.com/package/@agentmarkup/core">@agentmarkup/core</a></p>
+        <p><a href="https://github.com/agentmarkup/agentmarkup">GitHub</a> | <a href="https://www.npmjs.com/package/@agentmarkup/next">@agentmarkup/next</a> | <a href="https://www.npmjs.com/package/@agentmarkup/vite">@agentmarkup/vite</a> | <a href="https://www.npmjs.com/package/@agentmarkup/astro">@agentmarkup/astro</a> | <a href="https://www.npmjs.com/package/@agentmarkup/core">@agentmarkup/core</a></p>
       </div>
     </noscript>
   </body>

@@ -1,6 +1,6 @@
 # @agentmarkup/astro
 
-Build-time `llms.txt`, optional `llms-full.txt`, JSON-LD, markdown mirrors, AI crawler `robots.txt`, headers, and validation for Astro websites.
+Build-time `llms.txt`, optional `llms-full.txt`, optional A2A Agent Cards, JSON-LD, markdown mirrors, AI crawler `robots.txt`, headers, and validation for Astro websites.
 
 `@agentmarkup/astro` is the Astro adapter in the `agentmarkup` package family. Framework-agnostic helpers live in `@agentmarkup/core`, Vite sites use `@agentmarkup/vite`, and Next.js sites use `@agentmarkup/next`.
 
@@ -91,6 +91,7 @@ export default defineConfig({
 
 ## What It Does
 
+- Generates optional `/.well-known/agent-card.json` for existing A2A services
 - Injects JSON-LD into built HTML pages during the Astro build
 - Generates `/llms.txt` from config
 - Generates optional `/llms-full.txt` with inlined same-site markdown content
@@ -113,6 +114,8 @@ When markdown mirrors are enabled, the adapter also writes canonical `Link` head
 When markdown mirrors are enabled, same-site page entries in `llms.txt` automatically point at the generated `.md` mirrors by default. Set `llmsTxt.preferMarkdownMirrors: false` if you want `llms.txt` to keep linking to HTML routes instead.
 
 Enable `llmsFullTxt` when you want a richer companion file for agents that can consume more than the compact `llms.txt` manifest. The generated `llms-full.txt` keeps the same section structure but inlines same-site markdown mirror content when those mirrors exist.
+
+Enable `agentCard` when you already run a real A2A-compatible agent service and want Astro builds to publish its discovery file at `/.well-known/agent-card.json`. agentmarkup only emits and validates the static Agent Card. It does not implement the A2A runtime server or transport endpoints for you. When enabled, provide a `version`, at least one `supportedInterfaces` entry, and a non-empty description through either the top-level `description` or `agentCard.description`.
 
 ## Maintainer
 

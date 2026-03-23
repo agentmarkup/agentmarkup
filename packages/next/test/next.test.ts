@@ -274,6 +274,24 @@ describe('@agentmarkup/next', () => {
         site: 'https://example.com',
         name: 'Example',
         description: 'Next fixture for agentmarkup.',
+        agentCard: {
+          version: '1.0.0',
+          supportedInterfaces: [
+            {
+              url: 'https://agent.example.com/a2a/v1',
+              protocolBinding: 'HTTP+JSON',
+              protocolVersion: '1.0',
+            },
+          ],
+          skills: [
+            {
+              id: 'docs-search',
+              name: 'Docs search',
+              description: 'Answers product questions from the docs set.',
+              tags: ['docs', 'support'],
+            },
+          ],
+        },
         llmsTxt: {
           sections: [
             {
@@ -331,6 +349,10 @@ describe('@agentmarkup/next', () => {
 
     const homeHtml = await readFile(join(root, 'out', 'index.html'), 'utf8');
     const faqHtml = await readFile(join(root, 'out', 'faq', 'index.html'), 'utf8');
+    const agentCard = await readFile(
+      join(root, 'out', '.well-known', 'agent-card.json'),
+      'utf8'
+    );
     const llmsTxt = await readFile(join(root, 'out', 'llms.txt'), 'utf8');
     const llmsFullTxt = await readFile(join(root, 'out', 'llms-full.txt'), 'utf8');
     const faqMarkdown = await readFile(join(root, 'out', 'faq.md'), 'utf8');
@@ -346,6 +368,8 @@ describe('@agentmarkup/next', () => {
     expect(faqHtml).toContain('"@type": "FAQPage"');
     expect(faqHtml).toContain('href="/faq.md"');
 
+    expect(agentCard).toContain('"supportedInterfaces"');
+    expect(agentCard).toContain('"protocolBinding": "HTTP+JSON"');
     expect(llmsTxt).toContain('# Example');
     expect(llmsTxt).toContain('[FAQ](https://example.com/faq.md)');
     expect(llmsFullTxt).toContain('### FAQ');
@@ -367,6 +391,25 @@ describe('@agentmarkup/next', () => {
       'out/faq/index.html': '<html><head><title>FAQ</title></head><body><main><h1>FAQ</h1><p>Answers live here.</p></main></body></html>',
       'out/index.md': '# Existing Home\n\nCurated home markdown.\n',
       'out/faq.md': '# Existing FAQ\n\nCurated FAQ markdown.\n',
+      'out/.well-known/agent-card.json': [
+        '{',
+        '  "name": "Existing Agent",',
+        '  "description": "Curated card.",',
+        '  "version": "1.0.0",',
+        '  "supportedInterfaces": [',
+        '    {',
+        '      "url": "https://agent.example.com/a2a/v1",',
+        '      "protocolBinding": "HTTP+JSON",',
+        '      "protocolVersion": "1.0"',
+        '    }',
+        '  ],',
+        '  "capabilities": {},',
+        '  "defaultInputModes": ["text/plain"],',
+        '  "defaultOutputModes": ["text/plain"],',
+        '  "skills": []',
+        '}',
+        '',
+      ].join('\n'),
       'out/llms.txt': '# Curated\n\n- Keep this file.\n',
       'out/llms-full.txt': '# Curated Full\n\nKeep this richer file.\n',
     });
@@ -375,6 +418,16 @@ describe('@agentmarkup/next', () => {
       {
         site: 'https://example.com',
         name: 'Example',
+        agentCard: {
+          version: '1.0.1',
+          supportedInterfaces: [
+            {
+              url: 'https://agent.example.com/a2a/v2',
+              protocolBinding: 'JSONRPC',
+              protocolVersion: '1.0',
+            },
+          ],
+        },
         llmsTxt: {
           sections: [
             {
@@ -399,6 +452,7 @@ describe('@agentmarkup/next', () => {
     );
 
     expect(result.markdownPagesStatus).toBe('preserved');
+    expect(result.agentCardStatus).toBe('preserved');
     expect(result.llmsTxtStatus).toBe('preserved');
     expect(result.llmsFullTxtStatus).toBe('preserved');
 
@@ -408,12 +462,50 @@ describe('@agentmarkup/next', () => {
     expect(await readFile(join(root, 'out', 'faq.md'), 'utf8')).toContain(
       'Curated FAQ markdown.'
     );
+    expect(
+      await readFile(join(root, 'out', '.well-known', 'agent-card.json'), 'utf8')
+    ).toContain('Curated card.');
     expect(await readFile(join(root, 'out', 'llms.txt'), 'utf8')).toContain(
       '- Keep this file.'
     );
     expect(await readFile(join(root, 'out', 'llms-full.txt'), 'utf8')).toContain(
       'Keep this richer file.'
     );
+  });
+
+  it('reports invalid Agent Card config and skips Agent Card emission', async () => {
+    const root = await createFixture({
+      'out/index.html': '<html><head><title>Home</title></head><body><main><h1>Home</h1><p>Welcome.</p></main></body></html>',
+    });
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const result = await processNextBuildOutput(
+      {
+        site: 'https://example.com',
+        name: 'Example',
+        agentCard: {
+          version: '1.0.0',
+          supportedInterfaces: [],
+        },
+      },
+      {
+        projectDir: root,
+        nextConfig: {
+          output: 'export',
+        },
+      }
+    );
+
+    expect(result.agentCardStatus).toBe('none');
+    await expect(
+      readFile(join(root, 'out', '.well-known', 'agent-card.json'), 'utf8')
+    ).rejects.toThrow();
+
+    const output = consoleSpy.mock.calls
+      .map((args) => args.map(String).join(' '))
+      .join('\n');
+    expect(output).toContain('Agent Card description must be a non-empty string');
+    expect(output).toContain('supportedInterfaces must include at least one interface');
   });
 
   it('writes machine-readable assets into public for server builds and patches built app html', async () => {
@@ -426,6 +518,17 @@ describe('@agentmarkup/next', () => {
       {
         site: 'https://example.com',
         name: 'Example',
+        description: 'Next server fixture for agentmarkup.',
+        agentCard: {
+          version: '1.0.0',
+          supportedInterfaces: [
+            {
+              url: 'https://agent.example.com/a2a/v1',
+              protocolBinding: 'HTTP+JSON',
+              protocolVersion: '1.0',
+            },
+          ],
+        },
         globalSchemas: [
           {
             preset: 'webSite',
@@ -457,6 +560,10 @@ describe('@agentmarkup/next', () => {
     expect(result.mode).toBe('server');
 
     const llmsTxt = await readFile(join(root, 'public', 'llms.txt'), 'utf8');
+    const agentCard = await readFile(
+      join(root, 'public', '.well-known', 'agent-card.json'),
+      'utf8'
+    );
     const llmsFullTxt = await readFile(join(root, 'public', 'llms-full.txt'), 'utf8');
     const pricingMarkdown = await readFile(join(root, 'public', 'pricing.md'), 'utf8');
     const pricingHtml = await readFile(
@@ -464,6 +571,7 @@ describe('@agentmarkup/next', () => {
       'utf8'
     );
 
+    expect(agentCard).toContain('"supportedInterfaces"');
     expect(llmsTxt).toContain('[Pricing](https://example.com/pricing.md)');
     expect(llmsFullTxt).toContain('Preferred fetch: https://example.com/pricing.md');
     expect(pricingMarkdown).toContain('# Pricing');

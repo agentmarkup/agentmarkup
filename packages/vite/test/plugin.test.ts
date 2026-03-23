@@ -324,6 +324,85 @@ describe('agentmarkup plugin', () => {
     expect(result).toContain('href="/docs/guide.md"');
   });
 
+  it('emits an A2A Agent Card asset when configured', () => {
+    const plugin = agentmarkup({
+      site: 'https://example.com',
+      name: 'Example',
+      description: 'Machine-readable example site.',
+      agentCard: {
+        version: '1.0.0',
+        supportedInterfaces: [
+          {
+            url: 'https://agent.example.com/a2a/v1',
+            protocolBinding: 'HTTP+JSON',
+            protocolVersion: '1.0',
+          },
+        ],
+        skills: [
+          {
+            id: 'docs-search',
+            name: 'Docs search',
+            description: 'Answers product questions from the docs set.',
+            tags: ['docs', 'support'],
+          },
+        ],
+      },
+    });
+
+    const emitFile = vi.fn();
+    plugin.generateBundle?.call(
+      { emitFile } as unknown as Parameters<NonNullable<typeof plugin.generateBundle>>[0],
+      {} as Parameters<NonNullable<typeof plugin.generateBundle>>[0],
+      {}
+    );
+
+    expect(emitFile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'asset',
+        fileName: '.well-known/agent-card.json',
+      })
+    );
+
+    const asset = emitFile.mock.calls.find(
+      ([entry]) => entry && entry.fileName === '.well-known/agent-card.json'
+    )?.[0];
+    expect(String(asset?.source ?? '')).toContain('"supportedInterfaces"');
+    expect(String(asset?.source ?? '')).toContain('"skills"');
+  });
+
+  it('reports invalid Agent Card config and skips Agent Card emission', async () => {
+    const plugin = agentmarkup({
+      site: 'https://example.com',
+      name: 'Example',
+      agentCard: {
+        version: '1.0.0',
+        supportedInterfaces: [],
+      },
+    });
+
+    const emitFile = vi.fn();
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    plugin.generateBundle?.call(
+      { emitFile } as unknown as Parameters<NonNullable<typeof plugin.generateBundle>>[0],
+      {} as Parameters<NonNullable<typeof plugin.generateBundle>>[0],
+      {}
+    );
+    await plugin.closeBundle?.call(plugin);
+
+    expect(
+      emitFile.mock.calls.some(
+        ([entry]) => entry && entry.fileName === '.well-known/agent-card.json'
+      )
+    ).toBe(false);
+
+    const output = consoleSpy.mock.calls
+      .map((args) => args.map(String).join(' '))
+      .join('\n');
+    expect(output).toContain('Agent Card description must be a non-empty string');
+    expect(output).toContain('supportedInterfaces must include at least one interface');
+  });
+
   it('skips HTML injection, asset emission, and reporting during SSR builds', async () => {
     const plugin = agentmarkup({
       site: 'https://example.com',

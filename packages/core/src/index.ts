@@ -14,6 +14,18 @@ export type {
   LlmsTxtConfig,
   LlmsTxtSection,
   LlmsTxtEntry,
+  AgentCard,
+  AgentCardConfig,
+  EnabledAgentCardConfig,
+  DisabledAgentCardConfig,
+  AgentCardInterface,
+  AgentCardProvider,
+  AgentCardCapabilities,
+  AgentCardExtension,
+  AgentCardSecurityScheme,
+  AgentCardSecurityRequirement,
+  AgentCardSkill,
+  AgentCardSignature,
   LlmsFullTxtConfig,
   ResolvedLlmsTxtEntry,
   ResolvedLlmsTxtSection,
@@ -39,6 +51,12 @@ export {
   matchesPage,
   normalizePagePath,
 } from './html.js';
+export {
+  A2A_AGENT_CARD_PATH,
+  A2A_AGENT_CARD_FILE_NAME,
+  buildAgentCard,
+  generateAgentCard,
+} from './generators/agent-card.js';
 export {
   serializeJsonLd,
   generateJsonLdTags,
@@ -76,6 +94,11 @@ export {
   buildOffer,
   presetToJsonLd,
 } from './presets/index.js';
+export {
+  validateAgentCard,
+  validateAgentCardConfig,
+  validateAgentCardJson,
+} from './validation/agent-card.js';
 export {
   validateSchema,
   validateExistingJsonLd,

@@ -3,8 +3,10 @@ import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve as resolvePath } from 'node:path';
 import type { Plugin } from 'vite';
 import {
+  A2A_AGENT_CARD_FILE_NAME,
   collectSchemasForPage,
   filterJsonLdByExistingTypes,
+  generateAgentCard,
   generateLlmsFullTxt,
   generateLlmsTxtDiscoveryLink,
   generateMarkdownAlternateLink,
@@ -23,6 +25,8 @@ import {
   presetToJsonLd,
   printReport,
   resolveLlmsTxtSections,
+  validateAgentCardConfig,
+  validateAgentCardJson,
   validateExistingJsonLd,
   validateHtmlContent,
   validateLlmsTxt,
@@ -45,6 +49,7 @@ interface AssetLike {
 
 export function agentmarkup(config: AgentMarkupConfig): Plugin {
   const validationResults: ValidationResult[] = [];
+  let agentCardStatus: 'generated' | 'preserved' | 'none' = 'none';
   let llmsTxtContent: string | null = null;
   let llmsTxtEntries = 0;
   let llmsTxtSections = 0;
@@ -67,6 +72,7 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
 
   function resetBuildState(): void {
     validationResults.length = 0;
+    agentCardStatus = 'none';
     llmsTxtContent = null;
     llmsTxtEntries = 0;
     llmsTxtSections = 0;
@@ -194,6 +200,77 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
       const resolvedLlmsSections = resolveLlmsTxtSections(config);
       const markdownByUrl: Record<string, string> = {};
       const availableMarkdownUrls = new Set<string>();
+
+      if (config.agentCard && config.agentCard.enabled !== false) {
+        let existingAgentCard: string | null = null;
+        let existingAgentCardFromBundle = false;
+
+        for (const [fileName, asset] of Object.entries(bundle)) {
+          if (fileName === A2A_AGENT_CARD_FILE_NAME && asset.type === 'asset') {
+            existingAgentCard =
+              typeof asset.source === 'string'
+                ? asset.source
+                : new TextDecoder().decode(asset.source);
+            existingAgentCardFromBundle = true;
+            break;
+          }
+        }
+
+        if (!existingAgentCard && publicDir) {
+          const publicAgentCardPath = join(publicDir, A2A_AGENT_CARD_FILE_NAME);
+          if (existsSync(publicAgentCardPath)) {
+            existingAgentCard = readFileSync(publicAgentCardPath, 'utf8');
+          }
+        }
+
+        if (existingAgentCard && !config.agentCard?.replaceExisting) {
+          agentCardStatus = 'preserved';
+
+          if (!existingAgentCardFromBundle) {
+            this.emitFile({
+              type: 'asset',
+              fileName: A2A_AGENT_CARD_FILE_NAME,
+              source: existingAgentCard,
+            });
+          }
+
+          if (!config.validation?.disabled) {
+            validationResults.push(...validateAgentCardJson(existingAgentCard));
+          }
+        } else {
+          const agentCardConfigIssues = validateAgentCardConfig(
+            config,
+            `/${A2A_AGENT_CARD_FILE_NAME}`
+          );
+
+          if (!config.validation?.disabled) {
+            validationResults.push(...agentCardConfigIssues);
+          }
+
+          if (!agentCardConfigIssues.some((result) => result.severity === 'error')) {
+            const agentCardContent = generateAgentCard(config);
+            if (!agentCardContent) {
+              throw new Error('Agent Card generation returned no output for a valid config');
+            }
+
+            agentCardStatus = 'generated';
+
+            if (existingAgentCardFromBundle) {
+              delete bundle[A2A_AGENT_CARD_FILE_NAME];
+            }
+
+            this.emitFile({
+              type: 'asset',
+              fileName: A2A_AGENT_CARD_FILE_NAME,
+              source: agentCardContent,
+            });
+
+            if (!config.validation?.disabled) {
+              validationResults.push(...validateAgentCardJson(agentCardContent));
+            }
+          }
+        }
+      }
 
       // Generate llms.txt
       llmsTxtContent = generateLlmsTxt(config);
@@ -599,6 +676,7 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
 
       printReport({
         label: '@agentmarkup/vite',
+        agentCardStatus,
         llmsTxtEntries,
         llmsTxtSections,
         llmsTxtStatus,

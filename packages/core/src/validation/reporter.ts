@@ -9,6 +9,7 @@ const DIM = '\x1b[2m';
 
 export function printReport(opts: {
   label?: string;
+  agentCardStatus?: 'generated' | 'preserved' | 'none';
   llmsTxtEntries: number;
   llmsTxtSections: number;
   llmsTxtStatus?: 'generated' | 'preserved' | 'none';
@@ -26,6 +27,7 @@ export function printReport(opts: {
 }): void {
   const {
     label = '@agentmarkup',
+    agentCardStatus = 'none',
     llmsTxtEntries,
     llmsTxtSections,
     llmsTxtStatus = llmsTxtEntries > 0 ? 'generated' : 'none',
@@ -46,6 +48,14 @@ export function printReport(opts: {
   console.log('');
   console.log(`  ${BOLD}${label}${RESET}`);
   console.log('');
+
+  if (agentCardStatus === 'generated') {
+    console.log(`  ${GREEN}✓${RESET} .well-known/agent-card.json generated`);
+  } else if (agentCardStatus === 'preserved') {
+    console.log(
+      `  ${GREEN}✓${RESET} .well-known/agent-card.json preserved (existing file retained)`
+    );
+  }
 
   if (llmsTxtStatus === 'generated' && llmsTxtEntries > 0) {
     console.log(

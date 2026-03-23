@@ -111,6 +111,99 @@ export interface LlmsTxtConfig {
   preferMarkdownMirrors?: boolean;
 }
 
+export interface AgentCardInterface {
+  url: string;
+  protocolBinding: string;
+  protocolVersion: string;
+  tenant?: string;
+}
+
+export interface AgentCardProvider {
+  organization: string;
+  url: string;
+}
+
+export interface AgentCardExtension {
+  uri: string;
+  description?: string;
+  required?: boolean;
+  params?: Record<string, unknown>;
+}
+
+export interface AgentCardCapabilities {
+  streaming?: boolean;
+  pushNotifications?: boolean;
+  extensions?: AgentCardExtension[];
+  extendedAgentCard?: boolean;
+}
+
+export type AgentCardSecurityScheme = Record<string, unknown>;
+export type AgentCardSecurityRequirement = Record<string, string[]>;
+
+export interface AgentCardSkill {
+  id: string;
+  name: string;
+  description: string;
+  tags: string[];
+  examples?: string[];
+  inputModes?: string[];
+  outputModes?: string[];
+  security?: AgentCardSecurityRequirement[];
+}
+
+export interface AgentCardSignature {
+  protected: string;
+  signature: string;
+  header?: Record<string, unknown>;
+}
+
+export interface AgentCard {
+  name: string;
+  description: string;
+  supportedInterfaces: AgentCardInterface[];
+  provider?: AgentCardProvider;
+  version: string;
+  documentationUrl?: string;
+  capabilities: AgentCardCapabilities;
+  securitySchemes?: Record<string, AgentCardSecurityScheme>;
+  security?: AgentCardSecurityRequirement[];
+  defaultInputModes: string[];
+  defaultOutputModes: string[];
+  skills: AgentCardSkill[];
+  signatures?: AgentCardSignature[];
+  iconUrl?: string;
+}
+
+interface BaseAgentCardConfig {
+  replaceExisting?: boolean;
+  name?: string;
+  description?: string;
+  provider?: AgentCardProvider;
+  documentationUrl?: string;
+  capabilities?: AgentCardCapabilities;
+  securitySchemes?: Record<string, AgentCardSecurityScheme>;
+  security?: AgentCardSecurityRequirement[];
+  defaultInputModes?: string[];
+  defaultOutputModes?: string[];
+  skills?: AgentCardSkill[];
+  signatures?: AgentCardSignature[];
+  iconUrl?: string;
+}
+
+export interface EnabledAgentCardConfig extends BaseAgentCardConfig {
+  enabled?: true;
+  supportedInterfaces: AgentCardInterface[];
+  version: string;
+}
+
+export interface DisabledAgentCardConfig extends BaseAgentCardConfig {
+  enabled: false;
+  supportedInterfaces?: AgentCardInterface[];
+  version?: string;
+}
+
+export type AgentCardConfig = EnabledAgentCardConfig | DisabledAgentCardConfig;
+
 export interface LlmsFullTxtConfig {
   enabled?: boolean;
   replaceExisting?: boolean;
@@ -169,6 +262,7 @@ export interface AgentMarkupConfig {
   site: string;
   name: string;
   description?: string;
+  agentCard?: AgentCardConfig;
   llmsTxt?: LlmsTxtConfig;
   llmsFullTxt?: LlmsFullTxtConfig;
   markdownPages?: MarkdownPagesConfig;

@@ -59,6 +59,24 @@ describe('@agentmarkup/astro', () => {
       site: 'https://example.com',
       name: 'Example',
       description: 'Astro fixture for agentmarkup.',
+      agentCard: {
+        version: '1.0.0',
+        supportedInterfaces: [
+          {
+            url: 'https://agent.example.com/a2a/v1',
+            protocolBinding: 'HTTP+JSON',
+            protocolVersion: '1.0',
+          },
+        ],
+        skills: [
+          {
+            id: 'docs-search',
+            name: 'Docs search',
+            description: 'Answers product questions from the docs set.',
+            tags: ['docs', 'support'],
+          },
+        ],
+      },
       llmsTxt: {
         sections: [
           {
@@ -124,6 +142,10 @@ describe('@agentmarkup/astro', () => {
 
     const homeHtml = await readFile(join(root, 'dist', 'index.html'), 'utf8');
     const faqHtml = await readFile(join(root, 'dist', 'faq', 'index.html'), 'utf8');
+    const agentCard = await readFile(
+      join(root, 'dist', '.well-known', 'agent-card.json'),
+      'utf8'
+    );
     const llmsTxt = await readFile(join(root, 'dist', 'llms.txt'), 'utf8');
     const llmsFullTxt = await readFile(join(root, 'dist', 'llms-full.txt'), 'utf8');
     const faqMarkdown = await readFile(join(root, 'dist', 'faq.md'), 'utf8');
@@ -139,6 +161,8 @@ describe('@agentmarkup/astro', () => {
     expect(faqHtml).toContain('href="/llms.txt"');
     expect(faqHtml).toContain('href="/faq.md"');
 
+    expect(agentCard).toContain('"supportedInterfaces"');
+    expect(agentCard).toContain('"protocolBinding": "HTTP+JSON"');
     expect(llmsTxt).toContain('# Example');
     expect(llmsTxt).toContain('[FAQ](https://example.com/faq.md)');
     expect(llmsFullTxt).toContain('### FAQ');
@@ -262,6 +286,104 @@ describe('@agentmarkup/astro', () => {
     expect((homeHtml.match(/application\/ld\+json/g) ?? [])).toHaveLength(1);
     expect(llmsTxt).toBe(existingLlms);
     expect(robotsTxt).toBe(existingRobots);
+  });
+
+  it('preserves an existing Agent Card unless replacement is enabled', async () => {
+    const existingAgentCard = [
+      '{',
+      '  "name": "Existing Agent",',
+      '  "description": "Curated card.",',
+      '  "version": "1.0.0",',
+      '  "supportedInterfaces": [',
+      '    {',
+      '      "url": "https://agent.example.com/a2a/v1",',
+      '      "protocolBinding": "HTTP+JSON",',
+      '      "protocolVersion": "1.0"',
+      '    }',
+      '  ],',
+      '  "capabilities": {},',
+      '  "defaultInputModes": ["text/plain"],',
+      '  "defaultOutputModes": ["text/plain"],',
+      '  "skills": []',
+      '}',
+      '',
+    ].join('\n');
+
+    const root = await createFixture({
+      'dist/index.html': '<html><head><title>Home</title></head><body><main><h1>Home</h1><p>Readable HTML.</p></main></body></html>',
+      'public/.well-known/agent-card.json': existingAgentCard,
+    });
+
+    const integration = agentmarkup({
+      site: 'https://example.com',
+      name: 'Example',
+      description: 'Astro fixture for agentmarkup.',
+      agentCard: {
+        version: '1.0.1',
+        supportedInterfaces: [
+          {
+            url: 'https://agent.example.com/a2a/v2',
+            protocolBinding: 'JSONRPC',
+            protocolVersion: '1.0',
+          },
+        ],
+      },
+    });
+
+    await integration.hooks['astro:config:done']?.({
+      config: {
+        publicDir: pathToFileURL(join(root, 'public/')),
+      } as unknown as AstroConfig,
+      setAdapter: () => {},
+      injectTypes: () => pathToFileURL(join(root, 'types.d.ts')),
+      logger: {} as unknown as AstroIntegrationLogger,
+    } as AstroConfigDoneArgs);
+
+    await integration.hooks['astro:build:done']?.({
+      dir: pathToFileURL(join(root, 'dist/')),
+      routes: [],
+      pages: [{ pathname: '/' }],
+    } as AstroBuildDoneArgs);
+
+    const agentCard = await readFile(
+      join(root, 'dist', '.well-known', 'agent-card.json'),
+      'utf8'
+    );
+
+    expect(agentCard).toContain('"name": "Existing Agent"');
+    expect(agentCard).not.toContain('"protocolBinding": "JSONRPC"');
+  });
+
+  it('reports invalid Agent Card config and skips Agent Card emission', async () => {
+    const root = await createFixture({
+      'dist/index.html': '<html><head><title>Home</title></head><body><main><h1>Home</h1><p>Readable HTML.</p></main></body></html>',
+    });
+
+    const integration = agentmarkup({
+      site: 'https://example.com',
+      name: 'Example',
+      agentCard: {
+        version: '1.0.0',
+        supportedInterfaces: [],
+      },
+    });
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await integration.hooks['astro:build:done']?.({
+      dir: pathToFileURL(join(root, 'dist/')),
+      routes: [],
+      pages: [{ pathname: '/' }],
+    } as AstroBuildDoneArgs);
+
+    await expect(
+      readFile(join(root, 'dist', '.well-known', 'agent-card.json'), 'utf8')
+    ).rejects.toThrow();
+
+    const output = consoleSpy.mock.calls
+      .map((args) => args.map(String).join(' '))
+      .join('\n');
+    expect(output).toContain('Agent Card description must be a non-empty string');
+    expect(output).toContain('supportedInterfaces must include at least one interface');
   });
 
   it('injects an llms.txt discovery link when the site ships a public llms.txt file', async () => {

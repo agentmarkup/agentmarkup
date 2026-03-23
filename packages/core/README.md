@@ -1,6 +1,6 @@
 # @agentmarkup/core
 
-Framework-agnostic `llms.txt`, optional `llms-full.txt`, JSON-LD, markdown mirror, AI crawler `robots.txt`, header, and validation primitives for machine-readable websites.
+Framework-agnostic `llms.txt`, optional `llms-full.txt`, optional A2A Agent Cards, JSON-LD, markdown mirror, AI crawler `robots.txt`, header, and validation primitives for machine-readable websites.
 
 ## Install
 
@@ -20,14 +20,17 @@ When `markdownPages.enabled` is on, `generateLlmsTxt()` prefers same-site markdo
 
 ```ts
 import {
+  generateAgentCard,
   generateContentSignalHeaders,
   generateLlmsTxt,
   generateMarkdownCanonicalHeaders,
   generatePageMarkdown,
   generateJsonLdTags,
   patchRobotsTxt,
-  validateExistingJsonLd,
   presetToJsonLd,
+  validateAgentCardConfig,
+  validateAgentCardJson,
+  validateExistingJsonLd,
   validateLlmsTxt,
   validateRobotsTxt,
 } from '@agentmarkup/core';
@@ -45,6 +48,23 @@ const llms = generateLlmsTxt({
         entries: [{ title: 'Pricing', url: '/pricing', description: 'Plans and billing' }],
       },
     ],
+  },
+});
+
+const agentCard = generateAgentCard({
+  site: 'https://example.com',
+  name: 'Example',
+  description: 'Machine-readable metadata for an example site.',
+  agentCard: {
+    version: '1.0.0',
+    supportedInterfaces: [
+      {
+        url: 'https://agent.example.com/a2a/v1',
+        protocolBinding: 'HTTP+JSON',
+        protocolVersion: '1.0',
+      },
+    ],
+    skills: [],
   },
 });
 
@@ -81,13 +101,17 @@ const robotsIssues = validateRobotsTxt(robots, {
   GPTBot: 'allow',
   ClaudeBot: 'allow',
 });
+const agentCardIssues = agentCard ? validateAgentCardJson(agentCard) : [];
 const schemaIssues = validateExistingJsonLd(builtHtml, '/pricing/');
 ```
+
+When `agentCard` is enabled, provide a `version`, at least one `supportedInterfaces` entry, and a non-empty description through either the top-level `description` or `agentCard.description`. Use `validateAgentCardConfig()` if you want to preflight that config before generation.
 
 ## What It Includes
 
 - `llms.txt` generators and validators
 - optional `llms-full.txt` generator
+- optional A2A Agent Card generator plus config and JSON validators
 - `llms.txt` discovery-link generation
 - JSON-LD serialization and HTML injection helpers
 - existing JSON-LD inspection and validation

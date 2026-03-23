@@ -2,8 +2,10 @@ import { existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import {
+  A2A_AGENT_CARD_FILE_NAME,
   collectSchemasForPage,
   filterJsonLdByExistingTypes,
+  generateAgentCard,
   generateLlmsFullTxt,
   generateLlmsTxt,
   generatePageMarkdown,
@@ -19,6 +21,8 @@ import {
   presetToJsonLd,
   printReport,
   resolveLlmsTxtSections,
+  validateAgentCardConfig,
+  validateAgentCardJson,
   validateExistingJsonLd,
   validateHtmlContent,
   validateLlmsTxt,
@@ -79,6 +83,7 @@ export async function processNextBuildOutput(
       target.outputRoot ? join(target.outputRoot, 'llms.txt') : '',
     ])) !== null;
 
+  let agentCardStatus: 'generated' | 'preserved' | 'none' = 'none';
   let llmsTxtEntries = 0;
   let llmsTxtSections = 0;
   let llmsTxtStatus: 'generated' | 'preserved' | 'none' = 'none';
@@ -277,6 +282,57 @@ export async function processNextBuildOutput(
     }
   }
 
+  if (config.agentCard && config.agentCard.enabled !== false) {
+    const outputAgentCardPath =
+      target.mode === 'export'
+        ? resolveContainedPath(
+            target.outputRoot,
+            A2A_AGENT_CARD_FILE_NAME,
+            'generated Agent Card file'
+          )
+        : resolveContainedPath(
+            publicDir,
+            A2A_AGENT_CARD_FILE_NAME,
+            'generated Agent Card file'
+          );
+    const existingAgentCard = await readFirstExisting([
+      outputAgentCardPath,
+      resolveContainedPath(publicDir, A2A_AGENT_CARD_FILE_NAME, 'generated Agent Card file'),
+    ]);
+
+    if (existingAgentCard && !config.agentCard?.replaceExisting) {
+      agentCardStatus = 'preserved';
+      if (!(await fileExists(outputAgentCardPath))) {
+        await writeTextFile(outputAgentCardPath, existingAgentCard);
+      }
+      if (!config.validation?.disabled) {
+        validationResults.push(...validateAgentCardJson(existingAgentCard));
+      }
+    } else {
+      const agentCardConfigIssues = validateAgentCardConfig(
+        config,
+        `/${A2A_AGENT_CARD_FILE_NAME}`
+      );
+
+      if (!config.validation?.disabled) {
+        validationResults.push(...agentCardConfigIssues);
+      }
+
+      if (!agentCardConfigIssues.some((result) => result.severity === 'error')) {
+        const agentCardContent = generateAgentCard(config);
+        if (!agentCardContent) {
+          throw new Error('Agent Card generation returned no output for a valid config');
+        }
+
+        agentCardStatus = 'generated';
+        await writeTextFile(outputAgentCardPath, agentCardContent);
+        if (!config.validation?.disabled) {
+          validationResults.push(...validateAgentCardJson(agentCardContent));
+        }
+      }
+    }
+  }
+
   if (config.llmsTxt || (await fileExists(join(publicDir, 'llms.txt')))) {
     const llmsTxtContent = generateLlmsTxt(config);
     const outputLlmsPath =
@@ -421,6 +477,7 @@ export async function processNextBuildOutput(
 
   const result: ProcessNextBuildResult = {
     mode: target.mode,
+    agentCardStatus,
     llmsTxtEntries,
     llmsTxtSections,
     llmsTxtStatus,
@@ -438,6 +495,7 @@ export async function processNextBuildOutput(
 
   printReport({
     label: '@agentmarkup/next',
+    agentCardStatus: result.agentCardStatus,
     llmsTxtEntries: result.llmsTxtEntries,
     llmsTxtSections: result.llmsTxtSections,
     llmsTxtStatus: result.llmsTxtStatus,

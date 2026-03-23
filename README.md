@@ -1,6 +1,6 @@
 # agentmarkup
 
-Build-time `llms.txt`, optional `llms-full.txt`, JSON-LD, markdown mirrors, AI crawler controls, and validation for Vite, Astro, and Next.js websites.
+Build-time `llms.txt`, optional `llms-full.txt`, optional A2A Agent Cards, JSON-LD, markdown mirrors, AI crawler controls, and validation for Vite, Astro, and Next.js websites.
 
 ## What This Repo Contains
 
@@ -77,6 +77,7 @@ export default defineConfig({
 
 On build, the adapters can:
 
+- emit optional `/.well-known/agent-card.json` for existing A2A services
 - emit `llms.txt`
 - emit optional `llms-full.txt` with inlined same-site markdown context
 - inject the homepage `llms.txt` discovery link automatically
@@ -89,6 +90,8 @@ On build, the adapters can:
 
 By default, agentmarkup coexists with existing machine-readable assets. If a site already has a curated `llms.txt`, matching crawler rules, or hand-authored JSON-LD for a schema type, those are preserved unless you explicitly opt into replacement.
 
+Optional A2A Agent Card support is intentionally narrow. If you already run a real A2A-compatible agent service, agentmarkup can emit a static `/.well-known/agent-card.json` discovery file for that service from the same build pipeline. It does not implement the A2A runtime protocol or agent server itself. When you enable `agentCard`, provide a `version`, at least one `supportedInterfaces` entry, and a non-empty description through either the top-level `description` or `agentCard.description`.
+
 Markdown mirrors are optional. They are usually most useful for thin, noisy, or client-rendered HTML where the raw page is a poor fetch target for agents. When enabled, same-site page entries in `llms.txt` default to the generated `.md` URLs so cold agents discover the cleaner fetch path first. Set `llmsTxt.preferMarkdownMirrors: false` if you want `llms.txt` to keep pointing at HTML routes instead.
 
 If your site already has a custom prerender or post-build step, `@agentmarkup/core` exposes reusable `llms.txt`, JSON-LD, and `robots.txt` helpers so you can keep one final output pipeline instead of duplicating that logic.
@@ -100,6 +103,7 @@ If your site already has a custom prerender or post-build step, `@agentmarkup/co
 ## Current Features
 
 - Vite, Astro, and Next.js adapters
+- optional A2A Agent Card generation plus config and output validation
 - `llms.txt` generation
 - optional `llms-full.txt` generation
 - automatic `llms.txt` discovery-link injection

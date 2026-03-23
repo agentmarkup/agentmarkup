@@ -1,11 +1,13 @@
 import { existsSync } from 'node:fs';
-import { readdir, readFile, writeFile } from 'node:fs/promises';
-import { join, relative } from 'node:path';
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { AstroIntegration } from 'astro';
 import {
+  A2A_AGENT_CARD_FILE_NAME,
   collectSchemasForPage,
   filterJsonLdByExistingTypes,
+  generateAgentCard,
   generateLlmsFullTxt,
   generateLlmsTxtDiscoveryLink,
   generateMarkdownAlternateLink,
@@ -24,6 +26,8 @@ import {
   presetToJsonLd,
   printReport,
   resolveLlmsTxtSections,
+  validateAgentCardConfig,
+  validateAgentCardJson,
   validateExistingJsonLd,
   validateHtmlContent,
   validateLlmsTxt,
@@ -43,6 +47,7 @@ export * from '@agentmarkup/core';
 
 export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
   const validationResults: ValidationResult[] = [];
+  let agentCardStatus: 'generated' | 'preserved' | 'none' = 'none';
   let llmsTxtEntries = 0;
   let llmsTxtSections = 0;
   let llmsTxtStatus: 'generated' | 'preserved' | 'none' = 'none';
@@ -72,6 +77,8 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
         const markdownByUrl: Record<string, string> = {};
         const availableMarkdownUrls = new Set<string>();
         const finalHtmlByFile = new Map<string, string>();
+        const shouldManageAgentCard =
+          Boolean(config.agentCard) && config.agentCard?.enabled !== false;
         const advertiseLlmsTxt =
           Boolean(config.llmsTxt) ||
           Boolean(publicDir && existsSync(join(publicDir, 'llms.txt')));
@@ -259,6 +266,51 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
           }
         }
 
+        if (shouldManageAgentCard) {
+          const outputAgentCardPath = join(outDir, A2A_AGENT_CARD_FILE_NAME);
+          const existingOutputAgentCard = await readTextFileIfExists(outputAgentCardPath);
+          const existingAgentCard =
+            existingOutputAgentCard ??
+            (publicDir
+              ? await readTextFileIfExists(join(publicDir, A2A_AGENT_CARD_FILE_NAME))
+              : null);
+
+          if (existingAgentCard && !config.agentCard?.replaceExisting) {
+            agentCardStatus = 'preserved';
+
+            if (!existingOutputAgentCard) {
+              await writeTextFile(outputAgentCardPath, existingAgentCard);
+            }
+
+            if (!config.validation?.disabled) {
+              validationResults.push(...validateAgentCardJson(existingAgentCard));
+            }
+          } else {
+            const agentCardConfigIssues = validateAgentCardConfig(
+              config,
+              `/${A2A_AGENT_CARD_FILE_NAME}`
+            );
+
+            if (!config.validation?.disabled) {
+              validationResults.push(...agentCardConfigIssues);
+            }
+
+            if (!agentCardConfigIssues.some((result) => result.severity === 'error')) {
+              const agentCardContent = generateAgentCard(config);
+              if (!agentCardContent) {
+                throw new Error('Agent Card generation returned no output for a valid config');
+              }
+
+              agentCardStatus = 'generated';
+              await writeTextFile(outputAgentCardPath, agentCardContent);
+
+              if (!config.validation?.disabled) {
+                validationResults.push(...validateAgentCardJson(agentCardContent));
+              }
+            }
+          }
+        }
+
         const llmsTxtContent = generateLlmsTxt(config);
         if (llmsTxtContent) {
           const outputLlmsPath = join(outDir, 'llms.txt');
@@ -385,6 +437,7 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
 
         printReport({
           label: '@agentmarkup/astro',
+          agentCardStatus,
           llmsTxtEntries,
           llmsTxtSections,
           llmsTxtStatus,
@@ -420,6 +473,11 @@ async function readTextFileIfExists(filePath: string): Promise<string | null> {
 
     throw error;
   }
+}
+
+async function writeTextFile(filePath: string, content: string): Promise<void> {
+  await mkdir(dirname(filePath), { recursive: true });
+  await writeFile(filePath, ensureTrailingNewline(content), 'utf8');
 }
 
 async function findHtmlFiles(rootDir: string): Promise<string[]> {
