@@ -150,6 +150,28 @@ Preview with GitHub CLI:
 gh skill preview agentmarkup/agentmarkup agentmarkup
 ```
 
+Invoke it without installing:
+
+```bash
+npx skills use agentmarkup/agentmarkup --skill agentmarkup
+```
+
+After installing it, ask your coding agent to use `$agentmarkup` inside the target website repo.
+
+Example prompts:
+
+```text
+Use $agentmarkup to install AgentMarkup in this repo, configure it for my public site, run an audit, and implement the fixes.
+```
+
+```text
+Use $agentmarkup to add llms.txt, JSON-LD, markdown mirrors, AI crawler rules, and Content-Signal headers to this Vite/Astro/Next.js site.
+```
+
+```text
+Use $agentmarkup to inspect this custom post-build pipeline, choose @agentmarkup/core if appropriate, and wire the generated assets into the final deploy output.
+```
+
 ## Maintainer
 
 Copyright (c) 2026 [Sebastian Cochinescu](https://www.cochinescu.com). MIT License.
