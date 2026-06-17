@@ -168,7 +168,7 @@ export default defineConfig({
             title: 'Documentation',
             entries: [
               { title: 'GitHub Repository', url: 'https://github.com/agentmarkup/agentmarkup', description: 'Source code, issues, and contributing guide' },
-              { title: 'Codex Skill', url: 'https://github.com/agentmarkup/agentmarkup/tree/main/.agents/skills/agentmarkup-audit', description: 'Repo-local Codex skill for auditing final-output ownership, llms.txt, JSON-LD, robots.txt, _headers, and markdown-mirror fit' },
+              { title: 'AgentMarkup Agent Skill', url: 'https://github.com/agentmarkup/agentmarkup/tree/main/skills/agentmarkup', description: 'Public agent skill for installing AgentMarkup, configuring preferences, auditing output, and implementing fixes' },
               { title: 'Vite Package', url: 'https://www.npmjs.com/package/@agentmarkup/vite', description: 'Install with pnpm add -D @agentmarkup/vite' },
               { title: 'Astro Package', url: 'https://www.npmjs.com/package/@agentmarkup/astro', description: 'Install with pnpm add -D @agentmarkup/astro' },
               { title: 'Next.js Package', url: 'https://www.npmjs.com/package/@agentmarkup/next', description: 'Install with pnpm add -D @agentmarkup/next' },

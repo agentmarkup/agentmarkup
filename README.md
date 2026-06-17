@@ -150,25 +150,6 @@ Preview with GitHub CLI:
 gh skill preview agentmarkup/agentmarkup agentmarkup
 ```
 
-## Maintainer Codex Skill
-
-This repo also includes a maintainer-local Codex skill at `.agents/skills/agentmarkup-audit` for auditing and improving machine-readable website metadata while working inside this repository.
-
-Use it to:
-
-- determine final-output ownership
-- recommend `@agentmarkup/vite`, `@agentmarkup/astro`, `@agentmarkup/next`, or `@agentmarkup/core`
-- audit `llms.txt`, `llms-full.txt`, JSON-LD, `robots.txt`, `_headers`, and markdown mirrors
-- compare a site or repo against the same expectations used by the website checker
-
-This maintainer skill is repo tooling, not part of the published package runtime surface. The shareable public skill lives at `skills/agentmarkup`.
-
-Example prompt:
-
-```text
-Use the repo-local agentmarkup-audit skill on this repo or site. Determine who owns the final HTML, audit llms.txt, llms-full.txt, JSON-LD, robots.txt, _headers, and tell me whether markdown mirrors plus @agentmarkup/vite, @agentmarkup/astro, @agentmarkup/next, or @agentmarkup/core are the right fit.
-```
-
 ## Maintainer
 
 Copyright (c) 2026 [Sebastian Cochinescu](https://www.cochinescu.com). MIT License.

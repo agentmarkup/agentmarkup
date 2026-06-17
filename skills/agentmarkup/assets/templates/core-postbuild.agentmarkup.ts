@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import {
   generateLlmsTxt,
   generateJsonLdTags,
+  injectJsonLdTags,
   patchRobotsTxt,
   presetToJsonLd,
   validateLlmsTxt,
@@ -72,4 +73,10 @@ await writeFile(robotsPath, robotsTxt, 'utf8');
 const jsonLdTags = generateJsonLdTags(
   config.globalSchemas.map((schema) => presetToJsonLd(schema))
 );
-console.log(`Generated ${jsonLdTags.length} bytes of JSON-LD tags to inject into final HTML.`);
+const homepagePath = join(outputDir, 'index.html');
+try {
+  const homepageHtml = await readFile(homepagePath, 'utf8');
+  await writeFile(homepagePath, injectJsonLdTags(homepageHtml, jsonLdTags), 'utf8');
+} catch {
+  console.warn(`Skipped JSON-LD injection because ${homepagePath} was not readable.`);
+}
