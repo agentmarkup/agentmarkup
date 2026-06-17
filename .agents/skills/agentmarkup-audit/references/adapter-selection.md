@@ -20,6 +20,18 @@ Typical fit:
 
 - Astro sites that ship Astro's built HTML as the final deploy artifact
 
+## Choose `@agentmarkup/next`
+
+Use `@agentmarkup/next` when Next owns the final build output.
+
+Typical fit:
+
+- static export with `output: 'export'`
+- prerendered pages where Next emits build-time HTML
+- server deployments that can use merged `headers()` output for Content-Signal and markdown canonical headers
+
+For fully dynamic SSR routes where Next does not emit build-time HTML, use the re-exported `@agentmarkup/core` helpers directly inside app code for that route.
+
 ## Choose `@agentmarkup/core`
 
 Use `@agentmarkup/core` when something else owns the final output after Vite or another build tool finishes.

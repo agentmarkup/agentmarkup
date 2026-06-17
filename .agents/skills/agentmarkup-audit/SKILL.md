@@ -1,6 +1,6 @@
 ---
 name: agentmarkup-audit
-description: Audit and improve machine-readable website metadata with agentmarkup. Use when the user wants to determine final-output ownership, choose @agentmarkup/vite vs @agentmarkup/astro vs @agentmarkup/core, or audit llms.txt, llms-full.txt, JSON-LD, robots.txt, _headers, markdown mirrors, or the website checker.
+description: Audit and improve machine-readable website metadata with agentmarkup. Use when the user wants to determine final-output ownership, choose @agentmarkup/vite vs @agentmarkup/astro vs @agentmarkup/next vs @agentmarkup/core, or audit llms.txt, llms-full.txt, JSON-LD, robots.txt, _headers, markdown mirrors, or the website checker.
 ---
 
 # agentmarkup Audit
@@ -10,7 +10,7 @@ Use this skill for audit and recommendation work around agentmarkup.
 ## When to use it
 
 - Audit a repo, build output, or deployed site for machine-readable metadata.
-- Decide whether `@agentmarkup/vite`, `@agentmarkup/astro`, or `@agentmarkup/core` is the right integration point.
+- Decide whether `@agentmarkup/vite`, `@agentmarkup/astro`, `@agentmarkup/next`, or `@agentmarkup/core` is the right integration point.
 - Check whether markdown mirrors are appropriate or unnecessary.
 - Compare a site or repo against the same expectations used by the website checker.
 
@@ -42,7 +42,7 @@ This skill is for audit and recommendation work first.
 When auditing this repository itself:
 
 - `packages/core` contains the shared generators and validation helpers.
-- `packages/vite` and `packages/astro` are thin adapters on top of core.
+- `packages/vite`, `packages/astro`, and `packages/next` are adapters on top of core.
 - `website/` dogfoods the packages and contains the public website checker.
 - `website/src/checker/analyze.ts` is the clearest expression of the checker findings and expected end-state behavior.
 - `website/public/_worker.js` shows the checker fetch scope, normalization rules, and protection limits for deployed-site audits.

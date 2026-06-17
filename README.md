@@ -132,9 +132,27 @@ Contribution guidelines live in [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 Website deploys are manual via `./deploy/website-deploy.sh`.
 
-## Codex Skill
+## Public Agent Skill
 
-This repo includes a repo-local Codex skill at `.agents/skills/agentmarkup-audit` for auditing and improving machine-readable website metadata.
+This repo ships a public Agent Skills / skills.sh-compatible skill at `skills/agentmarkup`.
+
+Use it to install AgentMarkup in another JavaScript web repo, configure it from user preferences, audit generated output, and implement fixes for `llms.txt`, `llms-full.txt`, JSON-LD, markdown mirrors, AI crawler rules, and headers.
+
+Install with the skills CLI:
+
+```bash
+npx skills add agentmarkup/agentmarkup --skill agentmarkup
+```
+
+Preview with GitHub CLI:
+
+```bash
+gh skill preview agentmarkup/agentmarkup agentmarkup
+```
+
+## Maintainer Codex Skill
+
+This repo also includes a maintainer-local Codex skill at `.agents/skills/agentmarkup-audit` for auditing and improving machine-readable website metadata while working inside this repository.
 
 Use it to:
 
@@ -143,7 +161,7 @@ Use it to:
 - audit `llms.txt`, `llms-full.txt`, JSON-LD, `robots.txt`, `_headers`, and markdown mirrors
 - compare a site or repo against the same expectations used by the website checker
 
-This skill is repo tooling, not part of the published package runtime surface.
+This maintainer skill is repo tooling, not part of the published package runtime surface. The shareable public skill lives at `skills/agentmarkup`.
 
 Example prompt:
 
