@@ -99,24 +99,55 @@ export default withAgentmarkup(
   nextConfig,
 )`
 
-type Framework = 'next' | 'vite' | 'astro'
+const nuxtExample = `// nuxt.config.ts
+export default defineNuxtConfig({
+  modules: ['@agentmarkup/nuxt'],
+  agentmarkup: {
+    site: 'https://mysite.com',
+    name: 'My Site',
+    globalSchemas: [
+      { preset: 'webSite', name: 'My Site', url: 'https://mysite.com' },
+      { preset: 'organization', name: 'My Site', url: 'https://mysite.com' },
+    ],
+    llmsTxt: {
+      sections: [{ title: 'Docs', entries: [
+        { title: 'Getting Started', url: '/docs/getting-started', description: 'First steps' },
+      ]}],
+    },
+    llmsFullTxt: {
+      enabled: true,
+    },
+    markdownPages: {
+      enabled: true,
+    },
+    contentSignalHeaders: {
+      enabled: true,
+    },
+    aiCrawlers: { GPTBot: 'allow', ClaudeBot: 'allow' },
+  },
+})`
+
+type Framework = 'next' | 'vite' | 'astro' | 'nuxt'
 
 const installCommands: Record<Framework, string> = {
   next: 'pnpm add -D @agentmarkup/next',
   vite: 'pnpm add -D @agentmarkup/vite',
   astro: 'pnpm add -D @agentmarkup/astro',
+  nuxt: 'pnpm add -D @agentmarkup/nuxt',
 }
 
 const examples: Record<Framework, string> = {
   next: nextExample,
   vite: viteExample,
   astro: astroExample,
+  nuxt: nuxtExample,
 }
 
 const configFiles: Record<Framework, string> = {
   next: 'next.config.ts',
   vite: 'vite.config.ts',
   astro: 'astro.config.mjs',
+  nuxt: 'nuxt.config.ts',
 }
 
 function Home() {
@@ -138,7 +169,7 @@ function Home() {
     <>
       <header>
         <h1>Make your website machine-readable for LLMs and AI agents</h1>
-        <p className="tagline">Build-time llms.txt, optional A2A Agent Cards, JSON-LD, markdown mirrors, AI crawler controls, Content-Signal headers, and validation for Next.js, Vite, and Astro websites.</p>
+        <p className="tagline">Build-time llms.txt, optional A2A Agent Cards, JSON-LD, markdown mirrors, AI crawler controls, Content-Signal headers, and validation for Next.js, Vite, Astro, and Nuxt websites, plus a framework-agnostic CLI for any static output.</p>
         <p className="subtitle">Zero runtime cost. Type-safe. Open source.</p>
 
         <section className="hero-checker" aria-labelledby="hero-checker-title">
@@ -185,6 +216,7 @@ function Home() {
           <button className={fw === 'next' ? 'fw-tab active' : 'fw-tab'} onClick={() => setFw('next')}>Next.js</button>
           <button className={fw === 'vite' ? 'fw-tab active' : 'fw-tab'} onClick={() => setFw('vite')}>Vite</button>
           <button className={fw === 'astro' ? 'fw-tab active' : 'fw-tab'} onClick={() => setFw('astro')}>Astro</button>
+          <button className={fw === 'nuxt' ? 'fw-tab active' : 'fw-tab'} onClick={() => setFw('nuxt')}>Nuxt</button>
         </div>
         <pre className="install-hero"><code>{installCommands[fw]}</code></pre>
       </header>
@@ -192,7 +224,7 @@ function Home() {
       <main>
         <section className="about">
           <p>
-            agentmarkup makes your website understandable by LLMs and AI agents. It generates <a href="/docs/llms-txt/">llms.txt</a> and optional <code>llms-full.txt</code> files, can emit an optional <code>/.well-known/agent-card.json</code> for an existing A2A service, injects <a href="/docs/json-ld/">schema.org JSON-LD</a>, can generate <a href="/blog/markdown-mirrors/">markdown mirrors</a> from final HTML when raw pages are thin or noisy, manages <a href="/docs/ai-crawlers/">AI crawler robots.txt rules</a>, patches host-friendly headers with Content-Signal directives and markdown canonicals, and validates the final output at build time. Same core config, same feature set, whether you use Next.js, Vite, or Astro.
+            agentmarkup makes your website understandable by LLMs and AI agents. It generates <a href="/docs/llms-txt/">llms.txt</a> and optional <code>llms-full.txt</code> files, can emit an optional <code>/.well-known/agent-card.json</code> for an existing A2A service, injects <a href="/docs/json-ld/">schema.org JSON-LD</a>, can generate <a href="/blog/markdown-mirrors/">markdown mirrors</a> from final HTML when raw pages are thin or noisy, manages <a href="/docs/ai-crawlers/">AI crawler robots.txt rules</a>, patches host-friendly headers with Content-Signal directives and markdown canonicals, and validates the final output at build time. Same core config, same feature set, whether you use Next.js, Vite, Astro, or Nuxt, or run the framework-agnostic <a href="https://www.npmjs.com/package/@agentmarkup/cli" target="_blank" rel="noopener noreferrer">CLI</a> on any built static output.
           </p>
         </section>
 
@@ -278,6 +310,7 @@ function Home() {
             <button className={fw === 'next' ? 'fw-tab active' : 'fw-tab'} onClick={() => setFw('next')}>Next.js</button>
             <button className={fw === 'vite' ? 'fw-tab active' : 'fw-tab'} onClick={() => setFw('vite')}>Vite</button>
             <button className={fw === 'astro' ? 'fw-tab active' : 'fw-tab'} onClick={() => setFw('astro')}>Astro</button>
+            <button className={fw === 'nuxt' ? 'fw-tab active' : 'fw-tab'} onClick={() => setFw('nuxt')}>Nuxt</button>
           </div>
           <h2>Add to {configFiles[fw]}</h2>
           <CodeBlock code={examples[fw]} />
@@ -285,7 +318,7 @@ function Home() {
 
         <section className="output">
           <h2>Build output from this website</h2>
-          <p className="output-note">This is a recent build output from agentmarkup.dev, which currently uses <code>@agentmarkup/vite</code>. The same output types are available through the Astro and Next.js adapters; the exact page and entry counts change as the docs site grows.</p>
+          <p className="output-note">This is a recent build output from agentmarkup.dev, which currently uses <code>@agentmarkup/vite</code>. The same output types are available through the Astro, Next.js, and Nuxt adapters and the CLI; the exact page and entry counts change as the docs site grows.</p>
           <img
             src="/agentmarkup-build-output.webp"
             alt="Terminal output from a recent agentmarkup.dev build showing llms.txt generation, JSON-LD injection, markdown page generation, Content-Signal headers, markdown canonical headers, and a clean validation report"
@@ -312,8 +345,16 @@ function Home() {
               <p className="package-desc">Astro integration for sites where Astro owns the built HTML output.</p>
             </div>
             <div className="package-card">
+              <h3><a href="https://www.npmjs.com/package/@agentmarkup/nuxt" target="_blank" rel="noopener noreferrer">@agentmarkup/nuxt</a></h3>
+              <p className="package-desc">Nuxt module for prerendered output. Best for <code>nuxt generate</code> and prerendered routes; fully dynamic SSR routes should use <code>@agentmarkup/core</code> in app code. <a href="/blog/nuxt-llms-txt-json-ld/">Read the Nuxt guide</a>.</p>
+            </div>
+            <div className="package-card">
               <h3><a href="https://www.npmjs.com/package/@agentmarkup/core" target="_blank" rel="noopener noreferrer">@agentmarkup/core</a></h3>
               <p className="package-desc">Framework-agnostic generators and validators for custom build pipelines.</p>
+            </div>
+            <div className="package-card">
+              <h3><a href="https://www.npmjs.com/package/@agentmarkup/cli" target="_blank" rel="noopener noreferrer">@agentmarkup/cli</a></h3>
+              <p className="package-desc">Framework-agnostic command. Run agentmarkup over any built static output directory, or use <code>agentmarkup check</code> as a CI gate. <a href="/blog/agentmarkup-cli-any-static-site/">Read the CLI guide</a>.</p>
             </div>
           </div>
         </section>
@@ -355,13 +396,13 @@ function Home() {
           </details>
 
           <details>
-            <summary>Is the config the same for Next.js, Vite, and Astro?</summary>
-            <p>The shared <code>AgentMarkupConfig</code> object is the same across all three adapters. The difference is the integration point: Next.js uses <code>withAgentmarkup(config, nextConfig)</code>, Vite uses <code>plugins</code>, and Astro uses <code>integrations</code>. All three run on the same core engine under the hood.</p>
+            <summary>Is the config the same for Next.js, Vite, Astro, and Nuxt?</summary>
+            <p>The shared <code>AgentMarkupConfig</code> object is the same across all adapters. The difference is the integration point: Next.js uses <code>withAgentmarkup(config, nextConfig)</code>, Vite uses <code>plugins</code>, Astro uses <code>integrations</code>, and Nuxt uses the <code>agentmarkup</code> key with the module. The same config also drives the framework-agnostic CLI. All run on the same core engine under the hood.</p>
           </details>
 
           <details>
             <summary>What is @agentmarkup/core for?</summary>
-            <p>The core package contains the generators and validators without any framework binding. Use it if you have a custom build script, a prerender pipeline, or a route that needs direct integration instead of an adapter-owned build step. The Next.js, Vite, and Astro packages use core internally.</p>
+            <p>The core package contains the generators and validators without any framework binding. Use it if you have a custom build script, a prerender pipeline, or a route that needs direct integration instead of an adapter-owned build step. The Next.js, Vite, Astro, and Nuxt packages and the CLI use core internally.</p>
           </details>
 
           <details>

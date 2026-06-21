@@ -20,11 +20,15 @@ Choose the adapter that owns your final output:
 - `@agentmarkup/vite` for Vite
 - `@agentmarkup/astro` for Astro
 - `@agentmarkup/next` for Next.js
+- `@agentmarkup/nuxt` for Nuxt (prerendered / `nuxt generate` output)
+- `@agentmarkup/cli` for any other built static site, or as a CI check
 
 ```bash
 pnpm add -D @agentmarkup/vite
 # or: pnpm add -D @agentmarkup/astro
 # or: pnpm add -D @agentmarkup/next
+# or: pnpm add -D @agentmarkup/nuxt
+# or: pnpm add -D @agentmarkup/cli
 ```
 
 Vite example:

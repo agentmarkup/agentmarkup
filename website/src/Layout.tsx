@@ -134,6 +134,8 @@ function Layout({ children }: { children: React.ReactNode }) {
               <a href="https://www.npmjs.com/package/@agentmarkup/vite" target="_blank" rel="noopener noreferrer">@agentmarkup/vite</a>
               <a href="https://www.npmjs.com/package/@agentmarkup/astro" target="_blank" rel="noopener noreferrer">@agentmarkup/astro</a>
               <a href="https://www.npmjs.com/package/@agentmarkup/next" target="_blank" rel="noopener noreferrer">@agentmarkup/next</a>
+              <a href="https://www.npmjs.com/package/@agentmarkup/nuxt" target="_blank" rel="noopener noreferrer">@agentmarkup/nuxt</a>
+              <a href="https://www.npmjs.com/package/@agentmarkup/cli" target="_blank" rel="noopener noreferrer">@agentmarkup/cli</a>
               <a href="https://www.npmjs.com/package/@agentmarkup/core" target="_blank" rel="noopener noreferrer">@agentmarkup/core</a>
             </div>
             <div className="footer-col">

@@ -45,7 +45,16 @@ const nextConfig: NextConfig = {
   output: 'export',
 }
 
-export default withAgentmarkup(agentmarkupConfig, nextConfig)`
+export default withAgentmarkup(agentmarkupConfig, nextConfig)
+
+// Nuxt
+export default defineNuxtConfig({
+  modules: ['@agentmarkup/nuxt'],
+  agentmarkup: agentmarkupConfig,
+})
+
+// CLI (any other built static site)
+// agentmarkup generate ./dist`
 
 const customExample = `pages: [
   {
@@ -76,7 +85,7 @@ function JsonLd() {
       <article className="doc-page">
         <h1>How to add JSON-LD structured data to your website</h1>
         <p className="doc-intro">
-          JSON-LD (JavaScript Object Notation for Linked Data) is the format Google, Bing, and other search engines use to understand your page content. agentmarkup injects schema.org JSON-LD into your HTML pages at build time for Vite, Astro, and Next.js with XSS-safe serialization and type-safe presets.
+          JSON-LD (JavaScript Object Notation for Linked Data) is the format Google, Bing, and other search engines use to understand your page content. agentmarkup injects schema.org JSON-LD into your HTML pages at build time for Vite, Astro, Next.js, and Nuxt (and via the CLI for any other static build) with XSS-safe serialization and type-safe presets.
         </p>
 
         <section>

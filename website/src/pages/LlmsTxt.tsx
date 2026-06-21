@@ -49,7 +49,17 @@ const nextConfig: NextConfig = {
   output: 'export',
 }
 
-export default withAgentmarkup(agentmarkupConfig, nextConfig)`
+export default withAgentmarkup(agentmarkupConfig, nextConfig)
+
+// Nuxt
+export default defineNuxtConfig({
+  modules: ['@agentmarkup/nuxt'],
+  agentmarkup: agentmarkupConfig,
+})
+
+// CLI (any other built static site)
+// agentmarkup generate ./dist
+// agentmarkup check ./dist   # CI gate`
 
 const output = `# My Website
 
@@ -119,7 +129,7 @@ function LlmsTxt() {
         <section>
           <h2>Configuration</h2>
           <p>
-            The <code>llmsTxt</code> config itself is shared across the first-party adapters. Define sections and entries that describe the pages on your site once, then pass the same config into Vite, Astro, or Next.js.
+            The <code>llmsTxt</code> config itself is shared across the first-party adapters. Define sections and entries that describe the pages on your site once, then pass the same config into Vite, Astro, Next.js, or Nuxt, or run the CLI against any built static output.
           </p>
           <CodeBlock code={configExample} />
         </section>

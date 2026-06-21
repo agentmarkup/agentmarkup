@@ -17,6 +17,20 @@ export interface BlogPostMeta {
 
 export const blogPosts: BlogPostMeta[] = [
   {
+    slug: 'nuxt-llms-txt-json-ld',
+    title: 'How to add llms.txt, JSON-LD, and AI crawler controls to Nuxt',
+    description: 'Use @agentmarkup/nuxt to generate llms.txt, inject JSON-LD, create markdown mirrors, and manage AI crawler rules from prerendered Nuxt output.',
+    date: '2026-06-21',
+    readingTime: '7 min read',
+  },
+  {
+    slug: 'agentmarkup-cli-any-static-site',
+    title: 'Run agentmarkup on any static site with the CLI',
+    description: 'Use @agentmarkup/cli to run llms.txt, JSON-LD, markdown mirrors, and AI crawler controls over any built static output, with a CI check command.',
+    date: '2026-06-21',
+    readingTime: '6 min read',
+  },
+  {
     slug: 'nextjs-llms-txt-json-ld',
     title: 'How to add llms.txt, JSON-LD, and AI crawler controls to Next.js',
     description: 'Use @agentmarkup/next to generate llms.txt, inject JSON-LD, manage AI crawler rules, and understand the dynamic SSR boundary in Next.js.',
