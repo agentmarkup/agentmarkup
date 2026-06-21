@@ -17,6 +17,9 @@ pnpm build
 - `packages/core` contains the framework-agnostic engine.
 - `packages/vite` contains the publishable `@agentmarkup/vite` adapter.
 - `packages/astro` contains the publishable `@agentmarkup/astro` adapter.
+- `packages/next` contains the publishable `@agentmarkup/next` adapter.
+- `packages/nuxt` contains the publishable `@agentmarkup/nuxt` module for prerendered / `nuxt generate` output.
+- `packages/cli` contains the publishable `@agentmarkup/cli`, a framework-agnostic command for any built static output.
 - `website` is the dogfooding site and consumes `@agentmarkup/vite` through the workspace package boundary.
 - `examples/vite-react` is the minimal consumer example.
 
