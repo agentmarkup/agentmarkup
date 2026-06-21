@@ -69,7 +69,11 @@ export function parseArgs(argv: string[]): ParsedArgs {
       }
       default:
         if (arg.startsWith('--config=')) {
-          parsed.configPath = arg.slice('--config='.length);
+          const value = arg.slice('--config='.length);
+          if (value === '') {
+            throw new Error('--config requires a path argument');
+          }
+          parsed.configPath = value;
         } else if (arg.startsWith('-')) {
           throw new Error(`Unknown option: ${arg}`);
         } else {

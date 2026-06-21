@@ -502,6 +502,19 @@ async function runCheck(
     validationResults.push(...validateHtmlContent(html, pagePath));
     validationResults.push(...validateExistingJsonLd(html, pagePath));
 
+    // Configured schema with no JSON-LD on the page is a readiness gap (lenient
+    // warning so default check passes, but `--strict` can gate it).
+    if (
+      collectSchemasForPage(config, pagePath).length > 0 &&
+      !hasExistingJsonLdScripts(html)
+    ) {
+      validationResults.push({
+        severity: 'warning',
+        message: 'Configured JSON-LD is missing from this page',
+        path: pagePath,
+      });
+    }
+
     if (markdownEnabled) {
       validationResults.push(...validateMarkdownAlternateLink(html, pagePath));
 
@@ -577,6 +590,17 @@ async function runCheck(
     warnMissing('Agent Card');
   }
 
+  let contentSignalHeadersStatus: GenerateResult['contentSignalHeadersStatus'] =
+    'none';
+  if (isFeatureEnabled(config.contentSignalHeaders)) {
+    const existingHeaders = await readTextFileIfExists(join(outDir, '_headers'));
+    if (existingHeaders) {
+      contentSignalHeadersStatus = 'preserved';
+    } else {
+      warnMissing('_headers (Content-Signal)');
+    }
+  }
+
   return {
     agentCardStatus,
     llmsTxtEntries: resolvedLlmsSections.reduce(
@@ -596,7 +620,7 @@ async function runCheck(
       ? Object.keys(config.aiCrawlers).length
       : 0,
     robotsTxtStatus,
-    contentSignalHeadersStatus: 'none',
+    contentSignalHeadersStatus,
     validationResults,
   };
 }

@@ -233,6 +233,33 @@ describe('@agentmarkup/cli check', () => {
 
     expect(await run(['check'], { cwd: fixture.root })).toBe(1);
   });
+
+  it('gates configured-but-missing JSON-LD under --strict', async () => {
+    // globalSchemas configured, but the HTML on disk carries no JSON-LD.
+    const fixture = await createFixture({
+      'agentmarkup.config.mjs': `export default {
+        site: 'https://example.com', name: 'Example',
+        globalSchemas: [{ preset: 'webSite', name: 'Example', url: 'https://example.com' }],
+      };`,
+      'dist/index.html': page('Home'),
+    });
+
+    expect(await run(['check'], { cwd: fixture.root })).toBe(0);
+    expect(await run(['check', '--strict'], { cwd: fixture.root })).toBe(1);
+  });
+
+  it('gates configured-but-missing Content-Signal _headers under --strict', async () => {
+    const fixture = await createFixture({
+      'agentmarkup.config.mjs': `export default {
+        site: 'https://example.com', name: 'Example',
+        contentSignalHeaders: { enabled: true, aiTrain: 'no' },
+      };`,
+      'dist/index.html': page('Home'),
+    });
+
+    expect(await run(['check'], { cwd: fixture.root })).toBe(0);
+    expect(await run(['check', '--strict'], { cwd: fixture.root })).toBe(1);
+  });
 });
 
 describe('@agentmarkup/cli resolution and errors', () => {
@@ -314,5 +341,9 @@ describe('@agentmarkup/cli meta', () => {
 
   it('errors (exit 2) when --config is given no value', async () => {
     expect(await run(['generate', '--config'])).toBe(2);
+  });
+
+  it('errors (exit 2) for the equals-empty --config= form', async () => {
+    expect(await run(['generate', '--config='])).toBe(2);
   });
 });
