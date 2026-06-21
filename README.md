@@ -8,6 +8,7 @@ Build-time `llms.txt`, optional `llms-full.txt`, optional A2A Agent Cards, JSON-
 - `packages/vite` — the publishable `@agentmarkup/vite` adapter
 - `packages/astro` — the publishable `@agentmarkup/astro` adapter
 - `packages/next` — the publishable `@agentmarkup/next` adapter
+- `packages/cli` — the publishable `@agentmarkup/cli`, a framework-agnostic command that runs agentmarkup over any built static output directory (with a CI-friendly `check` command)
 - `website` — the dogfooding landing page built against the workspace package boundary
 - `examples/vite-react` — a minimal example app for local verification and onboarding
 
@@ -127,7 +128,7 @@ pnpm typecheck
 pnpm build
 ```
 
-Package details live in [packages/vite/README.md](./packages/vite/README.md), [packages/astro/README.md](./packages/astro/README.md), [packages/next/README.md](./packages/next/README.md), and [packages/core/README.md](./packages/core/README.md).
+Package details live in [packages/vite/README.md](./packages/vite/README.md), [packages/astro/README.md](./packages/astro/README.md), [packages/next/README.md](./packages/next/README.md), [packages/cli/README.md](./packages/cli/README.md), and [packages/core/README.md](./packages/core/README.md).
 Contribution guidelines live in [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 Website deploys are manual via `./deploy/website-deploy.sh`.

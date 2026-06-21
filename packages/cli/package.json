@@ -1,0 +1,71 @@
+{
+  "name": "@agentmarkup/cli",
+  "version": "0.5.0",
+  "description": "Run agentmarkup on any built static site: llms.txt, llms-full.txt, A2A Agent Cards, JSON-LD, markdown mirrors, headers, AI crawler controls, and validation — framework-agnostic, with a CI-friendly check command",
+  "type": "module",
+  "license": "MIT",
+  "author": "Sebastian Cochinescu <hello@animafelix.com> (https://animafelix.com)",
+  "homepage": "https://agentmarkup.dev",
+  "bugs": {
+    "url": "https://github.com/agentmarkup/agentmarkup/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agentmarkup/agentmarkup",
+    "directory": "packages/cli"
+  },
+  "keywords": [
+    "cli",
+    "llms-txt",
+    "llms-full",
+    "a2a",
+    "agent-card",
+    "json-ld",
+    "markdown",
+    "schema-org",
+    "structured-data",
+    "robots-txt",
+    "content-signal",
+    "headers",
+    "ai-crawler",
+    "machine-readable",
+    "seo",
+    "validation",
+    "geo"
+  ],
+  "bin": {
+    "agentmarkup": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "prebuild": "pnpm -C ../core build",
+    "build": "tsup",
+    "predev": "pnpm -C ../core build",
+    "dev": "tsup --watch",
+    "pretest": "pnpm -C ../core build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src/ test/",
+    "pretypecheck": "pnpm -C ../core build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@agentmarkup/core": "workspace:*"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
