@@ -9,6 +9,7 @@ Build-time `llms.txt`, optional `llms-full.txt`, optional A2A Agent Cards, JSON-
 - `packages/astro` — the publishable `@agentmarkup/astro` adapter
 - `packages/next` — the publishable `@agentmarkup/next` adapter
 - `packages/cli` — the publishable `@agentmarkup/cli`, a framework-agnostic command that runs agentmarkup over any built static output directory (with a CI-friendly `check` command)
+- `packages/nuxt` — the publishable `@agentmarkup/nuxt` module for prerendered / `nuxt generate` output
 - `website` — the dogfooding landing page built against the workspace package boundary
 - `examples/vite-react` — a minimal example app for local verification and onboarding
 
@@ -101,6 +102,10 @@ If your site already has a custom prerender or post-build step, `@agentmarkup/co
 
 `@agentmarkup/next` is best when Next owns the final build output. Static export gets the full post-build file flow, prerendered and server deployments still get generated assets plus header integration, but fully dynamic SSR routes are still a per-route integration point: if Next does not emit build-time HTML for that route, use the re-exported `@agentmarkup/core` helpers directly inside app code.
 
+`@agentmarkup/nuxt` is best when Nuxt prerenders your pages (`nuxt generate` or `prerender: true`). It hooks Nitro after prerendering and processes the emitted `.output/public` HTML. Fully dynamic SSR routes that never emit build-time HTML are not patched automatically; use the re-exported `@agentmarkup/core` helpers in app code for those.
+
+`@agentmarkup/cli` is framework-agnostic: point it at any built static output directory (`agentmarkup generate ./dist`) to run the same pipeline without an adapter, or use `agentmarkup check ./dist` as a CI gate that fails on machine-readability errors. Useful for static site generators without a dedicated adapter and for validating already-deployed output.
+
 ## Current Features
 
 - Vite, Astro, and Next.js adapters
@@ -128,7 +133,7 @@ pnpm typecheck
 pnpm build
 ```
 
-Package details live in [packages/vite/README.md](./packages/vite/README.md), [packages/astro/README.md](./packages/astro/README.md), [packages/next/README.md](./packages/next/README.md), [packages/cli/README.md](./packages/cli/README.md), and [packages/core/README.md](./packages/core/README.md).
+Package details live in [packages/vite/README.md](./packages/vite/README.md), [packages/astro/README.md](./packages/astro/README.md), [packages/next/README.md](./packages/next/README.md), [packages/cli/README.md](./packages/cli/README.md), [packages/nuxt/README.md](./packages/nuxt/README.md), and [packages/core/README.md](./packages/core/README.md).
 Contribution guidelines live in [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 Website deploys are manual via `./deploy/website-deploy.sh`.
