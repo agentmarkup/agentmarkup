@@ -25,12 +25,13 @@ export default defineConfig({
       markdownPages: {
         enabled: true,
       },
-      contentSignalHeaders: {
-        enabled: true,
-        aiTrain: 'yes',
-        search: 'yes',
-        aiInput: 'yes',
-      },
+      // Enable Content-Signal only after the user chooses this policy.
+      // contentSignalHeaders: {
+      //   enabled: true,
+      //   aiTrain: 'yes',
+      //   search: 'yes',
+      //   aiInput: 'yes',
+      // },
       globalSchemas: [
         {
           preset: 'webSite',
@@ -38,12 +39,13 @@ export default defineConfig({
           url: 'https://example.com',
         },
       ],
-      aiCrawlers: {
-        GPTBot: 'allow',
-        ClaudeBot: 'allow',
-        PerplexityBot: 'allow',
-        'Google-Extended': 'allow',
-      },
+      // Add crawler directives only after the user chooses allow/disallow policy.
+      // aiCrawlers: {
+      //   GPTBot: 'allow',
+      //   ClaudeBot: 'allow',
+      //   PerplexityBot: 'allow',
+      //   'Google-Extended': 'allow',
+      // },
       validation: {
         warnOnMissingSchema: true,
       },
