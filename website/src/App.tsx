@@ -271,23 +271,22 @@ function Home() {
 
         <section className="checker-cta">
           <div className="checker-cta-card">
-            <h2>Repo-local Codex skill</h2>
+            <h2>AgentMarkup agent skill</h2>
             <p>
-              This repo also includes a repo-local Codex skill at
-              {' '}<code>.agents/skills/agentmarkup-audit</code>{' '}
-              for auditing final-output ownership, llms.txt, llms-full.txt,
-              JSON-LD, robots.txt, <code>_headers</code>, and whether markdown
-              mirrors help. It stays separate from the published packages and
-              uses the website checker as guidance rather than a runtime
-              dependency.
+              Install the public <code>agentmarkup</code> skill from
+              {' '}<code>skills/agentmarkup</code>{' '}to help a coding agent
+              add AgentMarkup to a Vite, Astro, Next.js, or custom pipeline
+              repo, configure it from your preferences, audit generated output,
+              and implement fixes for llms.txt, JSON-LD, robots.txt,
+              <code>_headers</code>, and markdown mirrors.
             </p>
             <a
               className="checker-cta-link"
-              href="https://github.com/agentmarkup/agentmarkup/tree/main/.agents/skills/agentmarkup-audit"
+              href="https://github.com/agentmarkup/agentmarkup/tree/main/skills/agentmarkup"
               target="_blank"
               rel="noopener noreferrer"
             >
-              View the Codex skill in GitHub
+              View the agent skill in GitHub
             </a>
           </div>
         </section>
