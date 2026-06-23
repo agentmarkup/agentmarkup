@@ -142,23 +142,44 @@ Contribution guidelines live in [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 Website deploys are manual via `./deploy/website-deploy.sh`.
 
-## Codex Skill
+## Public Agent Skill
 
-This repo includes a repo-local Codex skill at `.agents/skills/agentmarkup-audit` for auditing and improving machine-readable website metadata.
+This repo ships a public Agent Skills / skills.sh-compatible skill at `skills/agentmarkup`.
 
-Use it to:
+Use it to install AgentMarkup in another JavaScript web repo, configure it from user preferences, audit generated output, and implement fixes for `llms.txt`, `llms-full.txt`, JSON-LD, markdown mirrors, AI crawler rules, and headers.
 
-- determine final-output ownership
-- recommend `@agentmarkup/vite`, `@agentmarkup/astro`, `@agentmarkup/next`, or `@agentmarkup/core`
-- audit `llms.txt`, `llms-full.txt`, JSON-LD, `robots.txt`, `_headers`, and markdown mirrors
-- compare a site or repo against the same expectations used by the website checker
+Install with the skills CLI:
 
-This skill is repo tooling, not part of the published package runtime surface.
+```bash
+npx skills add agentmarkup/agentmarkup --skill agentmarkup
+```
 
-Example prompt:
+Preview with GitHub CLI:
+
+```bash
+gh skill preview agentmarkup/agentmarkup agentmarkup
+```
+
+Invoke it without installing:
+
+```bash
+npx skills use agentmarkup/agentmarkup --skill agentmarkup
+```
+
+After installing it, ask your coding agent to use `$agentmarkup` inside the target website repo.
+
+Example prompts:
 
 ```text
-Use the repo-local agentmarkup-audit skill on this repo or site. Determine who owns the final HTML, audit llms.txt, llms-full.txt, JSON-LD, robots.txt, _headers, and tell me whether markdown mirrors plus @agentmarkup/vite, @agentmarkup/astro, @agentmarkup/next, or @agentmarkup/core are the right fit.
+Use $agentmarkup to install AgentMarkup in this repo, configure it for my public site, run an audit, and implement the fixes.
+```
+
+```text
+Use $agentmarkup to add llms.txt, JSON-LD, markdown mirrors, AI crawler rules, and Content-Signal headers to this Vite/Astro/Next.js site.
+```
+
+```text
+Use $agentmarkup to inspect this custom post-build pipeline, choose @agentmarkup/core if appropriate, and wire the generated assets into the final deploy output.
 ```
 
 ## Maintainer
