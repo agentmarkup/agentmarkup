@@ -44,6 +44,10 @@ const MAX_REDIRECTS = 5;
 const IP_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const IP_RATE_LIMIT_MAX = 10;
 const TARGET_CACHE_TTL_MS = 3 * 60 * 1000;
+// D1 rejects a single bound string/blob above its per-value limit with
+// SQLITE_TOOBIG. Skip caching responses whose serialized payload exceeds this
+// conservative budget so a large target still returns a live (uncached) result.
+const MAX_CACHE_VALUE_BYTES = 900 * 1024;
 const CHECK_HISTORY_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const REQUEST_EVENT_RETENTION_MS = 24 * 60 * 60 * 1000;
 const TURNSTILE_VERIFY_URL =
@@ -559,23 +563,37 @@ async function cacheCheckResponse(
   }
 
   const responseJson = JSON.stringify(payload);
+
+  // Large targets (big homepages, sitemaps, llms-full.txt) can serialize past
+  // D1's per-value size limit. Caching is best-effort: skip the write rather
+  // than fail an otherwise-successful check with SQLITE_TOOBIG. Measure UTF-8
+  // bytes (what D1 limits), not UTF-16 code units, so non-ASCII payloads are
+  // judged correctly.
+  if (new TextEncoder().encode(responseJson).byteLength > MAX_CACHE_VALUE_BYTES) {
+    return;
+  }
+
   const keys = targetUrl === normalized ? [normalized] : [normalized, targetUrl];
 
-  await env.CHECKS_DB.batch(
-    keys.map((cacheKey) =>
-      env.CHECKS_DB.prepare(
-        `
-          INSERT OR REPLACE INTO checker_cache (
-            normalized_url,
-            response_json,
-            cached_at,
-            expires_at
-          )
-          VALUES (?, ?, ?, ?)
-        `
-      ).bind(cacheKey, responseJson, checkedAt, expiresAt)
-    )
-  );
+  try {
+    await env.CHECKS_DB.batch(
+      keys.map((cacheKey) =>
+        env.CHECKS_DB.prepare(
+          `
+            INSERT OR REPLACE INTO checker_cache (
+              normalized_url,
+              response_json,
+              cached_at,
+              expires_at
+            )
+            VALUES (?, ?, ?, ?)
+          `
+        ).bind(cacheKey, responseJson, checkedAt, expiresAt)
+      )
+    );
+  } catch (error) {
+    console.error('checker cache write failed', error);
+  }
 }
 
 async function persistCheckedUrl(env, payload) {
