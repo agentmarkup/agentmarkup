@@ -181,6 +181,18 @@ function LlmsTxt() {
             enabled, it also warns when <code>llms.txt</code> points to a
             markdown URL that was never emitted.
           </p>
+          <p>
+            Links must use Markdown link syntax,{' '}
+            <code>- [Label](https://example.com)</code>, not plain-text{' '}
+            <code>- Label: https://example.com</code> lines. agentmarkup-generated
+            files already do this, but a hand-curated <code>llms.txt</code> that
+            uses bare URLs is flagged as a warning, because the{' '}
+            <a href="https://llmstxt.org" target="_blank" rel="noopener noreferrer">llmstxt.org</a>{' '}
+            spec and tools like Google Lighthouse&apos;s agentic-browsing audit
+            only recognize Markdown links. The same{' '}
+            <a href="/checker/">website checker</a> surfaces this warning for any
+            public site.
+          </p>
         </section>
 
         <section>

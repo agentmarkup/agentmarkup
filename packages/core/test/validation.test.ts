@@ -147,4 +147,46 @@ describe('validateLlmsTxt', () => {
     const errors = results.filter((r) => r.severity === 'error');
     expect(errors).toHaveLength(0);
   });
+
+  it('warns when links are plain-text URLs instead of Markdown links', () => {
+    const results = validateLlmsTxt(
+      '# Site\n\n## Links\n\n- Website: https://example.com\n+ Download: https://example.com/download/\n1. Docs: https://example.com/docs/\n2) API: https://example.com/api/\n'
+    );
+    const warning = results.find((r) => r.message.includes('plain-text URLs'));
+    expect(warning).toBeDefined();
+    expect(warning?.severity).toBe('warning');
+    expect(warning?.message).toContain('4 bare-URL list lines');
+  });
+
+  it('does not flag a file that already uses Markdown links', () => {
+    const results = validateLlmsTxt(
+      '# Site\n\n## Docs\n\n- [Guide](https://example.com): notes\n- [API](https://example.com/api)\n'
+    );
+    expect(results.some((r) => r.message.includes('plain-text URL'))).toBe(false);
+  });
+
+  it('warns when a file mixes Markdown links with bare URLs', () => {
+    const results = validateLlmsTxt(
+      '# Site\n\n## Docs\n\n- [Guide](https://example.com)\n- Download: https://example.com/download/\n'
+    );
+    const warning = results.find((r) => r.message.includes('mixes Markdown links'));
+    expect(warning).toBeDefined();
+    expect(warning?.severity).toBe('warning');
+  });
+
+  it('warns when a list item has a Markdown link plus another bare URL', () => {
+    const results = validateLlmsTxt(
+      '# Site\n\n## Docs\n\n- [Guide](https://example.com) also mirrors at https://example.com/guide.md\n'
+    );
+    const warning = results.find((r) => r.message.includes('mixes Markdown links'));
+    expect(warning).toBeDefined();
+    expect(warning?.severity).toBe('warning');
+  });
+
+  it('does not flag scheme-less mentions or non-list prose URLs', () => {
+    const results = validateLlmsTxt(
+      '# Site\n\n## About\n\n- Voice onboarding starts at call.example.com\n\nSource: https://example.com\n'
+    );
+    expect(results.some((r) => r.message.includes('plain-text URL'))).toBe(false);
+  });
 });
