@@ -24,11 +24,12 @@ Check:
 - file exists when configured
 - useful same-site coverage
 - deterministic sections and valid entries
+- links use Markdown syntax `- [Label](https://example.com)`, not plain-text `- Label: https://example.com` lines
 - homepage discovery link points to it
 - same-site entries prefer markdown mirrors when markdown generation is enabled
 - external URLs and non-HTML file URLs remain unchanged
 
-Fix by adjusting `llmsTxt.sections`, `llmsTxt.instructions`, or markdown mirror preference. Preserve an existing curated file unless replacement was explicitly approved.
+Fix by adjusting `llmsTxt.sections`, `llmsTxt.instructions`, or markdown mirror preference. Preserve an existing curated file unless replacement was explicitly approved. If a curated file uses bare-URL list lines, convert them to Markdown links in place (content-preserving) rather than regenerating; bare URLs are flagged by the build validator and the website checker because the llmstxt.org spec and Google Lighthouse only recognize Markdown links.
 
 ## `llms-full.txt`
 
