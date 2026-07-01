@@ -15,11 +15,11 @@ export function generateLlmsTxt(config: AgentMarkupConfig): string | null {
   const lines: string[] = [];
   const sections = resolveLlmsTxtSections(config);
 
-  lines.push(`# ${config.name}`);
+  lines.push(`# ${collapseInline(config.name)}`);
   lines.push('');
 
   if (config.description) {
-    lines.push(`> ${config.description}`);
+    lines.push(`> ${collapseInline(config.description)}`);
     lines.push('');
   }
 
@@ -29,18 +29,58 @@ export function generateLlmsTxt(config: AgentMarkupConfig): string | null {
   }
 
   for (const section of sections) {
-    lines.push(`## ${section.title}`);
+    lines.push(`## ${collapseInline(section.title)}`);
     lines.push('');
 
     for (const entry of section.entries) {
-      const description = entry.description ? `: ${entry.description}` : '';
-      lines.push(`- [${entry.title}](${entry.url})${description}`);
+      lines.push(renderLlmsTxtEntryLine(entry));
     }
 
     lines.push('');
   }
 
   return lines.join('\n').trimEnd() + '\n';
+}
+
+/**
+ * Collapses newlines and runs of whitespace to single spaces so a multi-line
+ * value cannot escape a single-line Markdown construct (H1, blockquote, list item).
+ */
+function collapseInline(value: string): string {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+/** Escapes Markdown link-label delimiters so a `]` in a title cannot close the label early. */
+function escapeLinkText(text: string): string {
+  return collapseInline(text).replace(/[\\[\]]/g, '\\$&');
+}
+
+/**
+ * Percent-encodes characters that would break a bare Markdown link destination
+ * (whitespace, parentheses, angle brackets, control chars) while leaving the
+ * rest of the URL untouched, so a `)` in a query string cannot close the link early.
+ */
+function encodeLinkDestination(url: string): string {
+  return Array.from(collapseInline(url))
+    .map((char) => {
+      const code = char.charCodeAt(0);
+      if (/[\s()<>]/.test(char) || code <= 0x1f || code === 0x7f) {
+        return `%${code.toString(16).toUpperCase().padStart(2, '0')}`;
+      }
+      return char;
+    })
+    .join('');
+}
+
+function renderLlmsTxtEntryLine(entry: {
+  title: string;
+  url: string;
+  description?: string;
+}): string {
+  const description = entry.description
+    ? `: ${collapseInline(entry.description)}`
+    : '';
+  return `- [${escapeLinkText(entry.title)}](${encodeLinkDestination(entry.url)})${description}`;
 }
 
 export function generateLlmsFullTxt(
@@ -54,11 +94,11 @@ export function generateLlmsFullTxt(
   const sections = resolveLlmsTxtSections(config);
   const lines: string[] = [];
 
-  lines.push(`# ${config.name}`);
+  lines.push(`# ${collapseInline(config.name)}`);
   lines.push('');
 
   if (config.description) {
-    lines.push(`> ${config.description}`);
+    lines.push(`> ${collapseInline(config.description)}`);
     lines.push('');
   }
 
@@ -73,12 +113,11 @@ export function generateLlmsFullTxt(
   lines.push('');
 
   for (const section of sections) {
-    lines.push(`## ${section.title}`);
+    lines.push(`## ${collapseInline(section.title)}`);
     lines.push('');
 
     for (const entry of section.entries) {
-      const description = entry.description ? `: ${entry.description}` : '';
-      lines.push(`- [${entry.title}](${entry.url})${description}`);
+      lines.push(renderLlmsTxtEntryLine(entry));
     }
 
     const entriesWithContent = section.entries.filter((entry) =>
@@ -96,11 +135,11 @@ export function generateLlmsFullTxt(
         continue;
       }
 
-      lines.push(`### ${entry.title}`);
+      lines.push(`### ${collapseInline(entry.title)}`);
       lines.push('');
 
       if (entry.description) {
-        lines.push(`> ${entry.description}`);
+        lines.push(`> ${collapseInline(entry.description)}`);
         lines.push('');
       }
 

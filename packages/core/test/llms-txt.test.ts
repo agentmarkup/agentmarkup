@@ -47,6 +47,68 @@ describe('generateLlmsTxt', () => {
     expect(result).toContain('- [API](https://example.com/docs/api)');
   });
 
+  it('escapes bracket characters in link titles', () => {
+    const result = generateLlmsTxt(
+      makeConfig({
+        llmsTxt: {
+          sections: [
+            {
+              title: 'Docs',
+              entries: [{ title: 'A [bracket] title', url: '/a' }],
+            },
+          ],
+        },
+      })
+    );
+
+    expect(result).toContain('- [A \\[bracket\\] title](https://example.com/a)');
+  });
+
+  it('percent-encodes parentheses in link URLs so they do not close the link early', () => {
+    const result = generateLlmsTxt(
+      makeConfig({
+        llmsTxt: {
+          sections: [
+            {
+              title: 'Docs',
+              entries: [{ title: 'Paren url', url: 'https://example.com/x?a=(b)&c=1' }],
+            },
+          ],
+        },
+      })
+    );
+
+    expect(result).toContain(
+      '- [Paren url](https://example.com/x?a=%28b%29&c=1)'
+    );
+    expect(result).not.toContain('(b)&c=1)');
+  });
+
+  it('collapses multi-line titles, descriptions and site name to single lines', () => {
+    const result = generateLlmsTxt(
+      makeConfig({
+        name: 'Line1\nLine2',
+        description: 'Desc line 1\nDesc line 2',
+        llmsTxt: {
+          sections: [
+            {
+              title: 'Docs',
+              entries: [
+                { title: 'Wrapped\nTitle', url: '/a', description: 'D1\nD2' },
+              ],
+            },
+          ],
+        },
+      })
+    );
+
+    expect(result).toContain('# Line1 Line2');
+    expect(result).toContain('> Desc line 1 Desc line 2');
+    expect(result).toContain('- [Wrapped Title](https://example.com/a): D1 D2');
+    // The blockquote summary must stay a single line.
+    expect(result).not.toMatch(/>[^\n]*\nDesc line 2/);
+  });
+
   it('includes instructions block', () => {
     const result = generateLlmsTxt(
       makeConfig({
