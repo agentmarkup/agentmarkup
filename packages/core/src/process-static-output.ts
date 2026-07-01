@@ -433,7 +433,11 @@ async function runGenerate(
       validationResults.push(...validateRobotsTxt(existingRobots, config.aiCrawlers));
     }
 
-    const patched = patchRobotsTxt(existingRobots, config.aiCrawlers);
+    const patched = patchRobotsTxt(
+      existingRobots,
+      config.aiCrawlers,
+      config.contentSignalHeaders
+    );
     const preserved = existingRobots !== null && patched === existingRobots;
     robotsTxtStatus = preserved ? 'preserved' : 'patched';
 

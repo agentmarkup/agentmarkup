@@ -1,6 +1,6 @@
 {
   "name": "@agentmarkup/next",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Build-time llms.txt, llms-full.txt, A2A Agent Cards, JSON-LD, markdown mirrors, headers, AI crawler controls, and validation for Next.js",
   "type": "module",
   "license": "MIT",

@@ -74,6 +74,7 @@ export {
 } from './generators/llms-txt.js';
 export {
   generateCrawlerRules,
+  generateContentSignalRobotsBlock,
   patchRobotsTxt,
   findBlockedCrawlers,
 } from './generators/robots-txt.js';

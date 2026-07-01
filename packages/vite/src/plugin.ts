@@ -369,7 +369,11 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
           );
         }
 
-        const patched = patchRobotsTxt(existingRobots, config.aiCrawlers);
+        const patched = patchRobotsTxt(
+          existingRobots,
+          config.aiCrawlers,
+          config.contentSignalHeaders
+        );
         const preserved = existingRobots !== null && patched === existingRobots;
         robotsTxtStatus = preserved ? 'preserved' : 'patched';
 

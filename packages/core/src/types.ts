@@ -243,12 +243,37 @@ export interface ContentSignalHeadersConfig {
 
 export type CrawlerDirective = 'allow' | 'disallow';
 
+/**
+ * Known AI crawler user-agents, grouped by intent. All keys are optional and
+ * the index signature accepts any custom bot name, so this list is a typed
+ * convenience — configure only the crawlers you care about. Blocking training
+ * crawlers while leaving search/retrieval crawlers allowed keeps a site
+ * eligible for citation in AI answers.
+ */
 export interface AiCrawlersConfig {
+  // Model-training crawlers
   GPTBot?: CrawlerDirective;
   ClaudeBot?: CrawlerDirective;
-  PerplexityBot?: CrawlerDirective;
   'Google-Extended'?: CrawlerDirective;
   CCBot?: CrawlerDirective;
+  'Applebot-Extended'?: CrawlerDirective;
+  Amazonbot?: CrawlerDirective;
+  'meta-externalagent'?: CrawlerDirective;
+  Bytespider?: CrawlerDirective;
+
+  // AI search / retrieval crawlers (allow these to stay citable in AI answers)
+  'OAI-SearchBot'?: CrawlerDirective;
+  PerplexityBot?: CrawlerDirective;
+  'Claude-SearchBot'?: CrawlerDirective;
+  DuckAssistBot?: CrawlerDirective;
+
+  // User-triggered / agent fetchers
+  'ChatGPT-User'?: CrawlerDirective;
+  'Claude-User'?: CrawlerDirective;
+  'Perplexity-User'?: CrawlerDirective;
+  'Meta-ExternalFetcher'?: CrawlerDirective;
+  'MistralAI-User'?: CrawlerDirective;
+
   [key: string]: CrawlerDirective | undefined;
 }
 
