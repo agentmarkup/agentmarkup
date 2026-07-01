@@ -90,8 +90,8 @@ On build, the adapters can:
 - inject JSON-LD into generated HTML
 - validate JSON-LD already present in page HTML
 - emit page-level `.md` mirrors from final HTML output when a cleaner agent-facing fetch path is useful
-- patch or create `robots.txt` with AI crawler directives
-- patch or create `_headers`, or merge server header rules, with `Content-Signal` and canonical `Link` headers for markdown mirrors
+- patch or create `robots.txt` with AI crawler directives, including the canonical `Content-Signal` policy alongside the crawler rules
+- patch or create `_headers`, or merge server header rules, with the `Content-Signal` header and canonical `Link` headers for markdown mirrors
 - report deterministic validation warnings and errors in the terminal, including markdown alternate-link and mirror-coverage issues
 
 By default, agentmarkup coexists with existing machine-readable assets. If a site already has a curated `llms.txt`, matching crawler rules, or hand-authored JSON-LD for a schema type, those are preserved unless you explicitly opt into replacement.
@@ -123,7 +123,7 @@ If your site already has a custom prerender or post-build step, `@agentmarkup/co
 - markdown alternate-link and mirror-coverage validation
 - schema presets for website and ecommerce basics
 - AI crawler `robots.txt` management
-- `Content-Signal` header generation
+- `Content-Signal` policy generation in `robots.txt` and the `_headers` header
 - deterministic validation checks
 - reusable generation and validation helpers for custom prerender pipelines
 

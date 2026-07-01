@@ -47,22 +47,30 @@ function AiCrawlers() {
         <section>
           <h2>Which AI crawlers exist?</h2>
           <p>
-            Major AI companies identify their crawlers with specific user-agent strings. agentmarkup supports the following crawlers out of the box:
+            Major AI companies identify their crawlers with specific user-agent strings, grouped here by intent. Because robots.txt rules are per user-agent, you can block training crawlers while keeping search and retrieval crawlers allowed, so your site stays eligible for citation in AI answers. agentmarkup recognizes the following crawlers out of the box:
           </p>
           <table className="doc-table">
             <thead>
-              <tr><th>Crawler</th><th>Company</th><th>Purpose</th></tr>
+              <tr><th>Crawler</th><th>Company</th><th>Intent</th></tr>
             </thead>
             <tbody>
-              <tr><td><code>GPTBot</code></td><td>OpenAI</td><td>Training data and browsing for ChatGPT</td></tr>
-              <tr><td><code>ClaudeBot</code></td><td>Anthropic</td><td>Training data for Claude</td></tr>
-              <tr><td><code>PerplexityBot</code></td><td>Perplexity</td><td>Real-time web search for AI answers</td></tr>
-              <tr><td><code>Google-Extended</code></td><td>Google</td><td>Training data for Gemini (separate from Google Search)</td></tr>
-              <tr><td><code>CCBot</code></td><td>Common Crawl</td><td>Open web dataset used by many AI models</td></tr>
+              <tr><td><code>GPTBot</code></td><td>OpenAI</td><td>Model training</td></tr>
+              <tr><td><code>ClaudeBot</code></td><td>Anthropic</td><td>Model training</td></tr>
+              <tr><td><code>Google-Extended</code></td><td>Google</td><td>Model training (separate from Google Search)</td></tr>
+              <tr><td><code>CCBot</code></td><td>Common Crawl</td><td>Model training (open web dataset)</td></tr>
+              <tr><td><code>Applebot-Extended</code></td><td>Apple</td><td>Model training</td></tr>
+              <tr><td><code>Amazonbot</code></td><td>Amazon</td><td>Model training and search</td></tr>
+              <tr><td><code>OAI-SearchBot</code></td><td>OpenAI</td><td>AI search / retrieval</td></tr>
+              <tr><td><code>PerplexityBot</code></td><td>Perplexity</td><td>AI search / retrieval</td></tr>
+              <tr><td><code>Claude-SearchBot</code></td><td>Anthropic</td><td>AI search / retrieval</td></tr>
+              <tr><td><code>DuckAssistBot</code></td><td>DuckDuckGo</td><td>AI search / retrieval</td></tr>
+              <tr><td><code>ChatGPT-User</code></td><td>OpenAI</td><td>User-triggered fetch</td></tr>
+              <tr><td><code>Claude-User</code></td><td>Anthropic</td><td>User-triggered fetch</td></tr>
+              <tr><td><code>Perplexity-User</code></td><td>Perplexity</td><td>User-triggered fetch</td></tr>
             </tbody>
           </table>
           <p>
-            You can also add custom crawler names for any bot not in the built-in list.
+            You can also add custom crawler names for any bot not in the built-in list. Note that some crawlers, such as Bytespider and xAI/Grok agents, comply poorly with robots.txt, so directives are not a guarantee.
           </p>
         </section>
 
