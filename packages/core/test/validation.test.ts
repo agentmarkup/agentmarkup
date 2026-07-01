@@ -148,6 +148,16 @@ describe('validateLlmsTxt', () => {
     expect(errors).toHaveLength(0);
   });
 
+  it('recognizes Markdown links whose labels contain escaped brackets', () => {
+    const results = validateLlmsTxt(
+      '# Site\n\n## Docs\n\n- [A \\[b\\] title](https://example.com/x?a=%28b%29&c=1)\n'
+    );
+    expect(
+      results.find((r) => r.message.includes('plain-text URLs'))
+    ).toBeUndefined();
+    expect(results.filter((r) => r.severity === 'error')).toHaveLength(0);
+  });
+
   it('warns when links are plain-text URLs instead of Markdown links', () => {
     const results = validateLlmsTxt(
       '# Site\n\n## Links\n\n- Website: https://example.com\n+ Download: https://example.com/download/\n1. Docs: https://example.com/docs/\n2) API: https://example.com/api/\n'

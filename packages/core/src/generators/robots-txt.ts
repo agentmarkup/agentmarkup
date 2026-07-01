@@ -1,4 +1,5 @@
 import type { AiCrawlersConfig, CrawlerDirective } from '../types.js';
+import { hasControlCharacters } from './sanitize.js';
 
 const MARKER_START = '# BEGIN agentmarkup AI crawlers';
 const MARKER_END = '# END agentmarkup AI crawlers';
@@ -8,6 +9,11 @@ export function generateCrawlerRules(crawlers: AiCrawlersConfig): string {
 
   for (const [bot, directive] of Object.entries(crawlers)) {
     if (directive === undefined) continue;
+    if (hasControlCharacters(bot)) {
+      throw new Error(
+        `[agentmarkup/core] Invalid AI crawler name "${bot}". Crawler names must not contain control characters or newlines.`
+      );
+    }
     lines.push(`User-agent: ${bot}`);
     lines.push(directive === 'allow' ? 'Allow: /' : 'Disallow: /');
     lines.push('');
