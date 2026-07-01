@@ -745,40 +745,133 @@ function isBlockedHostname(hostname) {
   if (
     lower === 'localhost' ||
     lower.endsWith('.localhost') ||
-    lower.endsWith('.local') ||
-    lower === '0.0.0.0' ||
-    lower === '127.0.0.1' ||
-    lower === '[::1]' ||
-    lower === '::1'
+    lower.endsWith('.local')
   ) {
     return true;
   }
 
-  if (/^\d+\.\d+\.\d+\.\d+$/.test(lower)) {
-    const octets = lower.split('.').map(Number);
-    const [first, second] = octets;
-
-    return (
-      first === 10 ||
-      first === 127 ||
-      first === 0 ||
-      (first === 169 && second === 254) ||
-      (first === 172 && second >= 16 && second <= 31) ||
-      (first === 192 && second === 168)
-    );
+  // WHATWG URL canonicalizes decimal/hex/octal IPv4 (e.g. 2130706433, 0x7f000001)
+  // to dotted-decimal before this runs, so a plain dotted-quad parse is enough here.
+  const ipv4 = parseIpv4(lower);
+  if (ipv4) {
+    return isBlockedIpv4(ipv4);
   }
 
-  const normalizedIpv6 = lower.replace(/^\[|\]$/g, '');
-  if (normalizedIpv6.includes(':')) {
-    return (
-      normalizedIpv6 === '::1' ||
-      normalizedIpv6.startsWith('fc') ||
-      normalizedIpv6.startsWith('fd') ||
-      normalizedIpv6.startsWith('fe80:')
-    );
+  const ipv6 = parseIpv6(lower.replace(/^\[|\]$/g, ''));
+  if (ipv6) {
+    return isBlockedIpv6(ipv6);
   }
 
+  // Note: a public hostname that resolves to a private address (DNS rebinding)
+  // cannot be detected from the name alone. On Cloudflare, Worker fetch will not
+  // route to loopback/RFC1918/link-local targets, which mitigates that path.
   return false;
+}
+
+function parseIpv4(value) {
+  const match = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(value);
+  if (!match) {
+    return null;
+  }
+  const octets = match.slice(1).map(Number);
+  return octets.some((octet) => octet > 255) ? null : octets;
+}
+
+function isBlockedIpv4(octets) {
+  const [first, second] = octets;
+  return (
+    first === 0 || // 0.0.0.0/8 (includes 0.0.0.0)
+    first === 10 || // 10.0.0.0/8
+    first === 127 || // loopback 127.0.0.0/8
+    (first === 100 && second >= 64 && second <= 127) || // CGNAT 100.64.0.0/10
+    (first === 169 && second === 254) || // link-local 169.254.0.0/16
+    (first === 172 && second >= 16 && second <= 31) || // 172.16.0.0/12
+    (first === 192 && second === 168) // 192.168.0.0/16
+  );
+}
+
+// Expands an IPv6 literal (including "::" compression and IPv4-mapped suffixes)
+// into eight 16-bit groups, or null when the input is not a valid IPv6 address.
+function parseIpv6(value) {
+  if (!value.includes(':')) {
+    return null;
+  }
+
+  let head = value;
+  const embedded = [];
+  const lastColon = value.lastIndexOf(':');
+  const suffix = value.slice(lastColon + 1);
+  if (suffix.includes('.')) {
+    const v4 = parseIpv4(suffix);
+    if (!v4) {
+      return null;
+    }
+    embedded.push((v4[0] << 8) | v4[1], (v4[2] << 8) | v4[3]);
+    head = value.slice(0, lastColon);
+  }
+
+  const halves = head.split('::');
+  if (halves.length > 2) {
+    return null;
+  }
+
+  const parseGroups = (part) =>
+    part === ''
+      ? []
+      : part.split(':').map((group) =>
+          /^[0-9a-f]{1,4}$/.test(group) ? parseInt(group, 16) : NaN
+        );
+
+  const left = parseGroups(halves[0]);
+  const right = halves.length === 2 ? parseGroups(halves[1]) : null;
+
+  let groups;
+  if (right === null) {
+    groups = [...left, ...embedded];
+  } else {
+    const known = left.length + right.length + embedded.length;
+    const missing = 8 - known;
+    if (missing < 1) {
+      return null;
+    }
+    groups = [...left, ...Array(missing).fill(0), ...right, ...embedded];
+  }
+
+  if (groups.length !== 8 || groups.some((group) => Number.isNaN(group))) {
+    return null;
+  }
+  return groups;
+}
+
+function isBlockedIpv6(groups) {
+  const [first] = groups;
+
+  // Unspecified :: and loopback ::1
+  if (groups.every((group) => group === 0)) {
+    return true;
+  }
+  if (groups.slice(0, 7).every((group) => group === 0) && groups[7] === 1) {
+    return true;
+  }
+
+  // IPv4-mapped (::ffff:a.b.c.d) and IPv4-compatible (::a.b.c.d) addresses:
+  // evaluate the embedded IPv4 against the same private-range rules.
+  const mapped = groups.slice(0, 5).every((group) => group === 0) && groups[5] === 0xffff;
+  const compatible = groups.slice(0, 6).every((group) => group === 0);
+  if (mapped || compatible) {
+    return isBlockedIpv4([
+      groups[6] >> 8,
+      groups[6] & 0xff,
+      groups[7] >> 8,
+      groups[7] & 0xff,
+    ]);
+  }
+
+  return (
+    (first & 0xfe00) === 0xfc00 || // unique-local fc00::/7
+    (first & 0xffc0) === 0xfe80 || // link-local fe80::/10
+    (first & 0xffc0) === 0xfec0 // site-local (deprecated) fec0::/10
+  );
 }
 
 async function fetchText(targetUrl) {
