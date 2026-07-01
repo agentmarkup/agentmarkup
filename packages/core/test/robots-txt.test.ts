@@ -24,6 +24,27 @@ describe('generateCrawlerRules', () => {
     expect(result).toContain('# BEGIN agentmarkup AI crawlers');
     expect(result).toContain('# END agentmarkup AI crawlers');
   });
+
+  it('rejects crawler names containing newlines to prevent robots.txt injection', () => {
+    expect(() =>
+      generateCrawlerRules({
+        GPTBot: 'allow',
+        'Evil\nUser-agent: *\nDisallow: /': 'disallow',
+      })
+    ).toThrow(/must not contain control characters or newlines/);
+  });
+
+  it('rejects crawler names containing other control characters', () => {
+    expect(() =>
+      generateCrawlerRules({ [['Bad', String.fromCharCode(1), 'Bot'].join('')]: 'allow' })
+    ).toThrow(/Invalid AI crawler name/);
+  });
+
+  it('propagates the control-character guard through patchRobotsTxt', () => {
+    expect(() =>
+      patchRobotsTxt(null, { 'Evil\nDisallow: /': 'disallow' })
+    ).toThrow(/must not contain control characters or newlines/);
+  });
 });
 
 describe('patchRobotsTxt', () => {

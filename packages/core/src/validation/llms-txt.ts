@@ -24,7 +24,9 @@ export function validateLlmsTxt(content: string): ValidationResult[] {
   let bareUrlListLineCount = 0;
 
   for (const line of lines) {
-    const linkPattern = /\[([^\]]*)\]\(([^)]*)\)/g;
+    // Link labels may contain backslash-escaped brackets (e.g. "[A \[b\] title]"),
+    // which is valid CommonMark, so the label group accepts escaped characters.
+    const linkPattern = /\[((?:\\.|[^\]\\])*)\]\(([^)]*)\)/g;
     let match;
     while ((match = linkPattern.exec(line)) !== null) {
       markdownLinkCount++;
@@ -49,7 +51,10 @@ export function validateLlmsTxt(content: string): ValidationResult[] {
     // agentic-browsing audit) will not recognize as a link. Per-line regexes
     // keep URL checks independent across lines.
     const isListItem = /^\s*(?:[-*+]|\d+[.)])\s+/.test(line);
-    const lineWithoutMarkdownLinks = line.replace(/\[[^\]]*\]\([^)]*\)/g, '');
+    const lineWithoutMarkdownLinks = line.replace(
+      /\[(?:\\.|[^\]\\])*\]\([^)]*\)/g,
+      ''
+    );
     const hasBareUrl = /https?:\/\/\S/.test(lineWithoutMarkdownLinks);
     if (isListItem && hasBareUrl) {
       bareUrlListLineCount++;

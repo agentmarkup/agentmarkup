@@ -2,6 +2,7 @@ import type {
   ContentSignalDirective,
   ContentSignalHeadersConfig,
 } from '../types.js';
+import { hasControlCharacters } from './sanitize.js';
 
 const CONTENT_SIGNAL_MARKER_START = '# BEGIN agentmarkup Content-Signal';
 const CONTENT_SIGNAL_MARKER_END = '# END agentmarkup Content-Signal';
@@ -241,13 +242,6 @@ function sanitizeHeadersLineValue(value: string, field: string): string {
   }
 
   return value.trim();
-}
-
-function hasControlCharacters(value: string): boolean {
-  return Array.from(value).some((char) => {
-    const code = char.charCodeAt(0);
-    return code <= 0x1f || code === 0x7f;
-  });
 }
 
 function hasMatchingMarkdownCanonicalHeaders(
