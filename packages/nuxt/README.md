@@ -36,7 +36,7 @@ The module runs after Nitro finishes prerendering (the `nuxt generate` / `preren
 - Generates content-centric markdown mirrors (`.md`) for prerendered pages, with canonical `Link` headers in `_headers`.
 - Injects an `llms.txt` discovery link and a `text/markdown` alternate link into each page `<head>`.
 - Injects gap-aware JSON-LD (only types not already present on the page).
-- Adds AI-crawler rules to `robots.txt` and optional `Content-Signal` headers.
+- Adds AI-crawler rules to `robots.txt`, including the canonical `Content-Signal` policy alongside them, plus the optional `Content-Signal` `_headers` header.
 - Runs deterministic validation and prints a build-time report.
 
 Existing curated `llms.txt`, `robots.txt` rules, and page JSON-LD are **preserved by default** — the module only fills gaps. Opt into replacement per feature (`llmsTxt.replaceExisting`, `markdownPages.replaceExisting`, `jsonLd.replaceExistingTypes`, etc.).

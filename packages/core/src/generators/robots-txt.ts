@@ -1,8 +1,31 @@
-import type { AiCrawlersConfig, CrawlerDirective } from '../types.js';
+import type {
+  AiCrawlersConfig,
+  ContentSignalHeadersConfig,
+  CrawlerDirective,
+} from '../types.js';
+import { generateContentSignalHeaderValue } from './headers.js';
 import { hasControlCharacters } from './sanitize.js';
 
 const MARKER_START = '# BEGIN agentmarkup AI crawlers';
 const MARKER_END = '# END agentmarkup AI crawlers';
+const CONTENT_SIGNAL_MARKER_START = '# BEGIN agentmarkup Content-Signal';
+const CONTENT_SIGNAL_MARKER_END = '# END agentmarkup Content-Signal';
+
+/**
+ * Builds the canonical robots.txt Content-Signal group. The Content Signals
+ * Policy (and tools like Lighthouse) expect this directive in robots.txt, not
+ * only in an HTTP header, so this mirrors the `_headers` value into robots.txt.
+ */
+export function generateContentSignalRobotsBlock(
+  config: ContentSignalHeadersConfig = {}
+): string {
+  return [
+    CONTENT_SIGNAL_MARKER_START,
+    'User-agent: *',
+    `Content-Signal: ${generateContentSignalHeaderValue(config)}`,
+    CONTENT_SIGNAL_MARKER_END,
+  ].join('\n');
+}
 
 export function generateCrawlerRules(crawlers: AiCrawlersConfig): string {
   const lines: string[] = [MARKER_START];
@@ -24,6 +47,20 @@ export function generateCrawlerRules(crawlers: AiCrawlersConfig): string {
 }
 
 export function patchRobotsTxt(
+  existing: string | null,
+  crawlers: AiCrawlersConfig,
+  contentSignal?: ContentSignalHeadersConfig
+): string {
+  const withCrawlers = patchCrawlerRules(existing, crawlers);
+
+  if (!contentSignal || contentSignal.enabled === false) {
+    return withCrawlers;
+  }
+
+  return patchContentSignalBlock(withCrawlers, contentSignal);
+}
+
+function patchCrawlerRules(
   existing: string | null,
   crawlers: AiCrawlersConfig
 ): string {
@@ -49,6 +86,30 @@ export function patchRobotsTxt(
 
   const trimmed = existing.trimEnd();
   return `${trimmed}\n\n${rules}\n`;
+}
+
+/**
+ * Inserts (or replaces) the marked Content-Signal group at the top of
+ * robots.txt without touching any other user-authored directives.
+ */
+function patchContentSignalBlock(
+  content: string,
+  config: ContentSignalHeadersConfig
+): string {
+  const block = generateContentSignalRobotsBlock(config);
+  const startIdx = content.indexOf(CONTENT_SIGNAL_MARKER_START);
+  const endIdx = content.indexOf(CONTENT_SIGNAL_MARKER_END);
+
+  if (startIdx !== -1 && endIdx !== -1) {
+    const before = content.slice(0, startIdx).trimEnd();
+    const after = content
+      .slice(endIdx + CONTENT_SIGNAL_MARKER_END.length)
+      .trimStart();
+    const parts = [before, block, after].filter(Boolean);
+    return parts.join('\n\n').replace(/\n+$/, '') + '\n';
+  }
+
+  return `${block}\n\n${content.trimStart()}`.replace(/\n+$/, '') + '\n';
 }
 
 export function findBlockedCrawlers(

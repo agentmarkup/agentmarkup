@@ -1,6 +1,6 @@
 {
   "name": "@agentmarkup/cli",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Run agentmarkup on any built static site: llms.txt, llms-full.txt, A2A Agent Cards, JSON-LD, markdown mirrors, headers, AI crawler controls, and validation — framework-agnostic, with a CI-friendly check command",
   "type": "module",
   "license": "MIT",

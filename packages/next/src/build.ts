@@ -414,7 +414,11 @@ export async function processNextBuildOutput(
       outputRobotsPath,
       resolveContainedPath(publicDir, 'robots.txt', 'generated robots.txt file'),
     ]);
-    const patchedRobots = patchRobotsTxt(existingRobots, config.aiCrawlers);
+    const patchedRobots = patchRobotsTxt(
+      existingRobots,
+      config.aiCrawlers,
+      config.contentSignalHeaders
+    );
     const preserved =
       existingRobots !== null &&
       patchedRobots === ensureTrailingNewline(existingRobots);
