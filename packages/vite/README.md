@@ -101,8 +101,8 @@ export default defineConfig({
 - Injects JSON-LD into built HTML pages
 - Validates JSON-LD already present in page HTML
 - Generates `.md` mirrors from the final HTML output when a cleaner agent-facing fetch path is useful
-- Patches or creates `robots.txt` with AI crawler directives
-- Patches or creates `_headers` with `Content-Signal` and canonical `Link` headers for markdown mirrors
+- Patches or creates `robots.txt` with AI crawler directives and the canonical `Content-Signal` policy
+- Patches or creates `_headers` with the `Content-Signal` header and canonical `Link` headers for markdown mirrors
 - Validates common schema and crawler mistakes at build time
 - Warns when a page looks like a thin client-rendered HTML shell
 - Warns when markdown alternate links or `llms.txt` mirror coverage drift out of sync

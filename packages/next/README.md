@@ -104,7 +104,7 @@ export default withAgentmarkup(
 - Generates `.md` mirrors from the final exported or prerendered HTML output when a cleaner agent-facing fetch path is useful
 - Configures `Content-Signal` and markdown-canonical headers for server deployments through `next.config` headers
 - Generates `_headers` with `Content-Signal` and markdown-canonical `Link` headers for static export output
-- Generates or patches `robots.txt` with AI crawler directives
+- Generates or patches `robots.txt` with AI crawler directives and the canonical `Content-Signal` policy
 - Validates common schema and crawler mistakes at build time
 - Warns when emitted HTML looks like a thin client-rendered shell
 - Warns when markdown alternate links or `llms.txt` mirror coverage drift out of sync

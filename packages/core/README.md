@@ -120,7 +120,7 @@ When `agentCard` is enabled, provide a `version`, at least one `supportedInterfa
 - markdown alternate-link and mirror-coverage validation
 - schema.org preset builders
 - AI crawler `robots.txt` generation and patching
-- `Content-Signal` header generation and patching
+- `Content-Signal` policy generation and patching in `robots.txt` (canonical) and the `_headers` header
 - canonical `Link` header generation for markdown mirrors
 - deterministic schema and crawler validation
 

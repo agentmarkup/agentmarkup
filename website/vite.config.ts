@@ -291,11 +291,22 @@ export default defineConfig({
       ],
 
       aiCrawlers: {
+        // Model-training crawlers
         GPTBot: 'allow',
         ClaudeBot: 'allow',
-        PerplexityBot: 'allow',
         'Google-Extended': 'allow',
         CCBot: 'allow',
+        'Applebot-Extended': 'allow',
+        Amazonbot: 'allow',
+        // AI search / retrieval crawlers (kept allowed to stay citable in AI answers)
+        'OAI-SearchBot': 'allow',
+        PerplexityBot: 'allow',
+        'Claude-SearchBot': 'allow',
+        DuckAssistBot: 'allow',
+        // User-triggered / agent fetchers
+        'ChatGPT-User': 'allow',
+        'Claude-User': 'allow',
+        'Perplexity-User': 'allow',
       },
 
       validation: {
