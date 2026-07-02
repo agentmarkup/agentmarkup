@@ -107,6 +107,41 @@ export function analyzeJsDependence(control: FetchResult): AuditFinding[] {
   ];
 }
 
+/** Recognized values of the Content Signals `use` content-use preference. */
+const CONTENT_SIGNAL_USE_VALUES = new Set(['immediate', 'reference', 'full']);
+
+/**
+ * Read-only parse of every `Content-Signal:` directive in a robots.txt body.
+ *
+ * Tolerant by design: unknown keys and values are preserved verbatim so the
+ * audit can *report* emerging syntax (such as the `use=` content-use field
+ * Cloudflare added to Content Signals) without treating it as invalid. This
+ * never writes anything; the generator deliberately does not emit `use=` yet.
+ */
+export function parseContentSignal(body: string): {
+  present: boolean;
+  directives: Record<string, string>;
+  raw: string[];
+} {
+  const raw: string[] = [];
+  const directives: Record<string, string> = {};
+  const re = /^[ \t]*content-signal[ \t]*:[ \t]*(.+?)[ \t]*$/gim;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(body)) !== null) {
+    const value = match[1].trim();
+    if (!value) continue;
+    raw.push(value);
+    for (const pair of value.split(',')) {
+      const eq = pair.indexOf('=');
+      if (eq === -1) continue;
+      const key = pair.slice(0, eq).trim().toLowerCase();
+      const val = pair.slice(eq + 1).trim().toLowerCase();
+      if (key) directives[key] = val;
+    }
+  }
+  return { present: raw.length > 0, directives, raw };
+}
+
 /** robots.txt intent: are the crawlers we expect to allow actually blocked? */
 export function analyzeRobots(robots: FetchResult): AuditFinding[] {
   const findings: AuditFinding[] = [];
@@ -147,13 +182,34 @@ export function analyzeRobots(robots: FetchResult): AuditFinding[] {
     });
   }
 
-  if (/^\s*content-signal\s*:/im.test(body)) {
+  const contentSignal = parseContentSignal(body);
+  if (contentSignal.present) {
+    const declared = Object.entries(contentSignal.directives)
+      .map(([key, value]) => `${key}=${value}`)
+      .join(', ');
+    const useValue = contentSignal.directives['use'];
+    const hasUse = typeof useValue === 'string';
+    const useRecognized = hasUse && CONTENT_SIGNAL_USE_VALUES.has(useValue);
+    const detail = [
+      'The canonical Content-Signal directive is in robots.txt, where the Content Signals Policy and Lighthouse look for it.',
+    ];
+    if (useRecognized) {
+      detail.push(
+        `It also declares the extended content-use preference use=${useValue} (immediate/reference/full), the field Cloudflare added to Content Signals for how AI may reuse the content.`
+      );
+    } else if (hasUse) {
+      detail.push(
+        `A use=${useValue} field is present but is not one of the recognized values (immediate, reference, full).`
+      );
+    }
     findings.push({
       code: 'robots.content-signal',
       level: 'pass',
-      title: 'Content-Signal policy present in robots.txt',
-      detail:
-        'The canonical Content-Signal directive is in robots.txt, where the Content Signals Policy and Lighthouse look for it.',
+      title: hasUse
+        ? 'Content-Signal policy present (with content-use preference)'
+        : 'Content-Signal policy present in robots.txt',
+      detail: detail.join(' '),
+      evidence: declared || contentSignal.raw.join(' | '),
     });
   } else {
     findings.push({
