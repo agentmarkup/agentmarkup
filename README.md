@@ -1,6 +1,6 @@
 # agentmarkup
 
-Build-time `llms.txt`, optional `llms-full.txt`, optional A2A Agent Cards, JSON-LD, markdown mirrors, AI crawler controls, and validation for Vite, Astro, and Next.js websites.
+Build-time `llms.txt`, optional `llms-full.txt`, optional A2A Agent Cards, JSON-LD, markdown mirrors, AI crawler controls, and validation for Vite, Astro, Next.js, and Nuxt websites, plus a framework-agnostic CLI for any static output.
 
 ## What This Repo Contains
 
@@ -112,7 +112,7 @@ If your site already has a custom prerender or post-build step, `@agentmarkup/co
 
 ## Current Features
 
-- Vite, Astro, and Next.js adapters
+- Vite, Astro, Next.js, and Nuxt adapters, plus a framework-agnostic CLI
 - optional A2A Agent Card generation plus config and output validation
 - `llms.txt` generation
 - optional `llms-full.txt` generation
