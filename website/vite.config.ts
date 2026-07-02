@@ -63,6 +63,17 @@ const informationalPages = [
     ],
   },
   {
+    path: '/docs/audit/',
+    schemas: [
+      {
+        '@type': 'WebPage',
+        name: 'How to audit your site the way AI crawlers see it',
+        url: `${siteUrl}/docs/audit/`,
+        description: 'Use @agentmarkup/audit to fetch any live URL as each major AI crawler, diff against a browser, and report machine-readability findings in CI.',
+      },
+    ],
+  },
+  {
     path: '/blog/',
     schemas: [
       {
@@ -120,7 +131,9 @@ export default defineConfig({
         'docs-llms-txt': resolve(__dirname, 'docs/llms-txt/index.html'),
         'docs-json-ld': resolve(__dirname, 'docs/json-ld/index.html'),
         'docs-ai-crawlers': resolve(__dirname, 'docs/ai-crawlers/index.html'),
+        'docs-audit': resolve(__dirname, 'docs/audit/index.html'),
         'blog-index': resolve(__dirname, 'blog/index.html'),
+        'blog-audit-ai-crawler-access': resolve(__dirname, 'blog/audit-ai-crawler-access/index.html'),
         'blog-nextjs-llms-txt-json-ld': resolve(__dirname, 'blog/nextjs-llms-txt-json-ld/index.html'),
         'blog-nuxt-llms-txt-json-ld': resolve(__dirname, 'blog/nuxt-llms-txt-json-ld/index.html'),
         'blog-agentmarkup-cli-any-static-site': resolve(__dirname, 'blog/agentmarkup-cli-any-static-site/index.html'),
@@ -140,7 +153,9 @@ export default defineConfig({
         'prerender-docs-llms-txt': resolve(__dirname, 'src/entries/llms-txt.tsx'),
         'prerender-docs-json-ld': resolve(__dirname, 'src/entries/json-ld.tsx'),
         'prerender-docs-ai-crawlers': resolve(__dirname, 'src/entries/ai-crawlers.tsx'),
+        'prerender-docs-audit': resolve(__dirname, 'src/entries/audit.tsx'),
         'prerender-blog-index': resolve(__dirname, 'src/entries/blog-index.tsx'),
+        'prerender-blog-audit-ai-crawler-access': resolve(__dirname, 'src/entries/blog-post-13.tsx'),
         'prerender-blog-nextjs-llms-txt-json-ld': resolve(__dirname, 'src/entries/blog-post-10.tsx'),
         'prerender-blog-nuxt-llms-txt-json-ld': resolve(__dirname, 'src/entries/blog-post-11.tsx'),
         'prerender-blog-agentmarkup-cli-any-static-site': resolve(__dirname, 'src/entries/blog-post-12.tsx'),
@@ -186,6 +201,7 @@ export default defineConfig({
             title: 'Guides',
             entries: [
               { title: 'Website checker', url: '/checker/', description: 'Check any public site for llms.txt, JSON-LD, robots.txt, sitemap discovery, markdown mirrors, and machine-readable basics' },
+              { title: 'How to audit AI crawler access', url: '/docs/audit/', description: 'Fetch any live URL as each major AI crawler with @agentmarkup/audit, diff against a browser, and gate machine-readability in CI' },
               { title: 'How to generate llms.txt', url: '/docs/llms-txt/', description: 'Generate a spec-compliant llms.txt file at build time for AI model discovery' },
               { title: 'How to add JSON-LD structured data', url: '/docs/json-ld/', description: 'Inject schema.org JSON-LD with type-safe presets and XSS-safe serialization' },
               { title: 'How to manage AI crawlers', url: '/docs/ai-crawlers/', description: 'Allow or block AI crawlers like GPTBot and ClaudeBot via robots.txt' },
@@ -194,6 +210,7 @@ export default defineConfig({
           {
             title: 'Blog',
             entries: [
+              { title: 'See your site like AI crawlers do', url: '/blog/audit-ai-crawler-access/', description: 'Fetch any live URL as each major AI crawler with @agentmarkup/audit, diff against a browser, and catch machine-readability issues in CI' },
               { title: 'Next.js guide', url: '/blog/nextjs-llms-txt-json-ld/', description: 'How to add llms.txt, JSON-LD, AI crawler controls, and validation to Next.js with @agentmarkup/next' },
               { title: 'Nuxt guide', url: '/blog/nuxt-llms-txt-json-ld/', description: 'How to add llms.txt, JSON-LD, markdown mirrors, and AI crawler controls to Nuxt with @agentmarkup/nuxt' },
               { title: 'CLI for any static site', url: '/blog/agentmarkup-cli-any-static-site/', description: 'Run agentmarkup over any built static output and gate machine-readability in CI with @agentmarkup/cli' },
