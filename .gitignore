@@ -18,6 +18,9 @@ dist/
 # Test artifacts
 **/test/.tmp/
 
+# Scratch / smoke-test scaffolds
+tmp/
+
 # Internal docs
 /AGENTS.md
 /CLAUDE.md
