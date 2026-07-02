@@ -57,7 +57,28 @@ describe('analyzeRobots', () => {
       'User-agent: *\nContent-Signal: ai-train=yes, search=yes, ai-input=yes\nAllow: /\n';
     const f = analyzeRobots(result({ body }));
     expect(f.find((x) => x.code === 'robots.crawlers-allowed')?.level).toBe('pass');
-    expect(f.find((x) => x.code === 'robots.content-signal')?.level).toBe('pass');
+    const cs = f.find((x) => x.code === 'robots.content-signal');
+    expect(cs?.level).toBe('pass');
+    expect(cs?.evidence).toContain('ai-train=yes');
+  });
+
+  it('recognizes the extended Content Signals use= content-use preference', () => {
+    const body =
+      'User-agent: *\nContent-Signal: search=yes, ai-train=no, use=reference\nAllow: /\n';
+    const f = analyzeRobots(result({ body }));
+    const cs = f.find((x) => x.code === 'robots.content-signal');
+    expect(cs?.level).toBe('pass');
+    expect(cs?.title).toContain('content-use preference');
+    expect(cs?.detail).toContain('use=reference');
+    expect(cs?.evidence).toContain('use=reference');
+  });
+
+  it('reports an unrecognized use= value without failing (read-only, tolerant)', () => {
+    const body = 'User-agent: *\nContent-Signal: use=whatever\nAllow: /\n';
+    const f = analyzeRobots(result({ body }));
+    const cs = f.find((x) => x.code === 'robots.content-signal');
+    expect(cs?.level).toBe('pass');
+    expect(cs?.detail).toContain('not one of the recognized values');
   });
 
   it('warns when robots.txt is missing', () => {

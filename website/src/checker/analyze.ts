@@ -438,6 +438,37 @@ function analyzeLlmsTxt(llmsTxt: RemoteResource, items: AuditItem[]): void {
   }
 }
 
+const CONTENT_SIGNAL_USE_VALUES = new Set(['immediate', 'reference', 'full']);
+
+/**
+ * Read-only parse of Content-Signal directives in a robots.txt body. Tolerant by
+ * design: unknown keys and values (such as Cloudflare's emerging `use=` content-use
+ * field) are preserved so the checker can report them without treating them as
+ * invalid. Nothing is written; agentmarkup does not emit `use=` yet.
+ */
+function parseContentSignal(body: string): {
+  present: boolean;
+  directives: Record<string, string>;
+} {
+  const directives: Record<string, string> = {};
+  let present = false;
+  const re = /^[ \t]*content-signal[ \t]*:[ \t]*(.+?)[ \t]*$/gim;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(body)) !== null) {
+    const value = match[1].trim();
+    if (!value) continue;
+    present = true;
+    for (const pair of value.split(',')) {
+      const eq = pair.indexOf('=');
+      if (eq === -1) continue;
+      const key = pair.slice(0, eq).trim().toLowerCase();
+      const val = pair.slice(eq + 1).trim().toLowerCase();
+      if (key) directives[key] = val;
+    }
+  }
+  return { present, directives };
+}
+
 function analyzeRobotsTxt(robotsTxt: RemoteResource, items: AuditItem[]): void {
   if (!robotsTxt.ok || !robotsTxt.body) {
     push(items, {
@@ -481,6 +512,32 @@ function analyzeRobotsTxt(robotsTxt: RemoteResource, items: AuditItem[]): void {
       detail: 'robots.txt is reachable and does not show obvious conflicts for the common AI crawlers checked here.',
       action: 'Keep explicit crawler rules stable so your policy is easy to inspect.',
       docUrl: DOCS.crawlers,
+    });
+  }
+
+  const contentSignal = parseContentSignal(robotsBody);
+  if (contentSignal.present) {
+    const declared = Object.entries(contentSignal.directives)
+      .map(([key, value]) => `${key}=${value}`)
+      .join(', ');
+    const useValue = contentSignal.directives['use'];
+    const hasUse = typeof useValue === 'string';
+    const useRecognized = hasUse && CONTENT_SIGNAL_USE_VALUES.has(useValue);
+    const detail = useRecognized
+      ? `robots.txt declares a Content-Signal policy (${declared}), including the extended use=${useValue} content-use preference that Cloudflare added to Content Signals.`
+      : hasUse
+        ? `robots.txt declares a Content-Signal policy (${declared}). The use=${useValue} value is not one of the recognized options (immediate, reference, full).`
+        : `robots.txt declares a Content-Signal policy (${declared}), the canonical place to state training, search, and AI-input preferences.`;
+    push(items, {
+      level: 'pass',
+      title: hasUse
+        ? 'Content-Signal policy in robots.txt (with content-use preference)'
+        : 'Content-Signal policy present in robots.txt',
+      detail,
+      action:
+        'Keep Content-Signal directives in robots.txt so AI systems can read your reuse preferences from the canonical location.',
+      docUrl: DOCS.crawlers,
+      agentmarkupHelp: AGENTMARKUP.crawlers,
     });
   }
 }
