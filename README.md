@@ -10,6 +10,7 @@ Build-time `llms.txt`, optional `llms-full.txt`, optional A2A Agent Cards, JSON-
 - `packages/next` — the publishable `@agentmarkup/next` adapter
 - `packages/cli` — the publishable `@agentmarkup/cli`, a framework-agnostic command that runs agentmarkup over any built static output directory (with a CI-friendly `check` command)
 - `packages/nuxt` — the publishable `@agentmarkup/nuxt` module for prerendered / `nuxt generate` output
+- `packages/audit` — the publishable `@agentmarkup/audit`, a runtime CLI that fetches a live URL as each major AI crawler, diffs against a browser, and reports machine-readability findings (CI-friendly)
 - `website` — the dogfooding landing page built against the workspace package boundary
 - `examples/vite-react` — a minimal example app for local verification and onboarding
 
