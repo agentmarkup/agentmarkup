@@ -17,6 +17,13 @@ export interface BlogPostMeta {
 
 export const blogPosts: BlogPostMeta[] = [
   {
+    slug: 'audit-ai-crawler-access',
+    title: 'See your website the way AI crawlers do',
+    description: 'Use @agentmarkup/audit to fetch any live URL as GPTBot, ClaudeBot, PerplexityBot, and other AI crawlers, diff each response against a browser, and catch machine-readability issues in CI.',
+    date: '2026-07-02',
+    readingTime: '6 min read',
+  },
+  {
     slug: 'nuxt-llms-txt-json-ld',
     title: 'How to add llms.txt, JSON-LD, and AI crawler controls to Nuxt',
     description: 'Use @agentmarkup/nuxt to generate llms.txt, inject JSON-LD, create markdown mirrors, and manage AI crawler rules from prerendered Nuxt output.',
