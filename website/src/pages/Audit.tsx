@@ -56,7 +56,7 @@ function Audit() {
             <tbody>
               <tr>
                 <td><strong>Crawler access</strong></td>
-                <td>Fetches as each AI crawler user-agent and diffs the status against a browser control. Flags challenges, differential blocks, rate limits, and origin errors.</td>
+                <td>Fetches as each AI crawler user-agent and diffs against a browser control. Flags challenges, differential blocks, rate limits, origin errors, and when an accessible crawler gets materially less content than a browser (JS-gated or cloaked pages).</td>
               </tr>
               <tr>
                 <td><strong>JS dependence</strong></td>
@@ -68,11 +68,23 @@ function Audit() {
               </tr>
               <tr>
                 <td><strong>llms.txt</strong></td>
-                <td>Fetches <code>/llms.txt</code>, validates it, and checks whether the homepage links it for discovery.</td>
+                <td>Fetches <code>/llms.txt</code> (guarding against HTML soft-404s), validates it, and checks whether the homepage links it for discovery.</td>
               </tr>
               <tr>
                 <td><strong>JSON-LD</strong></td>
-                <td>Extracts and structurally validates the JSON-LD blocks on the page.</td>
+                <td>Extracts the JSON-LD blocks and flags only unparseable or type-less ones; parseable structured data, including <code>@graph</code>, passes.</td>
+              </tr>
+              <tr>
+                <td><strong>Markdown mirror</strong></td>
+                <td>Detects a fetchable markdown mirror or a <code>text/markdown</code> alternate link, the clean low-noise version agents prefer.</td>
+              </tr>
+              <tr>
+                <td><strong>Sitemap</strong></td>
+                <td>Checks for <code>/sitemap.xml</code>, a <code>Sitemap:</code> directive in robots.txt, or common non-standard sitemap paths.</td>
+              </tr>
+              <tr>
+                <td><strong>Page metadata</strong></td>
+                <td>Checks for a title, meta description, and canonical link that AI systems use to attribute the page.</td>
               </tr>
             </tbody>
           </table>

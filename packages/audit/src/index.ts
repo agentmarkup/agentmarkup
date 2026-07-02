@@ -30,5 +30,8 @@ export {
 export {
   analyzeJsDependence,
   analyzeMachineReadable,
+  analyzeMarkdown,
+  analyzeMetadata,
   analyzeRobots,
+  analyzeSitemap,
 } from './analyzers/site-checks.js';
