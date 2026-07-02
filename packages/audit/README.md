@@ -26,11 +26,14 @@ Bare domains are normalized to `https://`. Exit code is `1` when any **error**-l
 
 | Area | What it does |
 | --- | --- |
-| **Crawler access** | Fetches as each AI crawler user-agent and diffs status against a browser control. Flags challenges, differential blocks, rate limits, and origin errors. |
+| **Crawler access** | Fetches as each AI crawler user-agent and diffs against a browser control. Flags challenges, differential blocks, rate limits, origin errors, and when an *accessible* crawler gets materially less content than a browser (JS-gated or cloaked pages). |
 | **JS dependence** | Measures whether the raw (un-executed) HTML actually contains content, or is an empty `#root`/`#app` shell that only fills in after JavaScript runs. |
 | **robots.txt** | Reuses `@agentmarkup/core` to detect whether the crawlers you likely want are shadowed by a wildcard `Disallow`, and whether a canonical Content-Signal policy is present. |
-| **llms.txt** | Fetches `/llms.txt`, validates it, and checks the homepage links it for discovery. |
-| **JSON-LD** | Extracts and structurally validates JSON-LD blocks on the page. |
+| **llms.txt** | Fetches `/llms.txt` (guarding against HTML soft-404s), validates it, and checks the homepage links it for discovery. |
+| **JSON-LD** | Extracts JSON-LD and flags only unparseable or type-less blocks; parseable structured data (including `@graph`) passes. |
+| **Markdown mirror** | Detects a fetchable markdown mirror or a `text/markdown` alternate link — the clean, low-noise version agents prefer. |
+| **Sitemap** | Checks for `/sitemap.xml`, a `Sitemap:` directive in robots.txt, or common non-standard sitemap paths. |
+| **Page metadata** | Checks for a title, meta description, and canonical link. |
 
 ## An honest note on "blocked" crawlers
 

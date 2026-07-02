@@ -95,4 +95,24 @@ describe('analyzeCrawlerAccess', () => {
       'warn'
     );
   });
+
+  it('warns when an accessible crawler gets far less content than the browser', () => {
+    const richHtml = `<html><body><main>${'real product content here. '.repeat(200)}</main></body></html>`;
+    const thinHtml = '<html><body><div id="root"></div></body></html>';
+    const findings = analyzeCrawlerAccess(result({ status: 200, body: richHtml }), [
+      { agent: gptbot, result: result({ status: 200, body: thinHtml }) },
+    ]);
+    expect(findings.find((x) => x.code === 'crawler.content-differential')?.level).toBe('warn');
+    // it should not also claim clean access for the same crawler
+    expect(findings.find((x) => x.code === 'crawler.accessible')).toBeUndefined();
+  });
+
+  it('passes (no differential) when the crawler gets comparable content to the browser', () => {
+    const richHtml = `<html><body><main>${'real product content here. '.repeat(200)}</main></body></html>`;
+    const findings = analyzeCrawlerAccess(result({ status: 200, body: richHtml }), [
+      { agent: gptbot, result: result({ status: 200, body: richHtml }) },
+    ]);
+    expect(findings.find((x) => x.code === 'crawler.accessible')?.level).toBe('pass');
+    expect(findings.find((x) => x.code === 'crawler.content-differential')).toBeUndefined();
+  });
 });

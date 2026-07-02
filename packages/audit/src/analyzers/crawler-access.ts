@@ -1,10 +1,29 @@
 import type { CrawlerAgent } from '../agents.js';
 import type { AuditFinding } from '../findings.js';
 import type { FetchResult } from '../net.js';
+import { stripTags } from './site-checks.js';
 
 export interface AgentProbe {
   agent: CrawlerAgent;
   result: FetchResult;
+}
+
+/**
+ * When an accessible crawler's HTML has far less text than the browser's, the
+ * crawler is indexing a materially thinner page — content is likely gated
+ * behind JavaScript or served only to browsers. Kept conservative so normal
+ * variation (personalization, A/B) does not trip it.
+ */
+function isThinnerThanBrowser(
+  controlTextLength: number,
+  crawlerBody: string | null
+): boolean {
+  if (controlTextLength < 500) return false;
+  const crawlerTextLength = stripTags(crawlerBody ?? '').length;
+  return (
+    crawlerTextLength < controlTextLength * 0.4 &&
+    controlTextLength - crawlerTextLength >= 500
+  );
 }
 
 const CHALLENGE_MARKERS = [
@@ -39,6 +58,7 @@ export function analyzeCrawlerAccess(
 ): AuditFinding[] {
   const findings: AuditFinding[] = [];
   const controlClass = statusClass(control.status);
+  const controlTextLength = stripTags(control.body ?? '').length;
 
   if (control.error || controlClass !== 2) {
     findings.push({
@@ -73,6 +93,18 @@ export function analyzeCrawlerAccess(
     }
 
     if (botClass === 2) {
+      if (isThinnerThanBrowser(controlTextLength, result.body)) {
+        const crawlerTextLength = stripTags(result.body ?? '').length;
+        findings.push({
+          code: 'crawler.content-differential',
+          level: 'warn',
+          title: `${agent.vendor} ${agent.id} gets much less content than a browser`,
+          detail: `The ${agent.id} user-agent reached the page (${result.status}) but its HTML has far less text than the browser's (${crawlerTextLength} vs ${controlTextLength} characters). Content may be gated behind JavaScript or served only to browsers, so the crawler indexes a thinner page.`,
+          evidence: `${agent.id} text=${crawlerTextLength} chars; browser text=${controlTextLength} chars`,
+          fix: 'Server-render or prerender the shared content, or provide a markdown mirror, so crawlers get the same text as browsers.',
+        });
+        continue;
+      }
       findings.push({
         code: 'crawler.accessible',
         level: 'pass',
