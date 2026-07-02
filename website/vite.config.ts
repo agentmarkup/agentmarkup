@@ -23,7 +23,10 @@ const articlePages = blogPosts.map((post) => ({
       dateModified: post.date,
       author: authorSchema,
       description: post.description,
-      image: `${siteUrl}/og-image.png`,
+      image:
+        post.slug === 'fortune-500-ai-audit'
+          ? `${siteUrl}/og-fortune500.png`
+          : `${siteUrl}/og-image.png`,
     },
   ],
 }))
@@ -133,6 +136,7 @@ export default defineConfig({
         'docs-ai-crawlers': resolve(__dirname, 'docs/ai-crawlers/index.html'),
         'docs-audit': resolve(__dirname, 'docs/audit/index.html'),
         'blog-index': resolve(__dirname, 'blog/index.html'),
+        'blog-fortune-500-ai-audit': resolve(__dirname, 'blog/fortune-500-ai-audit/index.html'),
         'blog-audit-ai-crawler-access': resolve(__dirname, 'blog/audit-ai-crawler-access/index.html'),
         'blog-nextjs-llms-txt-json-ld': resolve(__dirname, 'blog/nextjs-llms-txt-json-ld/index.html'),
         'blog-nuxt-llms-txt-json-ld': resolve(__dirname, 'blog/nuxt-llms-txt-json-ld/index.html'),
@@ -155,6 +159,7 @@ export default defineConfig({
         'prerender-docs-ai-crawlers': resolve(__dirname, 'src/entries/ai-crawlers.tsx'),
         'prerender-docs-audit': resolve(__dirname, 'src/entries/audit.tsx'),
         'prerender-blog-index': resolve(__dirname, 'src/entries/blog-index.tsx'),
+        'prerender-blog-fortune-500-ai-audit': resolve(__dirname, 'src/entries/blog-post-14.tsx'),
         'prerender-blog-audit-ai-crawler-access': resolve(__dirname, 'src/entries/blog-post-13.tsx'),
         'prerender-blog-nextjs-llms-txt-json-ld': resolve(__dirname, 'src/entries/blog-post-10.tsx'),
         'prerender-blog-nuxt-llms-txt-json-ld': resolve(__dirname, 'src/entries/blog-post-11.tsx'),
@@ -210,6 +215,7 @@ export default defineConfig({
           {
             title: 'Blog',
             entries: [
+              { title: "We audited 500 of America's biggest companies for AI readiness", url: '/blog/fortune-500-ai-audit/', description: 'We ran 500 of the largest US public companies through @agentmarkup/audit: most serve readable HTML, but 46% have no usable structured data, 86% have no llms.txt, and seven serve crawlers a blank page' },
               { title: 'See your site like AI crawlers do', url: '/blog/audit-ai-crawler-access/', description: 'Fetch any live URL as each major AI crawler with @agentmarkup/audit, diff against a browser, and catch machine-readability issues in CI' },
               { title: 'Next.js guide', url: '/blog/nextjs-llms-txt-json-ld/', description: 'How to add llms.txt, JSON-LD, AI crawler controls, and validation to Next.js with @agentmarkup/next' },
               { title: 'Nuxt guide', url: '/blog/nuxt-llms-txt-json-ld/', description: 'How to add llms.txt, JSON-LD, markdown mirrors, and AI crawler controls to Nuxt with @agentmarkup/nuxt' },
