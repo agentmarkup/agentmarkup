@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import Byline from '../Byline'
 import BlogFooter from '../BlogFooter'
-import { fortune500, type F500Row } from '../data/fortune500'
+import { fortune500, type F500Row } from '../data/company-audit'
 
 // Reveal a block once it scrolls into view (adds `is-revealed`).
 // Hydration-safe: the class is only added on the client, after mount.
@@ -392,7 +392,7 @@ function FortuneReport() {
           </p>
         </section>
       </article>
-      <BlogFooter currentSlug="fortune-500-ai-audit" />
+      <BlogFooter currentSlug="ai-crawler-audit-500-companies" />
     </main>
   )
 }
