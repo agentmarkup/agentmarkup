@@ -26,8 +26,18 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://agentmarkup.dev/docs/audit/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://agentmarkup.dev/blog/</loc>
     <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://agentmarkup.dev/blog/audit-ai-crawler-access/</loc>
+    <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>

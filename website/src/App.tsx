@@ -266,7 +266,7 @@ function Home() {
               Run the built-in website checker to inspect any public homepage for llms.txt, JSON-LD, markdown mirrors, robots.txt, sitemap discovery, canonical tags, and thin-HTML issues. It follows at most one same-origin link, does not invent a score, and tells you exactly what is missing.
             </p>
             <p>
-              Prefer the terminal or CI? <a href="https://www.npmjs.com/package/@agentmarkup/audit" target="_blank" rel="noopener noreferrer"><code>@agentmarkup/audit</code></a> runs the same idea from the command line: it fetches your URL as GPTBot, ClaudeBot, PerplexityBot, OAI-SearchBot, and Google-Extended, diffs each response against a browser, and exits non-zero on provable machine-readability errors. Run <code>npx @agentmarkup/audit https://example.com</code>.
+              Prefer the terminal or CI? <a href="https://www.npmjs.com/package/@agentmarkup/audit" target="_blank" rel="noopener noreferrer"><code>@agentmarkup/audit</code></a> runs the same idea from the command line: it fetches your URL as GPTBot, ClaudeBot, PerplexityBot, OAI-SearchBot, and Google-Extended, diffs each response against a browser, and exits non-zero on provable machine-readability errors. Run <code>npx @agentmarkup/audit https://example.com</code>, or <a href="/docs/audit/">read the audit guide</a>.
             </p>
             <a className="checker-cta-link" href="/checker/">Open the website checker</a>
           </div>
@@ -360,7 +360,7 @@ function Home() {
             </div>
             <div className="package-card">
               <h3><a href="https://www.npmjs.com/package/@agentmarkup/audit" target="_blank" rel="noopener noreferrer">@agentmarkup/audit</a></h3>
-              <p className="package-desc">Runtime CLI that fetches any live URL as each major AI crawler, diffs the response against a browser, and reports deterministic machine-readability findings. The command-line companion to the website checker, built for local runs and CI. Run <code>npx @agentmarkup/audit https://example.com</code>.</p>
+              <p className="package-desc">Runtime CLI that fetches any live URL as each major AI crawler, diffs the response against a browser, and reports deterministic machine-readability findings. The command-line companion to the website checker, built for local runs and CI. Run <code>npx @agentmarkup/audit https://example.com</code>. <a href="/docs/audit/">Read the audit guide</a>.</p>
             </div>
           </div>
         </section>
