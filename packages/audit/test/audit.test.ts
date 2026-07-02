@@ -71,6 +71,65 @@ describe('audit orchestrator', () => {
     expect(report.findings.find((f) => f.code === 'js.empty-shell')?.level).toBe('error');
   });
 
+  it('covers markdown mirror, sitemap, and head metadata', async () => {
+    const pageHtml =
+      '<html><head><title>Example</title>' +
+      '<meta name="description" content="A useful description.">' +
+      '<link rel="canonical" href="https://example.com/">' +
+      '<link rel="alternate" type="text/markdown" href="/index.md">' +
+      '<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Example","url":"https://example.com"}</script>' +
+      '</head><body><main>' +
+      'Real server-rendered content about the product. '.repeat(10) +
+      '</main></body></html>';
+    const fetchImpl = async (url: string): Promise<FetchResult> => {
+      if (url.endsWith('/sitemap.xml')) {
+        return {
+          ...ok(url, '<?xml version="1.0"?><urlset><url><loc>https://example.com/</loc></url></urlset>'),
+          headers: { 'content-type': 'application/xml' },
+        };
+      }
+      if (url.endsWith('/index.md')) {
+        return {
+          ...ok(url, '# Example\n\nMarkdown mirror of the page.\n'),
+          headers: { 'content-type': 'text/markdown' },
+        };
+      }
+      if (url.endsWith('/robots.txt')) return ok(url, 'User-agent: *\nAllow: /\n');
+      if (url.endsWith('/llms.txt')) {
+        return { ...ok(url, '# Example\n\n## Docs\n\n- [G](https://example.com/g)\n'), headers: { 'content-type': 'text/plain' } };
+      }
+      return ok(url, pageHtml);
+    };
+
+    const report = await audit('https://example.com', {
+      fetchImpl,
+      fetchedAt: '2026-07-02T00:00:00.000Z',
+    });
+
+    expect(report.findings.find((f) => f.code === 'sitemap.present')?.level).toBe('pass');
+    expect(report.findings.find((f) => f.code === 'markdown.present')?.level).toBe('pass');
+    expect(report.findings.find((f) => f.code === 'meta.complete')?.level).toBe('pass');
+  });
+
+  it('finds a sitemap at a common non-standard path when /sitemap.xml is absent and robots declares none', async () => {
+    const xml = '<?xml version="1.0"?><urlset><url><loc>https://example.com/</loc></url></urlset>';
+    const fetchImpl = async (url: string): Promise<FetchResult> => {
+      if (url.endsWith('/sitemap.xml')) return notFound(url);
+      if (url.endsWith('/sitemap_index.xml')) {
+        return { ...ok(url, xml), headers: { 'content-type': 'application/xml' } };
+      }
+      if (url.endsWith('/robots.txt')) return ok(url, 'User-agent: *\nAllow: /\n');
+      if (url.endsWith('/llms.txt')) return notFound(url);
+      if (url.endsWith('/index.md')) return notFound(url);
+      return ok(url, GOOD_HTML);
+    };
+    const report = await audit('https://example.com', {
+      fetchImpl,
+      fetchedAt: '2026-07-02T00:00:00.000Z',
+    });
+    expect(report.findings.find((f) => f.code === 'sitemap.present')?.level).toBe('pass');
+  });
+
   it('spoofs each crawler UA and the browser control distinctly', async () => {
     const seen: string[] = [];
     const fetchImpl = async (

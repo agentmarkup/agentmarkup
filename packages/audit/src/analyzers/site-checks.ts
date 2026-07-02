@@ -2,10 +2,8 @@ import {
   extractJsonLdScriptContents,
   findBlockedCrawlers,
   hasLlmsTxtDiscoveryLink,
-  validateJsonLdNode,
   validateLlmsTxt,
   type AiCrawlersConfig,
-  type JsonLdBase,
   type ValidationResult,
 } from '@agentmarkup/core';
 import { CRAWLER_AGENTS } from '../agents.js';
@@ -16,12 +14,43 @@ function levelFromSeverity(severity: ValidationResult['severity']): AuditLevel {
   return severity === 'error' ? 'error' : 'warn';
 }
 
+const HTML_BODY_RE = /^\s*(?:<!doctype\s+html|<html[\s>])/i;
+
+/**
+ * Whether a fetched text resource (llms.txt, robots.txt) is a genuine text
+ * response rather than an HTML soft-404 / catch-all page. Many large sites
+ * return `200` plus their HTML homepage for unknown paths, which must count as
+ * "missing" rather than a malformed text file (otherwise the audit reports a
+ * broken llms.txt/robots.txt for a site that simply has none).
+ */
+export function isRealTextResource(res: FetchResult): boolean {
+  if (res.error || (res.status ?? 0) >= 400 || !res.body) {
+    return false;
+  }
+  const contentType = (res.headers['content-type'] ?? '').toLowerCase();
+  if (contentType.includes('text/html')) {
+    return false;
+  }
+  return !HTML_BODY_RE.test(res.body);
+}
+
+/** A JSON-LD `@graph` container wraps the real typed nodes in an array. */
+function isGraphContainer(
+  value: unknown
+): value is Record<string, unknown> & { '@graph': unknown[] } {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    Array.isArray((value as Record<string, unknown>)['@graph'])
+  );
+}
+
 /** The crawler stance the audit checks against: these should be reachable. */
 const EXPECTED_CRAWLERS: AiCrawlersConfig = Object.fromEntries(
   CRAWLER_AGENTS.map((agent) => [agent.ua.split('/')[0], 'allow' as const])
 );
 
-function stripTags(html: string): string {
+export function stripTags(html: string): string {
   return html
     .replace(/<(script|style|template|noscript)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ')
     .replace(/<[^>]+>/g, ' ')
@@ -81,7 +110,7 @@ export function analyzeJsDependence(control: FetchResult): AuditFinding[] {
 /** robots.txt intent: are the crawlers we expect to allow actually blocked? */
 export function analyzeRobots(robots: FetchResult): AuditFinding[] {
   const findings: AuditFinding[] = [];
-  const has = !robots.error && (robots.status ?? 0) < 400 && Boolean(robots.body);
+  const has = isRealTextResource(robots);
 
   if (!has) {
     findings.push({
@@ -149,7 +178,7 @@ export function analyzeMachineReadable(
   const html = control.body ?? '';
 
   // llms.txt
-  const llmsOk = !llms.error && (llms.status ?? 0) < 400 && Boolean(llms.body);
+  const llmsOk = isRealTextResource(llms);
   if (llmsOk) {
     const results = validateLlmsTxt(llms.body ?? '');
     const errors = results.filter((r) => r.severity === 'error');
@@ -191,7 +220,11 @@ export function analyzeMachineReadable(
     });
   }
 
-  // JSON-LD
+  // JSON-LD. When auditing a third-party live site the honest, provable signal
+  // is "is there parseable, typed structured data" — not whether it satisfies
+  // our build-time completeness rules (which would falsely flag valid schema.org
+  // that omits an optional field). So only unparseable JSON or a block with no
+  // @type at all is an error; @graph containers are unwrapped before checking.
   if (html) {
     const blocks = extractJsonLdScriptContents(html);
     if (blocks.length === 0) {
@@ -204,39 +237,193 @@ export function analyzeMachineReadable(
         fix: 'Add JSON-LD with agentmarkup schema presets (webSite, organization, article, …).',
       });
     } else {
-      const errors: string[] = [];
+      let parseError = false;
+      let anyTyped = false;
       for (const block of blocks) {
+        let parsed: unknown;
         try {
-          const parsed = JSON.parse(block) as JsonLdBase | JsonLdBase[];
-          const nodes = Array.isArray(parsed) ? parsed : [parsed];
+          parsed = JSON.parse(block);
+        } catch {
+          parseError = true;
+          continue;
+        }
+        const roots = Array.isArray(parsed) ? parsed : [parsed];
+        for (const root of roots) {
+          const nodes = isGraphContainer(root) ? root['@graph'] : [root];
           for (const node of nodes) {
-            for (const r of validateJsonLdNode(node)) {
-              if (r.severity === 'error') errors.push(r.message);
+            if (node && typeof node === 'object' && '@type' in node) {
+              anyTyped = true;
             }
           }
-        } catch {
-          errors.push('a JSON-LD script block is not valid JSON');
         }
       }
-      findings.push(
-        errors.length > 0
-          ? {
-              code: 'jsonld.invalid',
-              level: 'error',
-              title: 'JSON-LD has errors',
-              detail: errors.join('; '),
-            }
-          : {
-              code: 'jsonld.present',
-              level: 'pass',
-              title: 'JSON-LD structured data present',
-              detail: `${blocks.length} JSON-LD block(s) found and structurally valid.`,
-            }
-      );
+
+      if (parseError) {
+        findings.push({
+          code: 'jsonld.invalid',
+          level: 'error',
+          title: 'JSON-LD has errors',
+          detail: 'a JSON-LD script block is not valid JSON',
+        });
+      } else if (!anyTyped) {
+        findings.push({
+          code: 'jsonld.invalid',
+          level: 'error',
+          title: 'JSON-LD has errors',
+          detail: 'a JSON-LD block has no @type, so it is not usable structured data',
+        });
+      } else {
+        findings.push({
+          code: 'jsonld.present',
+          level: 'pass',
+          title: 'JSON-LD structured data present',
+          detail: `${blocks.length} JSON-LD block(s) found and parseable.`,
+        });
+      }
     }
   }
 
   return findings;
+}
+
+function hasMarkdownAlternate(html: string): boolean {
+  const links = html.match(/<link\b[^>]*>/gi) ?? [];
+  return links.some(
+    (link) =>
+      /\brel=["']?[^"'>]*\balternate\b/i.test(link) &&
+      /\btype=["']?text\/markdown\b/i.test(link)
+  );
+}
+
+/**
+ * Markdown mirrors / alternates are optional but valuable: they give agents a
+ * clean, low-noise version of the page (agentmarkup can generate them, and some
+ * CDNs serve runtime markdown). Present is a pass; absent emits no finding
+ * because a content-rich HTML page does not need one.
+ */
+export function analyzeMarkdown(
+  control: FetchResult,
+  mirror: FetchResult
+): AuditFinding[] {
+  const html = control.body ?? '';
+  const viaLink = html.length > 0 && hasMarkdownAlternate(html);
+  const mirrorType = (mirror.headers['content-type'] ?? '').toLowerCase();
+  const viaMirror =
+    isRealTextResource(mirror) &&
+    (mirrorType.includes('markdown') || /^\s*#/.test(mirror.body ?? ''));
+
+  if (!viaLink && !viaMirror) {
+    return [];
+  }
+  return [
+    {
+      code: 'markdown.present',
+      level: 'pass',
+      title: 'A markdown alternate is available for agents',
+      detail: viaMirror
+        ? 'A markdown mirror of the page is fetchable, giving agents a clean, low-noise version of the content.'
+        : 'The page advertises a text/markdown alternate link for agents.',
+    },
+  ];
+}
+
+/**
+ * sitemap.xml discovery. A sitemap counts as present if `/sitemap.xml` is a
+ * real XML sitemap, OR robots.txt declares one with a `Sitemap:` directive —
+ * many large sites host their sitemap at a non-standard path and only announce
+ * it through robots.txt, so checking `/sitemap.xml` alone false-negatives.
+ */
+export function isXmlSitemap(sitemap: FetchResult): boolean {
+  const body = sitemap.body ?? '';
+  const contentType = (sitemap.headers['content-type'] ?? '').toLowerCase();
+  const reachable =
+    !sitemap.error && (sitemap.status ?? 0) < 400 && body.length > 0;
+  const looksXml =
+    /<(?:urlset|sitemapindex)\b/i.test(body) || /^\s*<\?xml/i.test(body);
+  const isHtml = contentType.includes('text/html') || HTML_BODY_RE.test(body);
+  return reachable && looksXml && !isHtml;
+}
+
+export function analyzeSitemap(
+  sitemap: FetchResult,
+  robots: FetchResult
+): AuditFinding[] {
+  const declaredInRobots = /^\s*sitemap\s*:/im.test(robots.body ?? '');
+
+  if (isXmlSitemap(sitemap) || declaredInRobots) {
+    return [
+      {
+        code: 'sitemap.present',
+        level: 'pass',
+        title: 'Sitemap found',
+        detail: declaredInRobots
+          ? 'A sitemap is declared in robots.txt, which helps crawlers and AI systems discover all of your pages.'
+          : 'A sitemap.xml is reachable, which helps crawlers and AI systems discover all of your pages.',
+      },
+    ];
+  }
+  return [
+    {
+      code: 'sitemap.missing',
+      level: 'warn',
+      title: 'No sitemap.xml found',
+      detail:
+        'No reachable sitemap.xml. A sitemap helps crawlers and AI systems discover pages they would not reach by following links.',
+      fix: 'Generate a sitemap.xml and reference it from robots.txt.',
+    },
+  ];
+}
+
+/** Core head metadata (title / description / canonical) crawlers use to attribute a page. */
+export function analyzeMetadata(control: FetchResult): AuditFinding[] {
+  if (control.error || (control.status ?? 0) >= 400 || !control.body) {
+    return [];
+  }
+  const html = control.body;
+  const missing: string[] = [];
+
+  const titleMatch = /<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(html);
+  if (!titleMatch || titleMatch[1].trim().length === 0) {
+    missing.push('title');
+  }
+
+  const metas = html.match(/<meta\b[^>]*>/gi) ?? [];
+  const hasDescription = metas.some(
+    (tag) =>
+      /\bname=["']?description["']?/i.test(tag) &&
+      /\bcontent=["'][^"']*\S[^"']*["']/i.test(tag)
+  );
+  if (!hasDescription) missing.push('description');
+
+  const links = html.match(/<link\b[^>]*>/gi) ?? [];
+  const hasCanonical = links.some((link) =>
+    /\brel=["']?canonical\b/i.test(link)
+  );
+  if (!hasCanonical) missing.push('canonical');
+
+  if (missing.length === 0) {
+    return [
+      {
+        code: 'meta.complete',
+        level: 'pass',
+        title: 'Core page metadata present',
+        detail:
+          'The page has a title, a meta description, and a canonical link, which help AI systems and search attribute the page.',
+      },
+    ];
+  }
+  return [
+    {
+      code: 'meta.incomplete',
+      level: 'warn',
+      title: 'Core page metadata is incomplete',
+      detail: `Missing: ${missing.join(
+        ', '
+      )}. Title, meta description, and canonical link help AI systems and search understand and correctly attribute the page.`,
+      evidence: `missing: ${missing.join(', ')}`,
+      fix: 'Add the missing head tags; agentmarkup keeps these consistent on generated pages.',
+    },
+  ];
 }
 
 export { levelFromSeverity };
