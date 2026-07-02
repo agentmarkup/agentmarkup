@@ -17,6 +17,13 @@ export interface BlogPostMeta {
 
 export const blogPosts: BlogPostMeta[] = [
   {
+    slug: 'fortune-500-ai-audit',
+    title: "We ran 500 of America's biggest companies through an AI-crawler audit",
+    description: 'We fetched 500 corporate homepages the way ChatGPT, Claude, and Perplexity do. Most serve readable HTML, but 46% have no usable structured data, 86% have no llms.txt, and seven serve crawlers a blank page. Built for Google, not yet for AI agents.',
+    date: '2026-07-02',
+    readingTime: '4 min read',
+  },
+  {
     slug: 'audit-ai-crawler-access',
     title: 'See your website the way AI crawlers do',
     description: 'Use @agentmarkup/audit to fetch any live URL as GPTBot, ClaudeBot, PerplexityBot, and other AI crawlers, diff each response against a browser, and catch machine-readability issues in CI.',

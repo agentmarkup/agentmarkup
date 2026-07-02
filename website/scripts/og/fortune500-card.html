@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1200px; height: 630px; }
+  body {
+    background: #0a0a0a;
+    color: #ededed;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding: 68px 72px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+  }
+  .mono { font-family: 'SF Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .top { display: flex; justify-content: space-between; align-items: center; }
+  .brand { display: flex; align-items: center; gap: 14px; font-weight: 700; font-size: 26px; letter-spacing: -0.01em; }
+  .brand .mk {
+    width: 34px; height: 34px; border-radius: 8px; background: #ededed; color: #0a0a0a;
+    display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800;
+  }
+  .kicker { font-size: 15px; letter-spacing: 0.14em; text-transform: uppercase; color: #7a7a7a; }
+  .headline {
+    font-size: 62px; font-weight: 800; line-height: 1.02; letter-spacing: -0.03em; max-width: 900px;
+  }
+  .headline .dim { color: #6f6f6f; }
+  .stats { display: flex; gap: 56px; }
+  .stat .n { font-size: 78px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+  .stat .l { margin-top: 10px; font-size: 19px; color: #9a9a9a; font-weight: 500; }
+  .foot { display: flex; justify-content: space-between; align-items: center; font-size: 19px; }
+  .foot .site { font-weight: 700; }
+  .foot .cmd { color: #8a8a8a; }
+  /* signature grid band: one square = one company */
+  .strip { position: absolute; left: 72px; right: 72px; bottom: 26px; height: 26px; display: grid;
+    grid-template-columns: repeat(148, 1fr); grid-auto-rows: 11px; gap: 3px; opacity: 0.85; }
+  .cell { width: 11px; height: 11px; background: rgba(237,237,237,0.13); border-radius: 1.5px; }
+  .cell.on { background: #ededed; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="brand"><span class="mk">&#10216;/&#10217;</span> agentmarkup</div>
+    <div class="kicker mono">AI-crawler audit &middot; 500 US companies</div>
+  </div>
+
+  <div class="headline">Built for Google.<br /><span class="dim">Not yet for AI agents.</span></div>
+
+  <div class="stats">
+    <div class="stat"><div class="n">86%</div><div class="l">no llms.txt</div></div>
+    <div class="stat"><div class="n">46%</div><div class="l">no structured data</div></div>
+    <div class="stat"><div class="n">99%</div><div class="l">no AI-usage signal</div></div>
+    <div class="stat"><div class="n">7</div><div class="l">serve a blank page</div></div>
+  </div>
+
+  <div class="foot">
+    <div class="site">agentmarkup.dev</div>
+    <div class="cmd mono">npx @agentmarkup/audit &lt;url&gt;</div>
+  </div>
+
+  <div class="strip" id="strip"></div>
+  <script>
+    // sparse fill motif: ~1 in 7 lit, deterministic
+    var strip = document.getElementById('strip');
+    for (var i = 0; i < 148; i++) {
+      var c = document.createElement('div');
+      c.className = 'cell' + (i % 8 === 3 ? ' on' : '');
+      strip.appendChild(c);
+    }
+  </script>
+</body>
+</html>
