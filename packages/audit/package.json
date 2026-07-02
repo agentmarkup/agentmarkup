@@ -1,0 +1,68 @@
+{
+  "name": "@agentmarkup/audit",
+  "version": "0.1.0",
+  "description": "Audit a live URL the way AI crawlers see it: fetch as GPTBot, ClaudeBot, PerplexityBot and more, diff against a browser to catch accidental CDN blocks, plus llms.txt, JSON-LD, robots.txt intent, Content-Signal, and JS-dependence checks",
+  "type": "module",
+  "license": "MIT",
+  "author": "Sebastian Cochinescu <hello@animafelix.com> (https://animafelix.com)",
+  "homepage": "https://agentmarkup.dev",
+  "bugs": {
+    "url": "https://github.com/agentmarkup/agentmarkup/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agentmarkup/agentmarkup",
+    "directory": "packages/audit"
+  },
+  "keywords": [
+    "ai-crawler",
+    "gptbot",
+    "claudebot",
+    "perplexitybot",
+    "llms-txt",
+    "robots-txt",
+    "content-signal",
+    "json-ld",
+    "geo",
+    "aeo",
+    "seo",
+    "audit",
+    "machine-readable",
+    "ci"
+  ],
+  "bin": {
+    "agentmarkup-audit": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "prebuild": "pnpm -C ../core build",
+    "build": "tsup",
+    "predev": "pnpm -C ../core build",
+    "dev": "tsup --watch",
+    "pretest": "pnpm -C ../core build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src/ test/",
+    "pretypecheck": "pnpm -C ../core build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@agentmarkup/core": "workspace:*"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
