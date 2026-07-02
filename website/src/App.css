@@ -1562,7 +1562,7 @@ html[data-cookie-consent-ready="true"][data-cookie-consent="pending"] .cookie-ba
   }
 }
 
-/* Fortune 500 AI-readiness report: editorial monochrome data-viz */
+/* AI-crawler audit report (500 US companies): editorial monochrome data-viz */
 .f500-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
