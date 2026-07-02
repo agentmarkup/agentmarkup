@@ -2,7 +2,11 @@ import type { ValidationResult } from '../types.js';
 
 export function validateLlmsTxt(content: string): ValidationResult[] {
   const results: ValidationResult[] = [];
-  const lines = content.split('\n');
+  // Strip a leading UTF-8 BOM (U+FEFF): it is invisible but would otherwise
+  // fail the H1 check, since the first line would start with the BOM, not "# ".
+  const withoutBom =
+    content.charCodeAt(0) === 0xfeff ? content.slice(1) : content;
+  const lines = withoutBom.split('\n');
 
   const firstContentLine = lines.find((line) => line.trim() !== '');
   if (!firstContentLine || !firstContentLine.startsWith('# ')) {
