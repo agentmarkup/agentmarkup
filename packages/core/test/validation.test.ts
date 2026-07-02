@@ -148,6 +148,12 @@ describe('validateLlmsTxt', () => {
     expect(errors).toHaveLength(0);
   });
 
+  it('accepts a valid llms.txt that begins with a UTF-8 BOM', () => {
+    const results = validateLlmsTxt('﻿# Site\n\n## Docs\n\n- [Guide](https://example.com)\n');
+    expect(results.some((r) => r.message.includes('H1'))).toBe(false);
+    expect(results.filter((r) => r.severity === 'error')).toHaveLength(0);
+  });
+
   it('recognizes Markdown links whose labels contain escaped brackets', () => {
     const results = validateLlmsTxt(
       '# Site\n\n## Docs\n\n- [A \\[b\\] title](https://example.com/x?a=%28b%29&c=1)\n'
