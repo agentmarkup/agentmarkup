@@ -449,8 +449,10 @@ const CONTENT_SIGNAL_USE_VALUES = new Set(['immediate', 'reference', 'full']);
 function parseContentSignal(body: string): {
   present: boolean;
   directives: Record<string, string>;
+  raw: string[];
 } {
   const directives: Record<string, string> = {};
+  const raw: string[] = [];
   let present = false;
   const re = /^[ \t]*content-signal[ \t]*:[ \t]*(.+?)[ \t]*$/gim;
   let match: RegExpExecArray | null;
@@ -458,6 +460,7 @@ function parseContentSignal(body: string): {
     const value = match[1].trim();
     if (!value) continue;
     present = true;
+    raw.push(value);
     for (const pair of value.split(',')) {
       const eq = pair.indexOf('=');
       if (eq === -1) continue;
@@ -466,7 +469,7 @@ function parseContentSignal(body: string): {
       if (key) directives[key] = val;
     }
   }
-  return { present, directives };
+  return { present, directives, raw };
 }
 
 function analyzeRobotsTxt(robotsTxt: RemoteResource, items: AuditItem[]): void {
@@ -494,7 +497,7 @@ function analyzeRobotsTxt(robotsTxt: RemoteResource, items: AuditItem[]): void {
 
   const robotsBody = robotsTxt.body;
   const explicitAiRules = Object.keys(TARGET_CRAWLERS).some((bot) =>
-    new RegExp(`User-agent:\\s*${escapeRegExp(bot)}`, 'i').test(robotsBody)
+    new RegExp(`User-agent:\\s*${escapeRegExp(bot)}(?:\\b|$)`, 'i').test(robotsBody)
   );
 
   if (!explicitAiRules) {
@@ -519,7 +522,7 @@ function analyzeRobotsTxt(robotsTxt: RemoteResource, items: AuditItem[]): void {
   if (contentSignal.present) {
     const declared = Object.entries(contentSignal.directives)
       .map(([key, value]) => `${key}=${value}`)
-      .join(', ');
+      .join(', ') || contentSignal.raw.join(' | ');
     const useValue = contentSignal.directives['use'];
     const hasUse = typeof useValue === 'string';
     const useRecognized = hasUse && CONTENT_SIGNAL_USE_VALUES.has(useValue);

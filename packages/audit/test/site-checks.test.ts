@@ -52,6 +52,22 @@ describe('analyzeRobots', () => {
     expect(f.find((x) => x.code === 'robots.blocks-crawlers')?.level).toBe('error');
   });
 
+  it('errors when an expected crawler is specifically disallowed', () => {
+    const f = analyzeRobots(result({ body: 'User-agent: GPTBot\nDisallow: /\n' }));
+    const error = f.find((x) => x.code === 'robots.blocks-crawlers');
+    expect(error?.level).toBe('error');
+    expect(error?.evidence).toContain('gptbot');
+  });
+
+  it('passes when an expected crawler explicitly allows itself despite wildcard disallow', () => {
+    const f = analyzeRobots(result({ body: 'User-agent: *\nDisallow: /\n\nUser-agent: GPTBot\nAllow: /\n' }));
+    const error = f.find((x) => x.code === 'robots.blocks-crawlers');
+    // If gptbot is the only one we care about, it might still report others. 
+    // Wait, the default EXPECTED_CRAWLERS has multiple. So the others would be blocked by wildcard.
+    // Let's just check that 'gptbot' is not in the evidence.
+    expect(error?.evidence).not.toContain('gptbot');
+  });
+
   it('passes and detects Content-Signal when present', () => {
     const body =
       'User-agent: *\nContent-Signal: ai-train=yes, search=yes, ai-input=yes\nAllow: /\n';
@@ -107,6 +123,18 @@ describe('analyzeRobots', () => {
     });
     const f = analyzeRobots(softHtml);
     expect(f.find((x) => x.code === 'robots.missing')?.level).toBe('warn');
+  });
+
+  it('detects a soft-404 that begins with an HTML comment or BOM', () => {
+    const withComment = result({
+      body: '<!-- some comment -->\n<!doctype html><html><body>x</body></html>',
+    });
+    expect(analyzeRobots(withComment).find((x) => x.code === 'robots.missing')?.level).toBe('warn');
+
+    const withBom = result({
+      body: '\uFEFF<!doctype html><html><body>x</body></html>',
+    });
+    expect(analyzeRobots(withBom).find((x) => x.code === 'robots.missing')?.level).toBe('warn');
   });
 });
 

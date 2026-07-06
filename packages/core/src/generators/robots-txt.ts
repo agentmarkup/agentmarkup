@@ -116,10 +116,12 @@ export function findBlockedCrawlers(
   robotsTxt: string,
   crawlers: AiCrawlersConfig
 ): string[] {
-  const blocked: string[] = [];
   const lines = robotsTxt.split('\n');
   let currentAgents: string[] = [];
   let insideManagedBlock = false;
+
+  const explicitDirectives = new Map<string, 'allow' | 'disallow'>();
+  let wildcardDirective: 'allow' | 'disallow' | undefined = undefined;
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -147,19 +149,20 @@ export function findBlockedCrawlers(
     }
 
     const disallowMatch = trimmed.match(/^Disallow:\s*\/\s*$/i);
-    if (disallowMatch && currentAgents.length > 0) {
-      for (const agent of currentAgents) {
-        if (agent === '*') {
-          for (const [bot, directive] of Object.entries(crawlers)) {
-            if (directive === 'allow') {
-              blocked.push(bot);
+    const allowMatch = trimmed.match(/^Allow:\s*\/\s*$/i);
+
+    if (disallowMatch || allowMatch) {
+      const type = disallowMatch ? 'disallow' : 'allow';
+      if (currentAgents.length > 0) {
+        for (const agent of currentAgents) {
+          if (agent === '*') {
+            if (!wildcardDirective) wildcardDirective = type;
+          } else {
+            const key = agent.toLowerCase();
+            if (!explicitDirectives.has(key)) {
+              explicitDirectives.set(key, type);
             }
           }
-        } else if (
-          isConfiguredBot(agent, crawlers) &&
-          crawlers[agent] === 'allow'
-        ) {
-          blocked.push(agent);
         }
       }
     }
@@ -169,14 +172,22 @@ export function findBlockedCrawlers(
     }
   }
 
+  const blocked: string[] = [];
+  for (const [bot, directive] of Object.entries(crawlers)) {
+    if (directive === 'allow') {
+      const explicit = explicitDirectives.get(bot.toLowerCase());
+      if (explicit === 'disallow') {
+        blocked.push(bot);
+      } else if (!explicit && wildcardDirective === 'disallow') {
+        blocked.push(bot);
+      }
+    }
+  }
+
   return [...new Set(blocked)];
 }
 
-function isConfiguredBot(agent: string, crawlers: AiCrawlersConfig): boolean {
-  return Object.keys(crawlers).some(
-    (key) => key.toLowerCase() === agent.toLowerCase()
-  );
-}
+
 
 function hasMatchingCrawlerRules(
   robotsTxt: string,

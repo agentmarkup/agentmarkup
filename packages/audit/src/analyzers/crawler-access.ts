@@ -81,7 +81,7 @@ export function analyzeCrawlerAccess(
       result.error ? ` error=${result.error}` : ''
     }; browser → status=${control.status}`;
 
-    if (result.error === 'timeout' || result.error === 'network-error') {
+    if (result.error) {
       findings.push({
         code: 'crawler.probe-failed',
         level: 'warn',

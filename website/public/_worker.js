@@ -56,6 +56,8 @@ const TURNSTILE_VERIFY_URL =
 let checksSchemaReadyPromise;
 let checksSchemaUnavailable = false;
 
+const TOTAL_TIMEOUT_MS = 25000;
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -65,14 +67,14 @@ export default {
         return json({ error: 'Method not allowed.' }, 405);
       }
 
-      return handleCheckRequest(request, url, env);
+      return handleCheckRequest(request, url, env, Date.now());
     }
 
     return env.ASSETS.fetch(request);
   },
 };
 
-async function handleCheckRequest(request, url, env) {
+async function handleCheckRequest(request, url, env, checkStartTime) {
   try {
     const { input, turnstileToken } = await readCheckRequest(request, url);
     const normalized = normalizePublicUrl(input);
@@ -97,17 +99,17 @@ async function handleCheckRequest(request, url, env) {
       return json(cachedResponse, 200);
     }
 
-    const homepage = await fetchText(normalized);
+    const homepage = await fetchText(normalized, checkStartTime);
     const targetUrl = toSiteRootUrl(homepage.finalUrl || normalized);
     const homepageMarkdownUrl =
       (homepage.ok && homepage.body
         ? findMarkdownAlternateUrl(homepage.body, targetUrl)
         : null) ?? buildMarkdownUrl(targetUrl);
     const homepageMarkdown = homepageMarkdownUrl
-      ? await fetchText(homepageMarkdownUrl)
+      ? await fetchText(homepageMarkdownUrl, checkStartTime)
       : null;
-    const llmsTxt = await fetchText(new URL('/llms.txt', targetUrl).toString());
-    const robotsTxt = await fetchText(new URL('/robots.txt', targetUrl).toString());
+    const llmsTxt = await fetchText(new URL('/llms.txt', targetUrl).toString(), checkStartTime);
+    const robotsTxt = await fetchText(new URL('/robots.txt', targetUrl).toString(), checkStartTime);
 
     let samplePage = null;
     let samplePageMarkdown = null;
@@ -118,7 +120,7 @@ async function handleCheckRequest(request, url, env) {
         homepage.finalUrl || targetUrl
       );
       if (samplePageUrl) {
-        samplePage = await fetchText(samplePageUrl);
+        samplePage = await fetchText(samplePageUrl, checkStartTime);
         const sampleMarkdownUrl =
           (samplePage.ok && samplePage.body
             ? findMarkdownAlternateUrl(
@@ -127,7 +129,7 @@ async function handleCheckRequest(request, url, env) {
               )
             : null) ?? buildMarkdownUrl(samplePage.finalUrl || samplePageUrl);
         samplePageMarkdown = sampleMarkdownUrl
-          ? await fetchText(sampleMarkdownUrl)
+          ? await fetchText(sampleMarkdownUrl, checkStartTime)
           : null;
       }
     }
@@ -148,7 +150,7 @@ async function handleCheckRequest(request, url, env) {
       sitemapSource = 'default';
     }
 
-    const sitemap = sitemapUrl ? await fetchText(sitemapUrl) : null;
+    const sitemap = sitemapUrl ? await fetchText(sitemapUrl, checkStartTime) : null;
     const payload = {
       targetUrl,
       origin: new URL(targetUrl).origin,
@@ -696,6 +698,10 @@ function normalizePublicUrl(value) {
       throw new Error('blocked-hostname');
     }
 
+    if (parsed.port && parsed.port !== '80' && parsed.port !== '443') {
+      throw new Error('unsupported-port');
+    }
+
     parsed.hash = '';
     parsed.search = '';
     parsed.pathname = '/';
@@ -720,14 +726,8 @@ function readClientIp(request) {
     return forwarded;
   }
 
-  const fallback = request.headers
-    .get('x-forwarded-for')
-    ?.split(',')[0]
-    ?.trim();
-  if (fallback) {
-    return fallback;
-  }
-
+  // Fallback to unknown if cf-connecting-ip is absent. Do not use x-forwarded-for 
+  // because it can be trivially spoofed to bypass IP rate limits.
   return 'unknown';
 }
 
@@ -874,17 +874,27 @@ function isBlockedIpv6(groups) {
   );
 }
 
-async function fetchText(targetUrl) {
+async function fetchText(targetUrl, checkStartTime) {
   try {
     let currentUrl = targetUrl;
 
     for (let redirectCount = 0; redirectCount < MAX_REDIRECTS; redirectCount += 1) {
+      const remainingGlobalTime = TOTAL_TIMEOUT_MS - (Date.now() - (checkStartTime || Date.now()));
+      if (remainingGlobalTime <= 0) {
+        throw new Error('Overall checker timeout exceeded.');
+      }
+
       const parsed = new URL(currentUrl);
       if (!['http:', 'https:'].includes(parsed.protocol) || isBlockedHostname(parsed.hostname)) {
         throw new Error('Request was blocked by checker safety rules.');
       }
+      
+      if (parsed.port && parsed.port !== '80' && parsed.port !== '443') {
+        throw new Error('Request was blocked by checker safety rules.');
+      }
 
-      const { signal, cancel } = createTimeoutSignal(FETCH_TIMEOUT_MS);
+      const timeoutForThisFetch = Math.max(1000, Math.min(FETCH_TIMEOUT_MS, remainingGlobalTime));
+      const { signal, cancel } = createTimeoutSignal(timeoutForThisFetch);
       try {
         const response = await fetch(currentUrl, {
           redirect: 'manual',
@@ -913,7 +923,8 @@ async function fetchText(targetUrl) {
           const nextUrl = new URL(location, currentUrl);
           if (
             !['http:', 'https:'].includes(nextUrl.protocol) ||
-            isBlockedHostname(nextUrl.hostname)
+            isBlockedHostname(nextUrl.hostname) ||
+            (nextUrl.port && nextUrl.port !== '80' && nextUrl.port !== '443')
           ) {
             throw new Error('Request was blocked by checker safety rules.');
           }
