@@ -87,13 +87,14 @@ describe('analyzeCrawlerAccess', () => {
     expect(findings[0].code).toBe('crawler.control-failed');
   });
 
-  it('does not draw a conclusion when the crawler probe itself errors', () => {
+  it('does not draw a conclusion when the crawler probe itself errors (including non-network errors)', () => {
     const findings = analyzeCrawlerAccess(result({ status: 200 }), [
       { agent: gptbot, result: result({ status: null, ok: false, error: 'timeout' }) },
+      { agent: gptbot, result: result({ status: null, ok: false, error: 'too-many-redirects' }) },
+      { agent: gptbot, result: result({ status: null, ok: false, error: 'blocked-by-ssrf-rules' }) },
     ]);
-    expect(findings.find((x) => x.code === 'crawler.probe-failed')?.level).toBe(
-      'warn'
-    );
+    expect(findings.every((x) => x.code === 'crawler.probe-failed')).toBe(true);
+    expect(findings).toHaveLength(3);
   });
 
   it('warns when an accessible crawler gets far less content than the browser', () => {

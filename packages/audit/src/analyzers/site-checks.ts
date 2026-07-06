@@ -14,7 +14,7 @@ function levelFromSeverity(severity: ValidationResult['severity']): AuditLevel {
   return severity === 'error' ? 'error' : 'warn';
 }
 
-const HTML_BODY_RE = /^\s*(?:<!doctype\s+html|<html[\s>])/i;
+const HTML_BODY_RE = /^(?:\uFEFF)?\s*(?:<!--[\s\S]*?-->\s*)*(?:<!doctype\s+html|<html[\s>])/i;
 
 /**
  * Whether a fetched text resource (llms.txt, robots.txt) is a genuine text
@@ -47,7 +47,7 @@ function isGraphContainer(
 
 /** The crawler stance the audit checks against: these should be reachable. */
 const EXPECTED_CRAWLERS: AiCrawlersConfig = Object.fromEntries(
-  CRAWLER_AGENTS.map((agent) => [agent.ua.split('/')[0], 'allow' as const])
+  CRAWLER_AGENTS.map((agent) => [agent.id, 'allow' as const])
 );
 
 export function stripTags(html: string): string {

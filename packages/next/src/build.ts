@@ -111,7 +111,7 @@ export async function processNextBuildOutput(
 
     if (
       advertiseLlmsTxt &&
-      !hasLlmsTxtDiscoveryLinkForHref(nextHtml, publicLlmsTxtPath)
+      !hasLlmsTxtDiscoveryLink(nextHtml)
     ) {
       nextHtml = injectHeadContent(
         nextHtml,
@@ -125,7 +125,7 @@ export async function processNextBuildOutput(
     );
     if (
       isFeatureEnabled(config.markdownPages) &&
-      !hasMarkdownAlternateLinkForHref(nextHtml, publicMarkdownPath)
+      !hasMarkdownAlternateLink(nextHtml)
     ) {
       nextHtml = injectHeadContent(
         nextHtml,
@@ -431,51 +431,48 @@ export async function processNextBuildOutput(
     }
   }
 
-  if (target.mode === 'export') {
-    const outputHeadersPath = resolveContainedPath(
-      target.outputRoot,
-      '_headers',
-      'generated _headers file'
-    );
-    const existingHeaders = await readFirstExisting([
-      outputHeadersPath,
-      resolveContainedPath(publicDir, '_headers', 'generated _headers file'),
-    ]);
-    const nextHeadersConfig = withBasePathContentSignalConfig(
-      config.contentSignalHeaders,
-      nextConfig.basePath
-    );
+  const outputHeadersPath =
+    target.mode === 'export'
+      ? resolveContainedPath(target.outputRoot, '_headers', 'generated _headers file')
+      : resolveContainedPath(publicDir, '_headers', 'generated _headers file');
+  const existingHeaders = await readFirstExisting([
+    outputHeadersPath,
+    resolveContainedPath(publicDir, '_headers', 'generated _headers file'),
+  ]);
+  const nextHeadersConfig = withBasePathContentSignalConfig(
+    config.contentSignalHeaders,
+    nextConfig.basePath
+  );
 
-    if (isFeatureEnabled(config.contentSignalHeaders) || markdownCanonicalEntries.length > 0) {
-      let patchedHeaders: string;
+  if (isFeatureEnabled(config.contentSignalHeaders) || markdownCanonicalEntries.length > 0) {
+    let patchedHeaders: string;
 
-      if (isFeatureEnabled(config.contentSignalHeaders)) {
-        patchedHeaders = patchHeadersFile(existingHeaders, nextHeadersConfig, {
-          markdownCanonicalEntries,
-        });
-      } else {
-        patchedHeaders = patchMarkdownCanonicalHeaders(
-          existingHeaders,
-          markdownCanonicalEntries
-        );
-      }
+    if (isFeatureEnabled(config.contentSignalHeaders)) {
+      patchedHeaders = patchHeadersFile(existingHeaders, nextHeadersConfig, {
+        markdownCanonicalEntries,
+      });
+    } else {
+      patchedHeaders = patchMarkdownCanonicalHeaders(
+        existingHeaders,
+        markdownCanonicalEntries
+      );
+    }
 
-      const preserved =
-        existingHeaders !== null &&
-        patchedHeaders === ensureTrailingNewline(existingHeaders);
+    const preserved =
+      existingHeaders !== null &&
+      patchedHeaders === ensureTrailingNewline(existingHeaders);
 
-      if (isFeatureEnabled(config.contentSignalHeaders)) {
-        contentSignalHeadersStatus = preserved ? 'preserved' : 'generated';
-      }
+    if (isFeatureEnabled(config.contentSignalHeaders)) {
+      contentSignalHeadersStatus = preserved ? 'preserved' : 'generated';
+    }
 
-      if (markdownCanonicalEntries.length > 0) {
-        markdownCanonicalHeadersCount = markdownCanonicalEntries.length;
-        markdownCanonicalHeadersStatus = preserved ? 'preserved' : 'generated';
-      }
+    if (markdownCanonicalEntries.length > 0) {
+      markdownCanonicalHeadersCount = markdownCanonicalEntries.length;
+      markdownCanonicalHeadersStatus = preserved ? 'preserved' : 'generated';
+    }
 
-      if (!preserved || !(await fileExists(outputHeadersPath))) {
-        await writeTextFile(outputHeadersPath, patchedHeaders);
-      }
+    if (!preserved || !(await fileExists(outputHeadersPath))) {
+      await writeTextFile(outputHeadersPath, patchedHeaders);
     }
   }
 
@@ -943,13 +940,8 @@ function buildLlmsTxtDiscoveryLink(href: string): string {
   )}" title="LLM-readable site summary" />`;
 }
 
-function hasLlmsTxtDiscoveryLinkForHref(html: string, href: string): boolean {
-  return new RegExp(
-    `<link\\b[^>]*rel=(['"])alternate\\1[^>]*type=(['"])text\\/plain\\2[^>]*href=(['"])${escapeRegExp(
-      href
-    )}\\3`,
-    'i'
-  ).test(html);
+function hasLlmsTxtDiscoveryLink(html: string): boolean {
+  return /<link\b[^>]*rel=(['"])alternate\1[^>]*type=(['"])text\/plain\2/i.test(html);
 }
 
 function buildMarkdownAlternateLink(href: string): string {
@@ -958,12 +950,8 @@ function buildMarkdownAlternateLink(href: string): string {
   )}" title="Markdown version of this page" />`;
 }
 
-function hasMarkdownAlternateLinkForHref(html: string, href: string): boolean {
-  const match = html.match(
-    /<link\b[^>]*rel=(['"])alternate\1[^>]*type=(['"])text\/markdown\2[^>]*href=(['"])([\s\S]*?)\3/i
-  );
-
-  return match?.[4]?.trim() === href;
+function hasMarkdownAlternateLink(html: string): boolean {
+  return /<link\b[^>]*rel=(['"])alternate\1[^>]*type=(['"])text\/markdown\2/i.test(html);
 }
 
 function validateMarkdownAlternateLinkForHref(
