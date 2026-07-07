@@ -183,4 +183,29 @@ describe('findBlockedCrawlers', () => {
     const blocked = findBlockedCrawlers(robotsTxt, { GPTBot: 'allow' });
     expect(blocked).toHaveLength(0);
   });
+
+  it('does not leak a wildcard root Disallow onto a prior group without blank-line separators', () => {
+    // GPTBot has its own group that only disallows /private, then the wildcard
+    // group blocks everything. RFC 9309 says only GPTBot's own group applies, so
+    // GPTBot must not be reported as blocked even without a blank line between groups.
+    const robotsTxt =
+      'User-agent: GPTBot\nDisallow: /private\nUser-agent: *\nDisallow: /\n';
+    const blocked = findBlockedCrawlers(robotsTxt, {
+      GPTBot: 'allow',
+      ClaudeBot: 'allow',
+    });
+    expect(blocked).not.toContain('GPTBot');
+    expect(blocked).toContain('ClaudeBot');
+  });
+
+  it('treats an empty Disallow group as allow-all despite a wildcard disallow', () => {
+    const robotsTxt =
+      'User-agent: GPTBot\nDisallow:\n\nUser-agent: *\nDisallow: /\n';
+    const blocked = findBlockedCrawlers(robotsTxt, {
+      GPTBot: 'allow',
+      ClaudeBot: 'allow',
+    });
+    expect(blocked).not.toContain('GPTBot');
+    expect(blocked).toContain('ClaudeBot');
+  });
 });

@@ -118,10 +118,15 @@ export function findBlockedCrawlers(
 ): string[] {
   const lines = robotsTxt.split('\n');
   let currentAgents: string[] = [];
+  let groupHasRules = false;
   let insideManagedBlock = false;
 
-  const explicitDirectives = new Map<string, 'allow' | 'disallow'>();
-  let wildcardDirective: 'allow' | 'disallow' | undefined = undefined;
+  // Per RFC 9309, a crawler obeys only its own most-specific group; the wildcard
+  // `*` group applies only to crawlers that have no group of their own. So track
+  // which bots have their own group separately from any root Allow/Disallow.
+  const botHasOwnGroup = new Set<string>();
+  const explicitRootDirective = new Map<string, 'allow' | 'disallow'>();
+  let wildcardRootDirective: 'allow' | 'disallow' | undefined = undefined;
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -129,12 +134,14 @@ export function findBlockedCrawlers(
     if (trimmed === MARKER_START) {
       insideManagedBlock = true;
       currentAgents = [];
+      groupHasRules = false;
       continue;
     }
 
     if (trimmed === MARKER_END) {
       insideManagedBlock = false;
       currentAgents = [];
+      groupHasRules = false;
       continue;
     }
 
@@ -144,43 +151,58 @@ export function findBlockedCrawlers(
 
     const agentMatch = trimmed.match(/^User-agent:\s*(.+)$/i);
     if (agentMatch) {
-      currentAgents.push(agentMatch[1].trim());
+      // A User-agent line following a rule starts a new group; blank line
+      // separators are optional in robots.txt, so do not rely on them.
+      if (groupHasRules) {
+        currentAgents = [];
+        groupHasRules = false;
+      }
+      const agent = agentMatch[1].trim();
+      currentAgents.push(agent);
+      if (agent !== '*') {
+        botHasOwnGroup.add(agent.toLowerCase());
+      }
       continue;
     }
 
-    const disallowMatch = trimmed.match(/^Disallow:\s*\/\s*$/i);
-    const allowMatch = trimmed.match(/^Allow:\s*\/\s*$/i);
-
-    if (disallowMatch || allowMatch) {
-      const type = disallowMatch ? 'disallow' : 'allow';
-      if (currentAgents.length > 0) {
+    if (/^(?:allow|disallow)\s*:/i.test(trimmed)) {
+      const rootDisallow = /^Disallow:\s*\/\s*$/i.test(trimmed);
+      const rootAllow = /^Allow:\s*\/\s*$/i.test(trimmed);
+      if ((rootDisallow || rootAllow) && currentAgents.length > 0) {
+        const type: 'allow' | 'disallow' = rootDisallow ? 'disallow' : 'allow';
         for (const agent of currentAgents) {
           if (agent === '*') {
-            if (!wildcardDirective) wildcardDirective = type;
+            if (!wildcardRootDirective) wildcardRootDirective = type;
           } else {
             const key = agent.toLowerCase();
-            if (!explicitDirectives.has(key)) {
-              explicitDirectives.set(key, type);
+            if (!explicitRootDirective.has(key)) {
+              explicitRootDirective.set(key, type);
             }
           }
         }
       }
+      groupHasRules = true;
     }
 
     if (trimmed === '') {
       currentAgents = [];
+      groupHasRules = false;
     }
   }
 
   const blocked: string[] = [];
   for (const [bot, directive] of Object.entries(crawlers)) {
-    if (directive === 'allow') {
-      const explicit = explicitDirectives.get(bot.toLowerCase());
-      if (explicit === 'disallow') {
-        blocked.push(bot);
-      } else if (!explicit && wildcardDirective === 'disallow') {
+    if (directive !== 'allow') {
+      continue;
+    }
+    const key = bot.toLowerCase();
+    if (botHasOwnGroup.has(key)) {
+      // Only its own group applies; blocked solely by a root Disallow there.
+      if (explicitRootDirective.get(key) === 'disallow') {
         blocked.push(bot);
       }
+    } else if (wildcardRootDirective === 'disallow') {
+      blocked.push(bot);
     }
   }
 
