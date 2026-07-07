@@ -111,7 +111,7 @@ export async function processNextBuildOutput(
 
     if (
       advertiseLlmsTxt &&
-      !hasLlmsTxtDiscoveryLink(nextHtml)
+      !hasLlmsTxtDiscoveryLink(nextHtml, publicLlmsTxtPath)
     ) {
       nextHtml = injectHeadContent(
         nextHtml,
@@ -125,7 +125,7 @@ export async function processNextBuildOutput(
     );
     if (
       isFeatureEnabled(config.markdownPages) &&
-      !hasMarkdownAlternateLink(nextHtml)
+      !hasMarkdownAlternateLink(nextHtml, publicMarkdownPath)
     ) {
       nextHtml = injectHeadContent(
         nextHtml,
@@ -944,10 +944,36 @@ function buildLlmsTxtDiscoveryLink(href: string): string {
   )}" title="LLM-readable site summary" />`;
 }
 
-function hasLlmsTxtDiscoveryLink(html: string): boolean {
-  // Match a <link> carrying both rel=alternate and type=text/plain in either attribute order.
-  return /<link\b(?=[^>]*\brel=(['"])alternate\1)(?=[^>]*\btype=(['"])text\/plain\2)/i.test(
-    html
+/** Last path segment of an href, lowercased, ignoring query/hash/trailing slash. */
+function hrefBasename(href: string): string {
+  const clean = href.split('#')[0].split('?')[0].replace(/\/+$/, '');
+  return (clean.split('/').pop() ?? clean).toLowerCase();
+}
+
+/**
+ * Collect the `href`s of every `<link rel="alternate" type="...">` of a given
+ * type, tolerant of attribute order. Uses `matchAll` so no `/g` regex state
+ * leaks across calls.
+ */
+function alternateHrefsOfType(html: string, typeRe: RegExp): string[] {
+  const hrefs: string[] = [];
+  for (const match of html.matchAll(/<link\b[^>]*>/gi)) {
+    const tag = match[0];
+    if (/\brel=(['"])alternate\1/i.test(tag) && typeRe.test(tag)) {
+      const href = tag.match(/\bhref=(['"])([\s\S]*?)\1/i);
+      if (href) hrefs.push(href[2].trim());
+    }
+  }
+  return hrefs;
+}
+
+function hasLlmsTxtDiscoveryLink(html: string, expectedHref: string): boolean {
+  // Only suppress injection when an existing text/plain alternate points at the
+  // same file (by basename), so an unrelated link like humans.txt does not block
+  // it and a basePath-prefixed href still matches.
+  const target = hrefBasename(expectedHref);
+  return alternateHrefsOfType(html, /\btype=(['"])text\/plain\1/i).some(
+    (href) => hrefBasename(href) === target
   );
 }
 
@@ -957,10 +983,12 @@ function buildMarkdownAlternateLink(href: string): string {
   )}" title="Markdown version of this page" />`;
 }
 
-function hasMarkdownAlternateLink(html: string): boolean {
-  // Match a <link> carrying both rel=alternate and type=text/markdown in either attribute order.
-  return /<link\b(?=[^>]*\brel=(['"])alternate\1)(?=[^>]*\btype=(['"])text\/markdown\2)/i.test(
-    html
+function hasMarkdownAlternateLink(html: string, expectedHref: string): boolean {
+  // Only suppress injection when an existing text/markdown alternate points at the
+  // same mirror (by basename), tolerant of attribute order and basePath prefixes.
+  const target = hrefBasename(expectedHref);
+  return alternateHrefsOfType(html, /\btype=(['"])text\/markdown\1/i).some(
+    (href) => hrefBasename(href) === target
   );
 }
 
