@@ -262,6 +262,92 @@ describe('@agentmarkup/next', () => {
     expect(headers).toContain('Link: <https://example.com/docs/>; rel="canonical"');
   });
 
+  it('does not duplicate discovery links already present under a basePath, regardless of attribute order', async () => {
+    // Pre-existing links use type-before-rel ordering to also cover order-tolerant detection.
+    const preexisting =
+      '<link type="text/plain" rel="alternate" href="/docs/llms.txt" title="LLM-readable site summary" />' +
+      '<link type="text/markdown" rel="alternate" href="/docs/index.md" title="Markdown version of this page" />';
+    const root = await createFixture({
+      'out/index.html': `<html><head><title>Home</title>${preexisting}</head><body><main><h1>Home</h1><p>Welcome.</p></main></body></html>`,
+    });
+
+    await processNextBuildOutput(
+      {
+        site: 'https://example.com/docs',
+        name: 'Example',
+        description: 'Next fixture for discovery-link idempotency.',
+        llmsTxt: {
+          sections: [
+            {
+              title: 'Docs',
+              entries: [{ title: 'Home', url: '/', description: 'Home page' }],
+            },
+          ],
+        },
+        markdownPages: {
+          enabled: true,
+        },
+      },
+      {
+        projectDir: root,
+        nextConfig: {
+          output: 'export',
+          basePath: '/docs',
+        },
+        outputs: {
+          staticFiles: [
+            {
+              filePath: join(root, 'out', 'index.html'),
+              pathname: '/docs',
+            },
+          ],
+        },
+      }
+    );
+
+    const homeHtml = await readFile(join(root, 'out', 'index.html'), 'utf8');
+    expect(homeHtml.match(/type="text\/plain"/g)?.length ?? 0).toBe(1);
+    expect(homeHtml.match(/type="text\/markdown"/g)?.length ?? 0).toBe(1);
+  });
+
+  it('injects the llms.txt discovery link even when an unrelated text/plain alternate exists', async () => {
+    const preexisting =
+      '<link rel="alternate" type="text/plain" href="/humans.txt" title="Humans" />';
+    const root = await createFixture({
+      'out/index.html': `<html><head><title>Home</title>${preexisting}</head><body><main><h1>Home</h1><p>Welcome.</p></main></body></html>`,
+    });
+
+    await processNextBuildOutput(
+      {
+        site: 'https://example.com',
+        name: 'Example',
+        description: 'An unrelated text/plain alternate should not suppress llms.txt.',
+        llmsTxt: {
+          sections: [
+            {
+              title: 'Docs',
+              entries: [{ title: 'Home', url: '/', description: 'Home page' }],
+            },
+          ],
+        },
+      },
+      {
+        projectDir: root,
+        nextConfig: { output: 'export' },
+        outputs: {
+          staticFiles: [
+            { filePath: join(root, 'out', 'index.html'), pathname: '/' },
+          ],
+        },
+      }
+    );
+
+    const homeHtml = await readFile(join(root, 'out', 'index.html'), 'utf8');
+    expect(homeHtml).toContain('href="/llms.txt"');
+    expect(homeHtml).toContain('href="/humans.txt"');
+    expect(homeHtml.match(/type="text\/plain"/g)?.length ?? 0).toBe(2);
+  });
+
   it('emits full machine-readable output for static export builds', async () => {
     const root = await createFixture({
       'out/index.html': '<html><head><title>Home</title></head><body><main><h1>Home</h1><p>Welcome.</p></main></body></html>',
