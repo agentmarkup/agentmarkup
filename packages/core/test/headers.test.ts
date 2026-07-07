@@ -53,6 +53,13 @@ describe('Content-Signal headers', () => {
     expect(patchHeadersFile(existing, {})).toBe(existing);
   });
 
+  it('does not write a Content-Signal block when the config is disabled', () => {
+    const existing = ['/*', '  X-Content-Type-Options: nosniff', ''].join('\n');
+    const patched = patchHeadersFile(existing, { enabled: false });
+    expect(patched).not.toContain('# BEGIN agentmarkup Content-Signal');
+    expect(patched).not.toContain('Content-Signal:');
+  });
+
   it('rejects Content-Signal paths with control characters', () => {
     expect(() =>
       generateContentSignalHeaders({

@@ -62,9 +62,8 @@ describe('analyzeRobots', () => {
   it('passes when an expected crawler explicitly allows itself despite wildcard disallow', () => {
     const f = analyzeRobots(result({ body: 'User-agent: *\nDisallow: /\n\nUser-agent: GPTBot\nAllow: /\n' }));
     const error = f.find((x) => x.code === 'robots.blocks-crawlers');
-    // If gptbot is the only one we care about, it might still report others. 
-    // Wait, the default EXPECTED_CRAWLERS has multiple. So the others would be blocked by wildcard.
-    // Let's just check that 'gptbot' is not in the evidence.
+    // The other expected crawlers are still shadowed by the wildcard, so a finding
+    // may exist; what matters is that gptbot's own Allow group exempts it.
     expect(error?.evidence).not.toContain('gptbot');
   });
 
