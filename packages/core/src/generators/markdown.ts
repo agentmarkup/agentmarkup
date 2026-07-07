@@ -333,8 +333,11 @@ function stripDuplicateTitle(markdown: string, title: string | null): string {
     return markdown;
   }
 
-  const duplicateHeading = `# ${title}`.toLowerCase();
-  if (!markdown.toLowerCase().startsWith(duplicateHeading)) {
+  // Only strip the body's first heading when it is exactly `# <title>`. Matching a
+  // prefix would wrongly delete `# Introduction` when the title is merely `Intro`.
+  const duplicateHeading = `# ${title}`.trim().toLowerCase();
+  const firstLine = (markdown.split('\n', 1)[0] ?? '').trim().toLowerCase();
+  if (firstLine !== duplicateHeading) {
     return markdown;
   }
 

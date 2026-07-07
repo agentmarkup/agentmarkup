@@ -35,6 +35,26 @@ describe('generatePageMarkdown', () => {
     expect(markdown).not.toContain('Docs');
   });
 
+  it('keeps the body heading when the title is only a prefix of it', () => {
+    const markdown = generatePageMarkdown({
+      html: [
+        '<html>',
+        '<head><title>Intro</title></head>',
+        '<body><main>',
+        '<h1>Introduction</h1>',
+        '<p>Welcome to the guide.</p>',
+        '</main></body>',
+        '</html>',
+      ].join(''),
+      pagePath: '/intro/',
+      siteUrl: 'https://example.com',
+    });
+
+    // "Intro" is a prefix of "Introduction" but not equal, so the real heading
+    // must survive rather than being stripped as a duplicate title.
+    expect(markdown).toContain('# Introduction');
+  });
+
   it('falls back to head metadata when the body is a thin client shell', () => {
     const markdown = generatePageMarkdown({
       html: [
