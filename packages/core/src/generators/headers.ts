@@ -65,12 +65,14 @@ export function patchHeadersFile(
 ): string {
   let nextHeaders = existing;
 
-  nextHeaders = patchManagedHeadersBlock(nextHeaders, {
-    markerStart: CONTENT_SIGNAL_MARKER_START,
-    markerEnd: CONTENT_SIGNAL_MARKER_END,
-    block: generateContentSignalHeaders(config),
-    matches: (headers) => hasMatchingContentSignalHeaders(headers, config),
-  });
+  if (config.enabled !== false) {
+    nextHeaders = patchManagedHeadersBlock(nextHeaders, {
+      markerStart: CONTENT_SIGNAL_MARKER_START,
+      markerEnd: CONTENT_SIGNAL_MARKER_END,
+      block: generateContentSignalHeaders(config),
+      matches: (headers) => hasMatchingContentSignalHeaders(headers, config),
+    });
+  }
 
   if (options.markdownCanonicalEntries?.length) {
     const normalizedEntries = normalizeMarkdownCanonicalEntries(

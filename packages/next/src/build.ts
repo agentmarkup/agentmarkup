@@ -111,7 +111,7 @@ export async function processNextBuildOutput(
 
     if (
       advertiseLlmsTxt &&
-      !hasLlmsTxtDiscoveryLinkForHref(nextHtml, publicLlmsTxtPath)
+      !hasLlmsTxtDiscoveryLink(nextHtml, publicLlmsTxtPath)
     ) {
       nextHtml = injectHeadContent(
         nextHtml,
@@ -125,7 +125,7 @@ export async function processNextBuildOutput(
     );
     if (
       isFeatureEnabled(config.markdownPages) &&
-      !hasMarkdownAlternateLinkForHref(nextHtml, publicMarkdownPath)
+      !hasMarkdownAlternateLink(nextHtml, publicMarkdownPath)
     ) {
       nextHtml = injectHeadContent(
         nextHtml,
@@ -431,51 +431,52 @@ export async function processNextBuildOutput(
     }
   }
 
-  if (target.mode === 'export') {
-    const outputHeadersPath = resolveContainedPath(
-      target.outputRoot,
-      '_headers',
-      'generated _headers file'
-    );
-    const existingHeaders = await readFirstExisting([
-      outputHeadersPath,
-      resolveContainedPath(publicDir, '_headers', 'generated _headers file'),
-    ]);
-    const nextHeadersConfig = withBasePathContentSignalConfig(
-      config.contentSignalHeaders,
-      nextConfig.basePath
-    );
+  const outputHeadersPath =
+    target.mode === 'export'
+      ? resolveContainedPath(target.outputRoot, '_headers', 'generated _headers file')
+      : resolveContainedPath(publicDir, '_headers', 'generated _headers file');
+  const existingHeaders = await readFirstExisting(
+    target.mode === 'export'
+      ? [
+          outputHeadersPath,
+          resolveContainedPath(publicDir, '_headers', 'generated _headers file'),
+        ]
+      : [outputHeadersPath]
+  );
+  const nextHeadersConfig = withBasePathContentSignalConfig(
+    config.contentSignalHeaders,
+    nextConfig.basePath
+  );
 
-    if (isFeatureEnabled(config.contentSignalHeaders) || markdownCanonicalEntries.length > 0) {
-      let patchedHeaders: string;
+  if (isFeatureEnabled(config.contentSignalHeaders) || markdownCanonicalEntries.length > 0) {
+    let patchedHeaders: string;
 
-      if (isFeatureEnabled(config.contentSignalHeaders)) {
-        patchedHeaders = patchHeadersFile(existingHeaders, nextHeadersConfig, {
-          markdownCanonicalEntries,
-        });
-      } else {
-        patchedHeaders = patchMarkdownCanonicalHeaders(
-          existingHeaders,
-          markdownCanonicalEntries
-        );
-      }
+    if (isFeatureEnabled(config.contentSignalHeaders)) {
+      patchedHeaders = patchHeadersFile(existingHeaders, nextHeadersConfig, {
+        markdownCanonicalEntries,
+      });
+    } else {
+      patchedHeaders = patchMarkdownCanonicalHeaders(
+        existingHeaders,
+        markdownCanonicalEntries
+      );
+    }
 
-      const preserved =
-        existingHeaders !== null &&
-        patchedHeaders === ensureTrailingNewline(existingHeaders);
+    const preserved =
+      existingHeaders !== null &&
+      patchedHeaders === ensureTrailingNewline(existingHeaders);
 
-      if (isFeatureEnabled(config.contentSignalHeaders)) {
-        contentSignalHeadersStatus = preserved ? 'preserved' : 'generated';
-      }
+    if (isFeatureEnabled(config.contentSignalHeaders)) {
+      contentSignalHeadersStatus = preserved ? 'preserved' : 'generated';
+    }
 
-      if (markdownCanonicalEntries.length > 0) {
-        markdownCanonicalHeadersCount = markdownCanonicalEntries.length;
-        markdownCanonicalHeadersStatus = preserved ? 'preserved' : 'generated';
-      }
+    if (markdownCanonicalEntries.length > 0) {
+      markdownCanonicalHeadersCount = markdownCanonicalEntries.length;
+      markdownCanonicalHeadersStatus = preserved ? 'preserved' : 'generated';
+    }
 
-      if (!preserved || !(await fileExists(outputHeadersPath))) {
-        await writeTextFile(outputHeadersPath, patchedHeaders);
-      }
+    if (!preserved || !(await fileExists(outputHeadersPath))) {
+      await writeTextFile(outputHeadersPath, patchedHeaders);
     }
   }
 
@@ -943,13 +944,37 @@ function buildLlmsTxtDiscoveryLink(href: string): string {
   )}" title="LLM-readable site summary" />`;
 }
 
-function hasLlmsTxtDiscoveryLinkForHref(html: string, href: string): boolean {
-  return new RegExp(
-    `<link\\b[^>]*rel=(['"])alternate\\1[^>]*type=(['"])text\\/plain\\2[^>]*href=(['"])${escapeRegExp(
-      href
-    )}\\3`,
-    'i'
-  ).test(html);
+/** Last path segment of an href, lowercased, ignoring query/hash/trailing slash. */
+function hrefBasename(href: string): string {
+  const clean = href.split('#')[0].split('?')[0].replace(/\/+$/, '');
+  return (clean.split('/').pop() ?? clean).toLowerCase();
+}
+
+/**
+ * Collect the `href`s of every `<link rel="alternate" type="...">` of a given
+ * type, tolerant of attribute order. Uses `matchAll` so no `/g` regex state
+ * leaks across calls.
+ */
+function alternateHrefsOfType(html: string, typeRe: RegExp): string[] {
+  const hrefs: string[] = [];
+  for (const match of html.matchAll(/<link\b[^>]*>/gi)) {
+    const tag = match[0];
+    if (/\brel=(['"])alternate\1/i.test(tag) && typeRe.test(tag)) {
+      const href = tag.match(/\bhref=(['"])([\s\S]*?)\1/i);
+      if (href) hrefs.push(href[2].trim());
+    }
+  }
+  return hrefs;
+}
+
+function hasLlmsTxtDiscoveryLink(html: string, expectedHref: string): boolean {
+  // Only suppress injection when an existing text/plain alternate points at the
+  // same file (by basename), so an unrelated link like humans.txt does not block
+  // it and a basePath-prefixed href still matches.
+  const target = hrefBasename(expectedHref);
+  return alternateHrefsOfType(html, /\btype=(['"])text\/plain\1/i).some(
+    (href) => hrefBasename(href) === target
+  );
 }
 
 function buildMarkdownAlternateLink(href: string): string {
@@ -958,12 +983,13 @@ function buildMarkdownAlternateLink(href: string): string {
   )}" title="Markdown version of this page" />`;
 }
 
-function hasMarkdownAlternateLinkForHref(html: string, href: string): boolean {
-  const match = html.match(
-    /<link\b[^>]*rel=(['"])alternate\1[^>]*type=(['"])text\/markdown\2[^>]*href=(['"])([\s\S]*?)\3/i
+function hasMarkdownAlternateLink(html: string, expectedHref: string): boolean {
+  // Only suppress injection when an existing text/markdown alternate points at the
+  // same mirror (by basename), tolerant of attribute order and basePath prefixes.
+  const target = hrefBasename(expectedHref);
+  return alternateHrefsOfType(html, /\btype=(['"])text\/markdown\1/i).some(
+    (href) => hrefBasename(href) === target
   );
-
-  return match?.[4]?.trim() === href;
 }
 
 function validateMarkdownAlternateLinkForHref(
@@ -1060,8 +1086,4 @@ function escapeAttribute(value: string): string {
     .replace(/"/g, '&quot;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
