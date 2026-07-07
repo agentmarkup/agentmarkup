@@ -435,10 +435,14 @@ export async function processNextBuildOutput(
     target.mode === 'export'
       ? resolveContainedPath(target.outputRoot, '_headers', 'generated _headers file')
       : resolveContainedPath(publicDir, '_headers', 'generated _headers file');
-  const existingHeaders = await readFirstExisting([
-    outputHeadersPath,
-    resolveContainedPath(publicDir, '_headers', 'generated _headers file'),
-  ]);
+  const existingHeaders = await readFirstExisting(
+    target.mode === 'export'
+      ? [
+          outputHeadersPath,
+          resolveContainedPath(publicDir, '_headers', 'generated _headers file'),
+        ]
+      : [outputHeadersPath]
+  );
   const nextHeadersConfig = withBasePathContentSignalConfig(
     config.contentSignalHeaders,
     nextConfig.basePath
@@ -941,7 +945,10 @@ function buildLlmsTxtDiscoveryLink(href: string): string {
 }
 
 function hasLlmsTxtDiscoveryLink(html: string): boolean {
-  return /<link\b[^>]*rel=(['"])alternate\1[^>]*type=(['"])text\/plain\2/i.test(html);
+  // Match a <link> carrying both rel=alternate and type=text/plain in either attribute order.
+  return /<link\b(?=[^>]*\brel=(['"])alternate\1)(?=[^>]*\btype=(['"])text\/plain\2)/i.test(
+    html
+  );
 }
 
 function buildMarkdownAlternateLink(href: string): string {
@@ -951,7 +958,10 @@ function buildMarkdownAlternateLink(href: string): string {
 }
 
 function hasMarkdownAlternateLink(html: string): boolean {
-  return /<link\b[^>]*rel=(['"])alternate\1[^>]*type=(['"])text\/markdown\2/i.test(html);
+  // Match a <link> carrying both rel=alternate and type=text/markdown in either attribute order.
+  return /<link\b(?=[^>]*\brel=(['"])alternate\1)(?=[^>]*\btype=(['"])text\/markdown\2)/i.test(
+    html
+  );
 }
 
 function validateMarkdownAlternateLinkForHref(
@@ -1048,8 +1058,4 @@ function escapeAttribute(value: string): string {
     .replace(/"/g, '&quot;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
