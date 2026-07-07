@@ -1,6 +1,6 @@
 {
   "name": "@agentmarkup/core",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "description": "Framework-agnostic llms.txt, llms-full.txt, A2A Agent Cards, JSON-LD, markdown mirrors, headers, AI crawler controls, and validation",
   "type": "module",
   "license": "MIT",
@@ -59,7 +59,7 @@
     "eslint": "^9.0.0",
     "tsup": "^8.4.0",
     "typescript": "^5.7.0",
-    "vite": "^6.2.0",
-    "vitest": "^3.0.0"
+    "vite": "^6.4.3",
+    "vitest": "^3.2.6"
   }
 }
