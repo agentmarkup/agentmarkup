@@ -24,39 +24,45 @@ if ! CI=true pnpm exec wrangler whoami >/dev/null 2>&1; then
 fi
 
 echo "==> Verifying worker security header parity"
-read_root_header() {
-  awk -v header="$1" '
-    NR == 1 && $0 == "/*" { in_root_block = 1; next }
-    in_root_block && /^[^[:space:]]/ { exit }
-    in_root_block {
-      line = $0
-      sub(/^[[:space:]]*/, "", line)
-      if (index(line, header ":") == 1) {
-        sub(/^[^:]*:[[:space:]]*/, "", line)
-        print line
-        exit
-      }
-    }
-  ' website/public/_headers
-}
+# Compare each mirrored header for EXACT equality between the /* block of
+# website/public/_headers and the SECURITY_HEADERS object the worker serves.
+# A substring match would let drift through (e.g. DENY vs "DENY, SAMEORIGIN").
+if ! node -e '
+  const fs = require("fs");
+  const headersTxt = fs.readFileSync("website/public/_headers", "utf8");
+  const workerTxt = fs.readFileSync("website/public/_worker.js", "utf8");
 
-for header_name in \
-  Content-Security-Policy \
-  X-Content-Type-Options \
-  X-Frame-Options \
-  Referrer-Policy \
-  Permissions-Policy
-do
-  header_value="$(read_root_header "$header_name")"
-  if [ -z "$header_value" ]; then
-    echo "Missing $header_name in the /* block of website/public/_headers." >&2
-    exit 1
-  fi
-  if ! grep -F -- "$header_value" website/public/_worker.js >/dev/null; then
-    echo "$header_name differs between website/public/_headers and website/public/_worker.js." >&2
-    exit 1
-  fi
-done
+  const rootHeaders = {};
+  let inRoot = false;
+  for (const line of headersTxt.split(/\r?\n/)) {
+    if (line.trim() === "/*") { inRoot = true; continue; }
+    if (inRoot && /^\S/.test(line)) break;
+    const m = inRoot ? line.match(/^\s+([A-Za-z-]+):\s*(.*)$/) : null;
+    if (m) rootHeaders[m[1].toLowerCase()] = m[2];
+  }
+
+  const objMatch = workerTxt.match(/const SECURITY_HEADERS = (\{[\s\S]*?\n\});/);
+  if (!objMatch) { console.error("Could not find SECURITY_HEADERS in _worker.js."); process.exit(1); }
+  let workerHeaders;
+  try { workerHeaders = new Function("return (" + objMatch[1] + ")")(); }
+  catch (e) { console.error("Could not parse SECURITY_HEADERS:", e.message); process.exit(1); }
+
+  const mirrored = ["content-security-policy", "x-content-type-options", "x-frame-options", "referrer-policy", "permissions-policy"];
+  let ok = true;
+  for (const name of mirrored) {
+    if (!(name in rootHeaders)) { console.error("Missing " + name + " in the /* block of website/public/_headers."); ok = false; continue; }
+    if (rootHeaders[name] !== workerHeaders[name]) {
+      console.error(name + " differs between _headers and the worker SECURITY_HEADERS constant.");
+      console.error("  _headers: " + rootHeaders[name]);
+      console.error("  _worker : " + String(workerHeaders[name]));
+      ok = false;
+    }
+  }
+  process.exit(ok ? 0 : 1);
+'; then
+  echo "Worker security header parity check failed." >&2
+  exit 1
+fi
 
 echo "==> Verifying security.txt freshness"
 security_expires="$(awk '$1 == "Expires:" { sub(/^[^:]*:[[:space:]]*/, ""); print; exit }' website/public/.well-known/security.txt)"

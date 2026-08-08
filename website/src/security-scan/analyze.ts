@@ -702,8 +702,16 @@ function buildResourceStatuses(
   items: SecurityAuditItem[]
 ): SecurityResourceStatus[] {
   const homepageComplete = isCompletedHttpsResponse(response.homepage);
+  const submittedSource = response.normalizedFrom ?? response.targetUrl;
+  const submittedHost = stripWww(
+    hostnameOf(
+      /^[a-z][a-z0-9+.-]*:\/\//i.test(submittedSource)
+        ? submittedSource
+        : `https://${submittedSource}`
+    )
+  );
   const homepageDetail = response.crossOriginRedirect
-    ? `${stripWww(hostnameOf(response.targetUrl))} redirected to ${hostnameOf(response.homepage.finalUrl)}. Only the landed page's response headers were analyzed.`
+    ? `${submittedHost} redirected to ${hostnameOf(response.homepage.finalUrl)}. Only the landed page's response headers were analyzed.`
     : homepageComplete
       ? `Completed with status ${response.homepage.status} at ${response.homepage.finalUrl}.`
       : response.homepage.error ?? 'The HTTPS request did not complete securely.';
@@ -845,13 +853,14 @@ function isRestrictiveFrameAncestors(sources: string[]): boolean {
   if (lower.includes('*') || lower.some((source) => /^[a-z][a-z0-9+.-]*:$/.test(source))) {
     return false;
   }
-  return lower.every(
-    (source) =>
-      source === "'none'" ||
-      source === "'self'" ||
-      /^https?:\/\//.test(source) ||
-      /^(?:\*\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?::\d+)?(?:\/.*)?$/i.test(source)
-  );
+  return lower.every((source) => {
+    if (source === "'none'" || source === "'self'") return true;
+    // Strip an optional scheme:// prefix, then require a concrete host source
+    // (a bare or *.-prefixed hostname). This rejects wildcard-all hosts such as
+    // https://* or http://*, which permit framing by every origin on that scheme.
+    const host = source.replace(/^[a-z][a-z0-9+.-]*:\/\//, '');
+    return /^(?:\*\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?::\d+)?(?:\/.*)?$/i.test(host);
+  });
 }
 
 function redirectsToHttps(probe: HttpProbeResult): boolean {

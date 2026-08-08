@@ -245,6 +245,32 @@ describe('analyzeSecurityScan response header checks', () => {
     );
   });
 
+  it('suppresses the unsafe-inline warning when a hash source is present', () => {
+    const analysis = analyzeSecurityScan(
+      withHeaders({
+        'content-security-policy': "script-src 'unsafe-inline' 'sha256-fixedtesthash'",
+      })
+    );
+
+    expect(
+      analysis.items.some(
+        (candidate) =>
+          candidate.title === 'Content-Security-Policy' &&
+          candidate.detail.includes('unsafe-inline')
+      )
+    ).toBe(false);
+  });
+
+  it('warns for unsafe-inline via the default-src fallback when there is no script-src', () => {
+    const scan = withHeaders({
+      'content-security-policy': "default-src 'self' 'unsafe-inline'",
+    });
+
+    expect(item(scan, 'Content-Security-Policy', 'warning').detail).toContain(
+      'unsafe-inline'
+    );
+  });
+
   it.each([
     [
       'restrictive frame-ancestors',
@@ -257,6 +283,16 @@ describe('analyzeSecurityScan response header checks', () => {
         'content-security-policy': 'frame-ancestors *',
         'x-frame-options': 'DENY',
       },
+      'warning',
+    ],
+    [
+      'permissive frame-ancestors without XFO',
+      { 'content-security-policy': 'frame-ancestors *' },
+      'warning',
+    ],
+    [
+      'wildcard-all host frame-ancestors',
+      { 'content-security-policy': 'frame-ancestors https://*' },
       'warning',
     ],
     ['XFO DENY only', { 'x-frame-options': 'DENY' }, 'pass'],
@@ -402,6 +438,22 @@ describe('analyzeSecurityScan HTML content checks (needs a DOM environment)', ()
       html('<script src="https://cdn.example/app.js"></script>'),
       'Subresource Integrity',
       'warning'
+    );
+  });
+
+  it('passes when every cross-origin script has an integrity attribute', () => {
+    item(
+      html('<script src="https://cdn.example/app.js" integrity="sha384-fixedtest"></script>'),
+      'Subresource Integrity',
+      'pass'
+    );
+  });
+
+  it('passes when there are no cross-origin scripts', () => {
+    item(
+      html('<script src="/app.js"></script>'),
+      'Subresource Integrity',
+      'pass'
     );
   });
 });

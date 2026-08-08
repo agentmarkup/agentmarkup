@@ -56,6 +56,8 @@ const SECURITY_SCAN_PREFIX = 'security-scan:';
 const SECURITY_SCAN_MIN_FETCH_BUDGET_MS = 1500;
 const DNS_LOOKUP_TIMEOUT_MS = 4000;
 const MAX_DNS_RESPONSE_BYTES = 64 * 1024;
+// DNS-over-HTTPS numeric RR type codes for the record types we query.
+const DNS_RECORD_TYPE_NUMBERS = { TXT: 16, DS: 43 };
 const SECURITY_HEADER_NAMES = [
   'strict-transport-security',
   'content-security-policy',
@@ -1196,7 +1198,8 @@ async function fetchText(targetUrl, checkStartTime, options = {}) {
 
           if (
             options.sameHostAs &&
-            !hostnamesMatch(nextUrl.hostname, options.sameHostAs)
+            (!hostnamesMatch(nextUrl.hostname, options.sameHostAs) ||
+              nextUrl.protocol !== 'https:')
           ) {
             await cancelResponseBody(response);
             return {
@@ -1385,6 +1388,19 @@ async function probeHttpDowngrade(hostname, checkStartTime) {
     };
   }
 
+  // Re-validate the host immediately before the probe fetch, matching the
+  // per-hop guard in fetchText. The hostname was validated during the earlier
+  // HTTPS homepage fetch, but a separate request is a separate resolution, so
+  // re-check to keep the SSRF guard consistent across both requests.
+  if (isBlockedHostname(hostname)) {
+    return {
+      requestedUrl,
+      status: 0,
+      location: null,
+      error: 'Request was blocked by checker safety rules.',
+    };
+  }
+
   const { signal, cancel } = createTimeoutSignal(
     Math.min(5000, remainingGlobalTime)
   );
@@ -1456,12 +1472,18 @@ async function dnsLookup(
       return null;
     }
 
+    // Return only answers whose RR type matches the query, so a DS query cannot
+    // report a CNAME/RRSIG as a signed delegation and a TXT query stays TXT-only.
+    const expectedType = DNS_RECORD_TYPE_NUMBERS[type];
     return {
       status: payload.Status,
       ad: payload.AD === true,
       answers: Array.isArray(payload.Answer)
         ? payload.Answer.flatMap((answer) =>
-            typeof answer?.data === 'string' ? [answer.data] : []
+            typeof answer?.data === 'string' &&
+            (expectedType === undefined || answer.type === expectedType)
+              ? [answer.data]
+              : []
           )
         : [],
     };
