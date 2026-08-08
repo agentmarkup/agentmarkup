@@ -510,6 +510,8 @@ function analyzeMixedContent(
 
   collectHttpAttribute(document, 'script[src]', 'src', active);
   collectHttpAttribute(document, 'iframe[src]', 'src', active);
+  collectHttpAttribute(document, 'embed[src]', 'src', active);
+  collectHttpAttribute(document, 'object[data]', 'data', active);
   for (const link of Array.from(document.querySelectorAll('link[href]'))) {
     const rel = link.getAttribute('rel')?.toLowerCase().split(/\s+/) ?? [];
     const href = link.getAttribute('href')?.trim() ?? '';

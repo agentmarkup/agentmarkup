@@ -422,6 +422,7 @@ describe('analyzeSecurityScan HTML content checks (needs a DOM environment)', ()
 
   it.each([
     ['active HTTP content', '<script src="http://cdn.example/app.js"></script>', 'error'],
+    ['active HTTP object', '<object data="http://cdn.example/plugin.swf"></object>', 'error'],
     ['passive HTTP content', '<img src="http://cdn.example/image.png">', 'warning'],
     ['no HTTP content', '<img src="/image.png">', 'pass'],
     [
