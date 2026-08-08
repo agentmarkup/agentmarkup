@@ -200,6 +200,18 @@ function reportFileName(analysis: SecurityScanAnalysis, extension: string): stri
   return `agentmarkup-security-scan-${reportHostSlug(analysis)}-${date}.${extension}`;
 }
 
+// Neutralize remote-derived values (URLs, header values, statuses) before
+// putting them in the Markdown report: collapse newlines so a value cannot
+// start a new heading or list item, and escape characters a Markdown or
+// HTML-aware renderer would interpret, so a scanned site cannot inject
+// structure, links, or raw HTML into a downloaded report.
+function mdSafe(value: string): string {
+  return value
+    .replace(/\r?\n/g, ' ')
+    .replace(/[<>`[\]\\]/g, (ch) => `\\${ch}`)
+    .trim();
+}
+
 function buildReportMarkdown(
   analysis: SecurityScanAnalysis,
   result: SecurityScanResponse
@@ -207,10 +219,10 @@ function buildReportMarkdown(
   const lines: string[] = [];
   lines.push('# agentmarkup passive security scan report');
   lines.push('');
-  lines.push(`- Target: ${analysis.normalizedUrl}`);
+  lines.push(`- Target: ${mdSafe(analysis.normalizedUrl)}`);
   lines.push(`- Scanned at: ${new Date(result.fetchedAt).toISOString()}`);
   if (analysis.normalizedFrom) {
-    lines.push(`- Input normalized from: ${analysis.normalizedFrom}`);
+    lines.push(`- Input normalized from: ${mdSafe(analysis.normalizedFrom)}`);
   }
   lines.push(
     `- Summary: ${analysis.counts.error} error(s), ${analysis.counts.warning} warning(s), ${analysis.counts.pass} pass(es)`
@@ -220,18 +232,20 @@ function buildReportMarkdown(
   lines.push('## Findings');
   lines.push('');
   for (const item of analysis.items) {
-    lines.push(`### [${item.level.toUpperCase()}] ${item.title}`);
+    lines.push(`### [${item.level.toUpperCase()}] ${mdSafe(item.title)}`);
     lines.push('');
-    lines.push(item.detail);
+    lines.push(mdSafe(item.detail));
     lines.push('');
-    lines.push(`What this means: ${item.explainer}`);
+    lines.push(`What this means: ${mdSafe(item.explainer)}`);
     lines.push('');
   }
 
   lines.push('## Resources checked');
   lines.push('');
   for (const resource of analysis.resources) {
-    lines.push(`- ${resource.label} (${resource.status}): ${resource.detail}`);
+    lines.push(
+      `- ${mdSafe(resource.label)} (${mdSafe(resource.status)}): ${mdSafe(resource.detail)}`
+    );
   }
   lines.push('');
 
@@ -452,8 +466,20 @@ function SecurityScan() {
                 spellCheck={false}
                 required
               />
-              <button className="checker-submit" type="submit" disabled={loading}>
-                {loading ? 'Scanning...' : 'Run security scan'}
+              <button
+                className="checker-submit"
+                type="submit"
+                disabled={loading}
+                aria-busy={loading}
+              >
+                {loading ? (
+                  <>
+                    <span className="checker-spinner" aria-hidden="true" />
+                    Scanning...
+                  </>
+                ) : (
+                  'Run security scan'
+                )}
               </button>
             </div>
             <label
