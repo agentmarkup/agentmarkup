@@ -2068,7 +2068,11 @@ html[data-cookie-consent-ready="true"][data-cookie-consent="pending"] .cookie-ba
 
   /* Remove everything except the report from the layout entirely (display:none,
      not visibility:hidden) so the tall interactive results view does not leave
-     blank trailing pages. The report renders in normal flow. */
+     blank trailing pages. The report renders in normal flow. The :has() rule
+     robustly drops any body-level chrome (nav, footer, modals, toasts) that does
+     not contain the report; the explicit classes are a fallback where :has is
+     unsupported. */
+  body.printing-security-report > *:not(:has(.security-report-print)),
   body.printing-security-report .site-nav,
   body.printing-security-report .site-footer,
   body.printing-security-report .cookie-banner,
@@ -2088,7 +2092,6 @@ html[data-cookie-consent-ready="true"][data-cookie-consent="pending"] .cookie-ba
   body.printing-security-report .security-report-print,
   body.printing-security-report .security-report-print * {
     color: #000 !important;
-    background: transparent !important;
   }
 
   body.printing-security-report .security-report-print h1 {

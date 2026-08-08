@@ -847,7 +847,13 @@ function dedupeHeaderValue(raw: string | null | undefined): string | null {
   const value = raw?.trim();
   if (!value) return null;
   if (!value.includes(',')) return value;
-  const parts = value.split(',').map((part) => part.trim());
+  // Drop empty tokens (trailing commas, stray whitespace) before comparing, so
+  // "policy, policy," still collapses, and a comma-only value becomes null.
+  const parts = value
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (parts.length === 0) return null;
   const unique = [...new Set(parts)];
   return unique.length === 1 ? unique[0] : value;
 }
