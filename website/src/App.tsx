@@ -91,6 +91,13 @@ const configFiles: Record<Framework, string> = {
   nuxt: 'nuxt.config.ts',
 }
 
+const packageNames: Record<Framework, string> = {
+  next: '@agentmarkup/next',
+  vite: '@agentmarkup/vite',
+  astro: '@agentmarkup/astro',
+  nuxt: '@agentmarkup/nuxt',
+}
+
 function Home() {
   const [framework, setFramework] = useState<Framework>('next')
   const [checkerUrl, setCheckerUrl] = useState('')
@@ -110,7 +117,7 @@ function Home() {
         <div className="hero-copy">
           <p className="hero-overline">A clearer web for people and AI</p>
           <h1>Make your website easy for AI to understand.</h1>
-          <p className="tagline">Check your site in seconds. Get a clear answer and simple next steps—without needing to learn technical jargon first.</p>
+          <p className="tagline">Check your site in seconds. Get a clear answer and simple next steps without needing to learn technical jargon first.</p>
           <form className="hero-checker-form" action="/checker/" method="get" onSubmit={handleHeroCheckerSubmit}>
             <label className="sr-only" htmlFor="hero-checker-url">Website URL</label>
             <div className="checker-form-row hero-checker-row">
@@ -130,7 +137,7 @@ function Home() {
               />
               <button className="checker-submit" type="submit">Check my website</button>
             </div>
-            <p className="hero-checker-note">Free, public-site check. We start at your homepage.</p>
+            <p className="hero-checker-note">Free check of any public site. Whatever page you enter, we normalize it to the site root and start there.</p>
           </form>
         </div>
 
@@ -230,6 +237,7 @@ function Home() {
                 <button key={item} className={framework === item ? 'fw-tab active' : 'fw-tab'} onClick={() => setFramework(item)} aria-pressed={framework === item}>{item === 'next' ? 'Next.js' : item[0].toUpperCase() + item.slice(1)}</button>
               ))}
             </div>
+            <p className="install-command" aria-live="polite"><strong>Install:</strong> <code>pnpm add -D {packageNames[framework]}</code></p>
             <h3>Add to {configFiles[framework]}</h3>
             <CodeBlock code={examples[framework]} maxHeight="28rem" />
           </div>

@@ -20,9 +20,14 @@ export function mountPage(Page: ComponentType) {
   }
 
   const page = renderPageElement(Page)
-  if (root.hasChildNodes()) {
-    hydrateRoot(root, page)
-  } else {
+  if (!root.hasChildNodes()) {
+    if (!import.meta.env.DEV) {
+      throw new Error('Expected prerendered content in #root.')
+    }
+
     createRoot(root).render(page)
+    return
   }
+
+  hydrateRoot(root, page)
 }
