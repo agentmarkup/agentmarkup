@@ -318,6 +318,18 @@ describe('analyzeSecurityScan response header checks', () => {
     item(withHeaders(headers), 'Referrer-Policy', level);
   });
 
+  it('collapses a header sent twice into a single value', () => {
+    const scan = withHeaders({
+      'referrer-policy':
+        'strict-origin-when-cross-origin, strict-origin-when-cross-origin',
+    });
+    const found = item(scan, 'Referrer-Policy', 'pass');
+    expect(found.detail).toContain('strict-origin-when-cross-origin');
+    expect(found.detail).not.toContain(
+      'strict-origin-when-cross-origin, strict-origin-when-cross-origin'
+    );
+  });
+
   it.each([
     ['a present policy', { 'permissions-policy': 'camera=()' }, 'pass'],
     ['a missing policy', {}, 'warning'],
