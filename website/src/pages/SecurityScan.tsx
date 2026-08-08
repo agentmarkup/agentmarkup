@@ -1,15 +1,15 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 
-import { analyzeSiteCheck } from '../checker/analyze';
 import { normalizeWebsiteInput } from '../normalizeWebsiteInput';
+import { analyzeSecurityScan } from '../security-scan/analyze';
 import type {
-  AuditItem,
-  CheckerErrorResponse,
-  ResourceStatus,
-  SiteAnalysis,
-  SiteCheckResponse,
-} from '../checker/types';
+  SecurityAuditItem,
+  SecurityResourceStatus,
+  SecurityScanAnalysis,
+  SecurityScanErrorResponse,
+  SecurityScanResponse,
+} from '../security-scan/types';
 
 interface TurnstileApi {
   render: (
@@ -38,17 +38,17 @@ interface TurnstileChallengeState {
   retryAfterSeconds: number | null;
 }
 
-class CheckerRequestError extends Error {
+class SecurityScanRequestError extends Error {
   retryAfterSeconds: number | null;
 
   constructor(message: string, retryAfterSeconds: number | null = null) {
     super(message);
-    this.name = 'CheckerRequestError';
+    this.name = 'SecurityScanRequestError';
     this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 
-class CheckerTurnstileError extends CheckerRequestError {
+class SecurityScanTurnstileError extends SecurityScanRequestError {
   siteKey: string;
 
   constructor(
@@ -57,16 +57,13 @@ class CheckerTurnstileError extends CheckerRequestError {
     retryAfterSeconds: number | null = null
   ) {
     super(message, retryAfterSeconds);
-    this.name = 'CheckerTurnstileError';
+    this.name = 'SecurityScanTurnstileError';
     this.siteKey = siteKey;
   }
 }
 
 function getInitialUrl(): string {
-  if (typeof window === 'undefined') {
-    return '';
-  }
-
+  if (typeof window === 'undefined') return '';
   return normalizeWebsiteInput(
     new URLSearchParams(window.location.search).get('url') ?? ''
   );
@@ -77,9 +74,7 @@ async function loadTurnstile(): Promise<TurnstileApi> {
     throw new Error('Verification is only available in the browser.');
   }
 
-  if (window.turnstile) {
-    return window.turnstile;
-  }
+  if (window.turnstile) return window.turnstile;
 
   if (!window.__agentmarkupTurnstileLoader) {
     window.__agentmarkupTurnstileLoader = new Promise<TurnstileApi>(
@@ -87,16 +82,13 @@ async function loadTurnstile(): Promise<TurnstileApi> {
         const existing = document.querySelector<HTMLScriptElement>(
           'script[data-agentmarkup-turnstile="true"]'
         );
-
         const handleLoad = () => {
           if (window.turnstile) {
             resolve(window.turnstile);
-            return;
+          } else {
+            reject(new Error('Verification widget did not initialize.'));
           }
-
-          reject(new Error('Verification widget did not initialize.'));
         };
-
         const handleError = () => {
           reject(new Error('Verification widget could not be loaded.'));
         };
@@ -124,10 +116,7 @@ async function loadTurnstile(): Promise<TurnstileApi> {
 }
 
 function formatRetryAfter(retryAfterSeconds: number | null): string | null {
-  if (!retryAfterSeconds || retryAfterSeconds <= 0) {
-    return null;
-  }
-
+  if (!retryAfterSeconds || retryAfterSeconds <= 0) return null;
   if (retryAfterSeconds < 60) {
     return `Try again in about ${retryAfterSeconds} second${
       retryAfterSeconds === 1 ? '' : 's'
@@ -138,41 +127,38 @@ function formatRetryAfter(retryAfterSeconds: number | null): string | null {
   return `Try again in about ${minutes} minute${minutes === 1 ? '' : 's'}.`;
 }
 
-async function requestSiteCheck(
+async function requestSecurityScan(
   rawUrl: string,
   turnstileToken?: string
-): Promise<SiteCheckResponse> {
+): Promise<SecurityScanResponse> {
   const trimmedUrl = normalizeWebsiteInput(rawUrl);
-  const response = await fetch('/api/check', {
+  const response = await fetch('/api/security-scan', {
     method: 'POST',
     headers: {
       Accept: 'application/json',
       'content-type': 'application/json',
     },
-    body: JSON.stringify({
-      url: trimmedUrl,
-      turnstileToken,
-    }),
+    body: JSON.stringify({ url: trimmedUrl, turnstileToken }),
   });
 
   const contentType = response.headers.get('content-type')?.toLowerCase() ?? '';
   if (!contentType.includes('application/json')) {
-    throw new Error(getCheckerApiError(response.status));
+    throw new Error(getSecurityScanApiError(response.status));
   }
 
-  const payload = (await response.json()) as SiteCheckResponse &
-    CheckerErrorResponse;
+  const payload = (await response.json()) as SecurityScanResponse &
+    SecurityScanErrorResponse;
   if (!response.ok) {
     if (payload.turnstileRequired && payload.turnstileSiteKey) {
-      throw new CheckerTurnstileError(
+      throw new SecurityScanTurnstileError(
         payload.error ?? 'Additional verification is required.',
         payload.turnstileSiteKey,
         payload.retryAfterSeconds ?? null
       );
     }
 
-    throw new CheckerRequestError(
-      payload.error ?? `Checker request failed with HTTP ${response.status}`,
+    throw new SecurityScanRequestError(
+      payload.error ?? `Security scan failed with HTTP ${response.status}`,
       payload.retryAfterSeconds ?? null
     );
   }
@@ -180,37 +166,35 @@ async function requestSiteCheck(
   return payload;
 }
 
-function getCheckerApiError(status: number): string {
+function getSecurityScanApiError(status: number): string {
   const isLocalhost =
     typeof window !== 'undefined' &&
     ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname);
 
   if (isLocalhost) {
-    return 'The checker API runs in the Cloudflare Pages worker. Plain Vite localhost does not serve /api/check. Test this on the deployed site or run the site through Cloudflare Pages local dev.';
+    return 'The security scan API runs in the Cloudflare Pages worker. Plain Vite localhost does not serve /api/security-scan. Test this on the deployed site or run the site through Cloudflare Pages local dev.';
   }
-
   if (status === 404) {
-    return 'The checker API route was not found. Make sure the Pages worker is deployed alongside the website.';
+    return 'The security scan API route was not found. Make sure the Pages worker is deployed alongside the website.';
   }
-
-  return 'The checker API did not return JSON. Make sure the Pages worker is deployed and handling /api/check.';
+  return 'The security scan API did not return JSON. Make sure the Pages worker is deployed and handling /api/security-scan.';
 }
 
-function Checker() {
+function SecurityScan() {
   const [targetUrl, setTargetUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<SiteCheckResponse | null>(null);
-  const [analysis, setAnalysis] = useState<SiteAnalysis | null>(null);
+  const [result, setResult] = useState<SecurityScanResponse | null>(null);
+  const [analysis, setAnalysis] = useState<SecurityScanAnalysis | null>(null);
   const [turnstileChallenge, setTurnstileChallenge] =
     useState<TurnstileChallengeState | null>(null);
   const turnstileContainerRef = useRef<HTMLDivElement | null>(null);
   const turnstileWidgetIdRef = useRef<string | null>(null);
 
-  async function performCheck(rawUrl: string, turnstileToken?: string) {
+  async function performScan(rawUrl: string, turnstileToken?: string) {
     const trimmedUrl = normalizeWebsiteInput(rawUrl);
     if (!trimmedUrl) {
-      setError('Enter a public website URL to run the checker.');
+      setError('Enter a public website URL to run the security scan.');
       setResult(null);
       setAnalysis(null);
       setTurnstileChallenge(null);
@@ -219,23 +203,19 @@ function Checker() {
 
     setLoading(true);
     setError(null);
-
-    if (!turnstileToken) {
-      setTurnstileChallenge(null);
-    }
+    if (!turnstileToken) setTurnstileChallenge(null);
 
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set('url', trimmedUrl);
     window.history.replaceState({}, '', nextUrl);
 
     try {
-      const payload = await requestSiteCheck(trimmedUrl, turnstileToken);
-      const nextAnalysis = analyzeSiteCheck(payload);
+      const payload = await requestSecurityScan(trimmedUrl, turnstileToken);
       setResult(payload);
-      setAnalysis(nextAnalysis);
+      setAnalysis(analyzeSecurityScan(payload));
       setTurnstileChallenge(null);
     } catch (caught) {
-      if (caught instanceof CheckerTurnstileError) {
+      if (caught instanceof SecurityScanTurnstileError) {
         setError(null);
         setResult(null);
         setAnalysis(null);
@@ -248,14 +228,12 @@ function Checker() {
       }
 
       const baseMessage =
-        caught instanceof Error ? caught.message : 'The checker request failed.';
+        caught instanceof Error ? caught.message : 'The security scan failed.';
       const retryAfter =
-        caught instanceof CheckerRequestError
+        caught instanceof SecurityScanRequestError
           ? formatRetryAfter(caught.retryAfterSeconds)
           : null;
-      const message = retryAfter ? `${baseMessage} ${retryAfter}` : baseMessage;
-
-      setError(message);
+      setError(retryAfter ? `${baseMessage} ${retryAfter}` : baseMessage);
       setResult(null);
       setAnalysis(null);
       setTurnstileChallenge(null);
@@ -265,7 +243,7 @@ function Checker() {
   }
 
   const handleTurnstileToken = useEffectEvent((token: string) => {
-    void performCheck(targetUrl, token);
+    void performScan(targetUrl, token);
   });
 
   const handleTurnstileRenderFailure = useEffectEvent((message: string) => {
@@ -274,37 +252,27 @@ function Checker() {
 
   useEffect(() => {
     const initialUrl = getInitialUrl();
-    if (!initialUrl) {
-      return;
-    }
+    if (!initialUrl) return;
 
     let cancelled = false;
-
     setTargetUrl(initialUrl);
 
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set('url', initialUrl.trim());
     window.history.replaceState({}, '', nextUrl);
-
     setLoading(true);
     setError(null);
 
-    void requestSiteCheck(initialUrl)
+    void requestSecurityScan(initialUrl)
       .then((payload) => {
-        if (cancelled) {
-          return;
-        }
-
+        if (cancelled) return;
         setResult(payload);
-        setAnalysis(analyzeSiteCheck(payload));
+        setAnalysis(analyzeSecurityScan(payload));
         setTurnstileChallenge(null);
       })
       .catch((caught) => {
-        if (cancelled) {
-          return;
-        }
-
-        if (caught instanceof CheckerTurnstileError) {
+        if (cancelled) return;
+        if (caught instanceof SecurityScanTurnstileError) {
           setError(null);
           setResult(null);
           setAnalysis(null);
@@ -317,20 +285,18 @@ function Checker() {
         }
 
         const retryAfter =
-          caught instanceof CheckerRequestError
+          caught instanceof SecurityScanRequestError
             ? formatRetryAfter(caught.retryAfterSeconds)
             : null;
         const message =
-          caught instanceof Error ? caught.message : 'The checker request failed.';
+          caught instanceof Error ? caught.message : 'The security scan failed.';
         setError(retryAfter ? `${message} ${retryAfter}` : message);
         setResult(null);
         setAnalysis(null);
         setTurnstileChallenge(null);
       })
       .finally(() => {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       });
 
     return () => {
@@ -341,29 +307,21 @@ function Checker() {
   useEffect(() => {
     const challenge = turnstileChallenge;
     const container = turnstileContainerRef.current;
-    if (!challenge || !container) {
-      return;
-    }
+    if (!challenge || !container) return;
 
     let cancelled = false;
-
     container.innerHTML = '';
 
     void loadTurnstile()
       .then((turnstile) => {
-        if (cancelled) {
-          return;
-        }
-
+        if (cancelled) return;
         turnstileWidgetIdRef.current = turnstile.render(container, {
           sitekey: challenge.siteKey,
           theme: 'auto',
-          callback: (token) => {
-            handleTurnstileToken(token);
-          },
+          callback: (token) => handleTurnstileToken(token),
           'expired-callback': () => {
             handleTurnstileRenderFailure(
-              'Verification expired. Complete the challenge again to rerun the checker.'
+              'Verification expired. Complete the challenge again to rerun the security scan.'
             );
           },
           'error-callback': () => {
@@ -383,42 +341,43 @@ function Checker() {
 
     return () => {
       cancelled = true;
-
       if (turnstileWidgetIdRef.current && window.turnstile) {
         window.turnstile.remove(turnstileWidgetIdRef.current);
         turnstileWidgetIdRef.current = null;
       }
-
       container.innerHTML = '';
     };
   }, [turnstileChallenge]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void performCheck(targetUrl);
+    void performScan(targetUrl);
   }
 
   return (
     <main>
       <article className="doc-page checker-page">
-        <h1>Check your website before AI crawlers and search engines do</h1>
+        <h1>Passive security scan for public websites</h1>
         <p className="doc-intro checker-intro">
-          The checker fetches your public homepage, markdown mirrors, <code>/llms.txt</code>, <code>/robots.txt</code>, and sitemap, then shows deterministic pass, warning, and error findings. It also follows at most one same-origin page link to see what a real LLM-style fetch would actually get. No score. No vague advice. Just the exact metadata, crawler, and thin-HTML issues that need fixing.
+          Inspect the public HTTPS response, defensive headers, cookies,
+          embedded resources, security.txt, and basic email authentication.
+          Findings are deterministic pass, warning, or error results with no
+          score. Slow targets can produce partial results instead of blocking
+          the whole report.
         </p>
 
         <section className="checker-panel">
           <form className="checker-form" onSubmit={handleSubmit}>
-            <label className="checker-label" htmlFor="checker-url">
+            <label className="checker-label" htmlFor="security-scan-url">
               Website URL
             </label>
             <p className="checker-field-note">
-              Only the root website is checked first. Enter any public page URL
-              and the checker will normalize it to the site root before
-              fetching metadata.
+              Enter any public page URL. The scan normalizes it to the site root
+              and always assesses the HTTPS site, even if you enter http://.
             </p>
             <div className="checker-form-row">
               <input
-                id="checker-url"
+                id="security-scan-url"
                 className="checker-input"
                 type="text"
                 placeholder="https://example.com"
@@ -433,13 +392,46 @@ function Checker() {
                 required
               />
               <button className="checker-submit" type="submit" disabled={loading}>
-                {loading ? 'Checking...' : 'Run checker'}
+                {loading ? 'Scanning...' : 'Run security scan'}
               </button>
             </div>
           </form>
           <p className="checker-note">
-            The checker normalizes input to the site root and looks for homepage metadata, JSON-LD, markdown alternate links, llms.txt, robots.txt, sitemap discovery, and common AI crawler rules. It samples one internal link only, so it stays deterministic and does not flood the checked site. The checker and the <a href="/security-scan/">security scan</a> share the same per-IP rate limit.
-</p>
+            This scan and the <a href="/checker/">website checker</a> share the
+            same per-IP limit of 10 requests per 10 minutes. One complete scan
+            counts as one request against that shared budget, not one request
+            per internal fetch.
+          </p>
+        </section>
+
+        <section className="checker-findings">
+          <h2>Passive and authorized use only</h2>
+          <div className="checker-finding-list">
+            <article className="checker-finding checker-finding-pass">
+              <p className="checker-finding-detail">
+                This is a passive read of publicly served responses, not a
+                penetration test or vulnerability scan. Only scan sites you own
+                or are authorized to assess. Findings describe missing
+                defense-in-depth headers, not proof of exploitability.
+              </p>
+            </article>
+            <article className="checker-finding checker-finding-pass">
+              <p className="checker-finding-detail">
+                The scan sends ordinary GET requests to conventional public URLs
+                and a few read-only DNS lookups. It does not enumerate paths,
+                scan ports, send payloads, fuzz inputs, probe TLS, authenticate,
+                or run a headless browser.
+              </p>
+            </article>
+            <article className="checker-finding checker-finding-pass">
+              <p className="checker-finding-detail">
+                Requests use the fixed identifying user agent{' '}
+                <code>agentmarkup-checker/... (+https://agentmarkup.dev)</code>.
+                Nothing is hidden or spoofed; the traffic is browser-equivalent
+                and identifies this service.
+              </p>
+            </article>
+          </div>
         </section>
 
         {turnstileChallenge ? (
@@ -453,22 +445,26 @@ function Checker() {
             ) : null}
             <div className="checker-turnstile" ref={turnstileContainerRef} />
             <p className="checker-note">
-              The checker only asks for this after repeated requests from the same IP. Completing it reruns the same check once.
+              The scanner only asks for this after repeated requests from the
+              same IP. Completing it reruns the same scan once.
             </p>
           </section>
         ) : null}
 
         {error ? (
           <section className="checker-state checker-state-error">
-            <h2>Checker request failed</h2>
+            <h2>Security scan failed</h2>
             <p>{error}</p>
           </section>
         ) : null}
 
         {loading ? (
           <section className="checker-state">
-            <h2>Fetching public metadata</h2>
-            <p>The checker is requesting the homepage, markdown mirrors, llms.txt, robots.txt, sitemap, and one sampled internal page right now.</p>
+            <h2>Reading public responses</h2>
+            <p>
+              The scanner is fetching the HTTPS homepage, checking the first
+              HTTP response and security.txt, and requesting passive DNS data.
+            </p>
           </section>
         ) : null}
 
@@ -478,11 +474,13 @@ function Checker() {
               <div>
                 <h2>Results for {analysis.normalizedUrl}</h2>
                 <p className="checker-summary-text">
-                  Checked at {new Date(result.fetchedAt).toLocaleString()}.
+                  Scanned at {new Date(result.fetchedAt).toLocaleString()}.
                   {analysis.normalizedFrom ? (
                     <>
                       {' '}
-                      Input was normalized from <code>{analysis.normalizedFrom}</code> to the site root.
+                      Input was normalized from{' '}
+                      <code>{analysis.normalizedFrom}</code>. The scan assessed
+                      the HTTPS site root.
                     </>
                   ) : null}
                   {result.cache?.hit && result.cache.cachedAt ? (
@@ -495,9 +493,9 @@ function Checker() {
                   {typeof result.protection?.remainingChecks === 'number' ? (
                     <>
                       {' '}
-                      {result.protection.remainingChecks} check
-                      {result.protection.remainingChecks === 1 ? '' : 's'} remain in the
-                      current IP window.
+                      {result.protection.remainingChecks} request
+                      {result.protection.remainingChecks === 1 ? '' : 's'} remain
+                      in the current shared IP window.
                     </>
                   ) : null}
                 </p>
@@ -519,7 +517,10 @@ function Checker() {
               <h2>Findings</h2>
               <div className="checker-finding-list">
                 {analysis.items.map((item, index) => (
-                  <FindingCard key={`${item.level}-${item.title}-${index}`} item={item} />
+                  <FindingCard
+                    key={`${item.level}-${item.title}-${index}`}
+                    item={item}
+                  />
                 ))}
               </div>
             </section>
@@ -547,12 +548,14 @@ function ResultCount({
   );
 }
 
-function ResourceCard({ resource }: { resource: ResourceStatus }) {
+function ResourceCard({ resource }: { resource: SecurityResourceStatus }) {
   return (
     <article className={`checker-resource checker-resource-${resource.level}`}>
       <div className="checker-resource-top">
         <h3>{resource.label}</h3>
-        <span className={`checker-resource-status checker-resource-status-${resource.level}`}>
+        <span
+          className={`checker-resource-status checker-resource-status-${resource.level}`}
+        >
           {resource.status}
         </span>
       </div>
@@ -564,29 +567,28 @@ function ResourceCard({ resource }: { resource: ResourceStatus }) {
         </p>
       ) : null}
       <p className="checker-resource-detail">{resource.detail}</p>
-      {resource.agentmarkupHelp ? (
+      {resource.explainer ? (
         <p className="checker-agentmarkup-help">
-          <strong>How agentmarkup helps:</strong> {resource.agentmarkupHelp}
+          <strong>What this means:</strong> {resource.explainer}
         </p>
       ) : null}
     </article>
   );
 }
 
-function FindingCard({ item }: { item: AuditItem }) {
+function FindingCard({ item }: { item: SecurityAuditItem }) {
   return (
     <article className={`checker-finding checker-finding-${item.level}`}>
       <div className="checker-finding-top">
-        <span className={`checker-level checker-level-${item.level}`}>{item.level}</span>
+        <span className={`checker-level checker-level-${item.level}`}>
+          {item.level}
+        </span>
         <h3>{item.title}</h3>
       </div>
       <p className="checker-finding-detail">{item.detail}</p>
-      <p className="checker-finding-action">{item.action}</p>
-      {item.agentmarkupHelp ? (
-        <p className="checker-agentmarkup-help">
-          <strong>How agentmarkup helps:</strong> {item.agentmarkupHelp}
-        </p>
-      ) : null}
+      <p className="checker-agentmarkup-help">
+        <strong>What this means:</strong> {item.explainer}
+      </p>
       {item.docUrl ? (
         <p className="checker-finding-doc">
           <a href={item.docUrl}>Relevant docs</a>
@@ -596,4 +598,4 @@ function FindingCard({ item }: { item: AuditItem }) {
   );
 }
 
-export default Checker;
+export default SecurityScan;
