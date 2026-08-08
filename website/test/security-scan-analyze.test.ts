@@ -330,6 +330,25 @@ describe('analyzeSecurityScan response header checks', () => {
     );
   });
 
+  it('collapses a duplicate value with a trailing comma', () => {
+    const scan = withHeaders({
+      'referrer-policy': 'strict-origin, strict-origin,',
+    });
+    const found = item(scan, 'Referrer-Policy', 'pass');
+    expect(found.detail).toContain('Referrer-Policy is set to strict-origin.');
+  });
+
+  it('treats a comma-only header value as absent', () => {
+    item(withHeaders({ 'referrer-policy': ',' }), 'Referrer-Policy', 'warning');
+  });
+
+  it('preserves a legitimate multi-token permissions-policy list', () => {
+    const scan = withHeaders({
+      'permissions-policy': 'camera=(), microphone=()',
+    });
+    item(scan, 'Permissions-Policy', 'pass');
+  });
+
   it.each([
     ['a present policy', { 'permissions-policy': 'camera=()' }, 'pass'],
     ['a missing policy', {}, 'warning'],
