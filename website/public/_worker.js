@@ -52,6 +52,35 @@ const CHECK_HISTORY_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const REQUEST_EVENT_RETENTION_MS = 24 * 60 * 60 * 1000;
 const TURNSTILE_VERIFY_URL =
   'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+const SECURITY_SCAN_PREFIX = 'security-scan:';
+const SECURITY_SCAN_MIN_FETCH_BUDGET_MS = 1500;
+const DNS_LOOKUP_TIMEOUT_MS = 4000;
+const MAX_DNS_RESPONSE_BYTES = 64 * 1024;
+const SECURITY_HEADER_NAMES = [
+  'strict-transport-security',
+  'content-security-policy',
+  'content-security-policy-report-only',
+  'x-frame-options',
+  'x-content-type-options',
+  'referrer-policy',
+  'permissions-policy',
+  'cross-origin-opener-policy',
+  'cross-origin-resource-policy',
+  'cross-origin-embedder-policy',
+  'server',
+  'x-powered-by',
+];
+const SECURITY_HEADERS = {
+  'content-security-policy':
+    "default-src 'self'; script-src 'self' 'sha256-9H65k0Vudv1nXe8hMDYfPeuUwx7Ayw6wutA2u1iUze8=' 'sha256-MiBCOgMISGpfezwPQfq/58mseJfrfIQBTtTlwnMm/xE=' https://www.googletagmanager.com https://challenges.cloudflare.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.doubleclick.net https://challenges.cloudflare.com; img-src 'self' data: https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.doubleclick.net; style-src 'self' 'unsafe-inline'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src https://challenges.cloudflare.com; frame-ancestors 'none'",
+  'x-content-type-options': 'nosniff',
+  'x-frame-options': 'DENY',
+  'referrer-policy': 'strict-origin-when-cross-origin',
+  'permissions-policy':
+    'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()',
+  'strict-transport-security': 'max-age=31536000',
+  'cross-origin-opener-policy': 'same-origin',
+};
 
 let checksSchemaReadyPromise;
 let checksSchemaUnavailable = false;
@@ -70,7 +99,15 @@ export default {
       return handleCheckRequest(request, url, env, Date.now());
     }
 
-    return env.ASSETS.fetch(request);
+    if (url.pathname === '/api/security-scan') {
+      if (!['GET', 'POST'].includes(request.method)) {
+        return json({ error: 'Method not allowed.' }, 405);
+      }
+
+      return handleSecurityScanRequest(request, url, env, Date.now());
+    }
+
+    return serveAssetWithSecurityHeaders(request, env);
   },
 };
 
@@ -219,6 +256,211 @@ async function handleCheckRequest(request, url, env, checkStartTime) {
   }
 }
 
+async function handleSecurityScanRequest(request, url, env, checkStartTime) {
+  try {
+    const { input, turnstileToken } = await readCheckRequest(request, url);
+    const normalizedUrl = new URL(normalizePublicUrl(input));
+    normalizedUrl.protocol = 'https:';
+    const normalized = normalizedUrl.toString();
+    const cacheKey = `${SECURITY_SCAN_PREFIX}${normalized}`;
+    const checkedAt = new Date().toISOString();
+    const protection = await applyCheckerProtection(
+      env,
+      request,
+      cacheKey,
+      checkedAt,
+      turnstileToken
+    );
+    if (protection.response) {
+      return protection.response;
+    }
+
+    const cachedResponse = await readCachedResponse(
+      env,
+      cacheKey,
+      protection.metadata
+    );
+    if (cachedResponse) {
+      return json(
+        {
+          ...cachedResponse,
+          normalizedFrom: getNormalizedFrom(input, cachedResponse.targetUrl),
+        },
+        200
+      );
+    }
+
+    const homepage = hasSecurityScanFetchBudget(checkStartTime)
+      ? await fetchText(normalized, checkStartTime, {
+          captureHeaders: true,
+          timeoutMs: FETCH_TIMEOUT_MS,
+        })
+      : createSkippedResource(normalized, 'Scan time budget exhausted.', true);
+    const targetUrl = toSiteRootUrl(homepage.finalUrl || normalized);
+    const target = new URL(targetUrl);
+    const submitted = new URL(normalized);
+    const crossOriginRedirect = !hostnamesMatch(
+      target.hostname,
+      submitted.hostname
+    );
+
+    let httpProbe = null;
+    let securityTxt;
+    let securityTxtFallback = null;
+    let dns = {
+      spf: null,
+      dmarc: null,
+      dnssec: null,
+    };
+
+    const securityTxtUrl = buildHttpsUrl(
+      target.hostname,
+      '/.well-known/security.txt'
+    );
+
+    if (crossOriginRedirect) {
+      securityTxt = createSkippedResource(
+        securityTxtUrl,
+        'Skipped after a cross-origin redirect.'
+      );
+    } else {
+      httpProbe = hasSecurityScanFetchBudget(checkStartTime)
+        ? await probeHttpDowngrade(target.hostname, checkStartTime)
+        : createSkippedHttpProbe(target.hostname, 'Scan time budget exhausted.');
+
+      securityTxt = hasSecurityScanFetchBudget(checkStartTime)
+        ? await fetchText(securityTxtUrl, checkStartTime, {
+            timeoutMs: 5000,
+            sameHostAs: target.hostname,
+          })
+        : createSkippedResource(
+            securityTxtUrl,
+            'Scan time budget exhausted.'
+          );
+
+      if (shouldFetchLegacySecurityTxt(securityTxt)) {
+        const fallbackUrl = buildHttpsUrl(target.hostname, '/security.txt');
+        securityTxtFallback = hasSecurityScanFetchBudget(checkStartTime)
+          ? await fetchText(fallbackUrl, checkStartTime, {
+              timeoutMs: 5000,
+              sameHostAs: target.hostname,
+            })
+          : createSkippedResource(
+              fallbackUrl,
+              'Scan time budget exhausted.'
+            );
+      }
+
+      if (hasSecurityScanFetchBudget(checkStartTime)) {
+        const baseHost = stripLeadingWww(target.hostname);
+        const dnsDeadline = Math.min(
+          Date.now() + DNS_LOOKUP_TIMEOUT_MS,
+          checkStartTime + TOTAL_TIMEOUT_MS
+        );
+        const [spf, dmarc, dnssec] = await Promise.all([
+          dnsLookup('TXT', baseHost, checkStartTime, dnsDeadline),
+          dnsLookup('TXT', `_dmarc.${baseHost}`, checkStartTime, dnsDeadline),
+          dnsLookup('DS', baseHost, checkStartTime, dnsDeadline),
+        ]);
+        dns = { spf, dmarc, dnssec };
+      }
+    }
+
+    const cacheExpiresAt = new Date(
+      Date.parse(checkedAt) + TARGET_CACHE_TTL_MS
+    ).toISOString();
+    const responseBody = {
+      targetUrl,
+      origin: target.origin,
+      fetchedAt: checkedAt,
+      normalizedFrom: getNormalizedFrom(input, targetUrl),
+      homepage,
+      httpProbe,
+      securityTxt,
+      securityTxtFallback,
+      crossOriginRedirect,
+      dns,
+      cache: {
+        hit: false,
+        cachedAt: checkedAt,
+        expiresAt: cacheExpiresAt,
+      },
+      protection: protection.metadata,
+    };
+
+    const cacheBody = { ...responseBody };
+    delete cacheBody.normalizedFrom;
+    await cacheCheckResponse(
+      env,
+      cacheKey,
+      cacheKey,
+      cacheBody,
+      checkedAt,
+      cacheExpiresAt
+    );
+
+    return json(responseBody, 200);
+  } catch (error) {
+    return json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Enter a public http:// or https:// website URL.',
+      },
+      400
+    );
+  }
+}
+
+function getNormalizedFrom(input, targetUrl) {
+  const submitted = input.trim();
+  return submitted && submitted !== targetUrl ? submitted : null;
+}
+
+function hasSecurityScanFetchBudget(checkStartTime) {
+  return (
+    TOTAL_TIMEOUT_MS - (Date.now() - checkStartTime) >=
+    SECURITY_SCAN_MIN_FETCH_BUDGET_MS
+  );
+}
+
+function createSkippedResource(targetUrl, error, captureHeaders = false) {
+  return {
+    requestedUrl: targetUrl,
+    finalUrl: targetUrl,
+    status: 0,
+    ok: false,
+    contentType: null,
+    body: null,
+    xRobotsTag: null,
+    error,
+    ...(captureHeaders
+      ? {
+          headers: createCapturedHeaders(null),
+          cookies: null,
+        }
+      : {}),
+  };
+}
+
+function createSkippedHttpProbe(hostname, error) {
+  return {
+    requestedUrl: buildHttpUrl(hostname, '/'),
+    status: 0,
+    location: null,
+    error,
+  };
+}
+
+function shouldFetchLegacySecurityTxt(resource) {
+  return (
+    Boolean(resource.error) ||
+    !resource.ok ||
+    resource.contentType?.toLowerCase().includes('text/html') === true
+  );
+}
+
 async function readCheckRequest(request, url) {
   if (request.method === 'GET') {
     return {
@@ -310,7 +552,7 @@ async function applyCheckerProtection(
       response: json(
         {
           error:
-            'Too many checker requests came from this IP recently. Please wait a few minutes and try again.',
+            'Too many checker or security scan requests came from this IP recently.',
           retryAfterSeconds,
         },
         429,
@@ -874,13 +1116,20 @@ function isBlockedIpv6(groups) {
   );
 }
 
-async function fetchText(targetUrl, checkStartTime) {
+async function fetchText(targetUrl, checkStartTime, options = {}) {
+  const invocationDeadline = Date.now() + (options.timeoutMs ?? FETCH_TIMEOUT_MS);
+  const overallStartTime = checkStartTime || Date.now();
+  const capturedCookies = new Map();
+  let cookieCaptureSupported = options.captureHeaders ? null : false;
+
   try {
     let currentUrl = targetUrl;
 
     for (let redirectCount = 0; redirectCount < MAX_REDIRECTS; redirectCount += 1) {
-      const remainingGlobalTime = TOTAL_TIMEOUT_MS - (Date.now() - (checkStartTime || Date.now()));
-      if (remainingGlobalTime <= 0) {
+      const remainingGlobalTime =
+        TOTAL_TIMEOUT_MS - (Date.now() - overallStartTime);
+      const remainingInvocationTime = invocationDeadline - Date.now();
+      if (remainingGlobalTime <= 0 || remainingInvocationTime <= 0) {
         throw new Error('Overall checker timeout exceeded.');
       }
 
@@ -893,7 +1142,10 @@ async function fetchText(targetUrl, checkStartTime) {
         throw new Error('Request was blocked by checker safety rules.');
       }
 
-      const timeoutForThisFetch = Math.max(1000, Math.min(FETCH_TIMEOUT_MS, remainingGlobalTime));
+      const timeoutForThisFetch = Math.min(
+        remainingInvocationTime,
+        remainingGlobalTime
+      );
       const { signal, cancel } = createTimeoutSignal(timeoutForThisFetch);
       try {
         const response = await fetch(currentUrl, {
@@ -904,20 +1156,33 @@ async function fetchText(targetUrl, checkStartTime) {
             accept: 'text/html,text/plain,application/xml,text/xml;q=0.9,*/*;q=0.1',
           },
         });
+        if (options.captureHeaders) {
+          cookieCaptureSupported = captureResponseCookies(
+            response,
+            capturedCookies,
+            cookieCaptureSupported
+          );
+        }
 
         if (response.status >= 300 && response.status < 400) {
           const location = response.headers.get('location');
           if (!location) {
-            return {
-              requestedUrl: targetUrl,
-              finalUrl: currentUrl,
-              status: response.status,
-              ok: false,
-              contentType: response.headers.get('content-type'),
-              body: null,
-              xRobotsTag: response.headers.get('x-robots-tag'),
-              error: 'Redirect response had no Location header.',
-            };
+            return withCapturedResponseMetadata(
+              {
+                requestedUrl: targetUrl,
+                finalUrl: currentUrl,
+                status: response.status,
+                ok: false,
+                contentType: response.headers.get('content-type'),
+                body: null,
+                xRobotsTag: response.headers.get('x-robots-tag'),
+                error: 'Redirect response had no Location header.',
+              },
+              response,
+              options.captureHeaders,
+              capturedCookies,
+              cookieCaptureSupported
+            );
           }
 
           const nextUrl = new URL(location, currentUrl);
@@ -929,11 +1194,29 @@ async function fetchText(targetUrl, checkStartTime) {
             throw new Error('Request was blocked by checker safety rules.');
           }
 
+          if (
+            options.sameHostAs &&
+            !hostnamesMatch(nextUrl.hostname, options.sameHostAs)
+          ) {
+            await cancelResponseBody(response);
+            return {
+              requestedUrl: targetUrl,
+              finalUrl: currentUrl,
+              status: 0,
+              ok: false,
+              contentType: null,
+              body: null,
+              xRobotsTag: null,
+              error: 'Redirected off the scanned site.',
+            };
+          }
+
+          await cancelResponseBody(response);
           currentUrl = nextUrl.toString();
           continue;
         }
 
-        return {
+        const result = {
           requestedUrl: targetUrl,
           finalUrl: currentUrl,
           status: response.status,
@@ -942,40 +1225,281 @@ async function fetchText(targetUrl, checkStartTime) {
           body: await readBoundedText(response),
           xRobotsTag: response.headers.get('x-robots-tag'),
         };
+        return withCapturedResponseMetadata(
+          result,
+          response,
+          options.captureHeaders,
+          capturedCookies,
+          cookieCaptureSupported
+        );
       } finally {
         cancel();
       }
     }
 
-    return {
-      requestedUrl: targetUrl,
-      finalUrl: currentUrl,
-      status: 0,
-      ok: false,
-      contentType: null,
-      body: null,
-      xRobotsTag: null,
-      error: 'Too many redirects.',
-    };
+    return withEmptyCapturedResponseMetadata(
+      {
+        requestedUrl: targetUrl,
+        finalUrl: currentUrl,
+        status: 0,
+        ok: false,
+        contentType: null,
+        body: null,
+        xRobotsTag: null,
+        error: 'Too many redirects.',
+      },
+      options.captureHeaders,
+      capturedCookies,
+      cookieCaptureSupported
+    );
   } catch (error) {
-    return {
-      requestedUrl: targetUrl,
-      finalUrl: targetUrl,
-      status: 0,
-      ok: false,
-      contentType: null,
-      body: null,
-      xRobotsTag: null,
-      error: mapFetchError(error),
-    };
+    return withEmptyCapturedResponseMetadata(
+      {
+        requestedUrl: targetUrl,
+        finalUrl: targetUrl,
+        status: 0,
+        ok: false,
+        contentType: null,
+        body: null,
+        xRobotsTag: null,
+        error: mapFetchError(error),
+      },
+      options.captureHeaders,
+      capturedCookies,
+      cookieCaptureSupported
+    );
   }
 }
 
-async function readBoundedText(response) {
+function captureResponseCookies(response, capturedCookies, previousSupport) {
+  if (typeof response.headers.getSetCookie !== 'function') {
+    return false;
+  }
+
+  try {
+    for (const setCookie of response.headers.getSetCookie()) {
+      const cookie = parseCookieMetadata(setCookie);
+      if (cookie) {
+        capturedCookies.set(cookie.name, cookie);
+      }
+    }
+    return previousSupport === false ? false : true;
+  } catch {
+    return false;
+  }
+}
+
+function parseCookieMetadata(setCookie) {
+  const parts = setCookie.split(';');
+  const nameValue = parts.shift()?.trim() ?? '';
+  const separatorIndex = nameValue.indexOf('=');
+  const name = separatorIndex > 0 ? nameValue.slice(0, separatorIndex).trim() : '';
+  if (!name) {
+    return null;
+  }
+
+  let secure = false;
+  let httpOnly = false;
+  let sameSite = null;
+
+  for (const rawAttribute of parts) {
+    const attribute = rawAttribute.trim();
+    const [rawName, ...rawValue] = attribute.split('=');
+    const attributeName = rawName.toLowerCase();
+    if (attributeName === 'secure') {
+      secure = true;
+    } else if (attributeName === 'httponly') {
+      httpOnly = true;
+    } else if (attributeName === 'samesite') {
+      sameSite = rawValue.join('=').trim() || null;
+    }
+  }
+
+  return { name, secure, httpOnly, sameSite };
+}
+
+function withCapturedResponseMetadata(
+  resource,
+  response,
+  captureHeaders,
+  capturedCookies,
+  cookieCaptureSupported
+) {
+  if (!captureHeaders) {
+    return resource;
+  }
+
+  return {
+    ...resource,
+    headers: createCapturedHeaders(response.headers),
+    cookies:
+      cookieCaptureSupported === true ? [...capturedCookies.values()] : null,
+  };
+}
+
+function withEmptyCapturedResponseMetadata(
+  resource,
+  captureHeaders,
+  capturedCookies,
+  cookieCaptureSupported
+) {
+  if (!captureHeaders) {
+    return resource;
+  }
+
+  return {
+    ...resource,
+    headers: createCapturedHeaders(null),
+    cookies:
+      cookieCaptureSupported === true ? [...capturedCookies.values()] : null,
+  };
+}
+
+function createCapturedHeaders(headers) {
+  return Object.fromEntries(
+    SECURITY_HEADER_NAMES.map((headerName) => [
+      headerName,
+      headers?.get(headerName) ?? null,
+    ])
+  );
+}
+
+async function cancelResponseBody(response) {
+  try {
+    await response.body?.cancel();
+  } catch {
+    // The response body is best-effort cleanup after a manual redirect.
+  }
+}
+
+async function probeHttpDowngrade(hostname, checkStartTime) {
+  const requestedUrl = buildHttpUrl(hostname, '/');
+  const remainingGlobalTime =
+    TOTAL_TIMEOUT_MS - (Date.now() - checkStartTime);
+  if (remainingGlobalTime <= 0) {
+    return {
+      requestedUrl,
+      status: 0,
+      location: null,
+      error: 'Scan time budget exhausted.',
+    };
+  }
+
+  const { signal, cancel } = createTimeoutSignal(
+    Math.min(5000, remainingGlobalTime)
+  );
+  try {
+    const response = await fetch(requestedUrl, {
+      redirect: 'manual',
+      signal,
+      headers: {
+        'user-agent': CHECKER_USER_AGENT,
+        accept: 'text/html,*/*;q=0.1',
+      },
+    });
+    const result = {
+      requestedUrl,
+      status: response.status,
+      location: response.headers.get('location'),
+    };
+    await cancelResponseBody(response);
+    return result;
+  } catch (error) {
+    return {
+      requestedUrl,
+      status: 0,
+      location: null,
+      error: mapFetchError(error),
+    };
+  } finally {
+    cancel();
+  }
+}
+
+async function dnsLookup(
+  type,
+  name,
+  checkStartTime,
+  dnsDeadline = Date.now() + DNS_LOOKUP_TIMEOUT_MS
+) {
+  const remainingGlobalTime =
+    TOTAL_TIMEOUT_MS - (Date.now() - checkStartTime);
+  const remainingDnsTime = dnsDeadline - Date.now();
+  if (remainingGlobalTime <= 0 || remainingDnsTime <= 0) {
+    return null;
+  }
+
+  const resolverUrl = new URL('https://cloudflare-dns.com/dns-query');
+  resolverUrl.searchParams.set('type', type);
+  resolverUrl.searchParams.set('name', name);
+  const { signal, cancel } = createTimeoutSignal(
+    Math.min(remainingGlobalTime, remainingDnsTime)
+  );
+
+  try {
+    const response = await fetch(resolverUrl.toString(), {
+      redirect: 'manual',
+      signal,
+      headers: {
+        accept: 'application/dns-json',
+        'user-agent': CHECKER_USER_AGENT,
+      },
+    });
+    if (!response.ok) {
+      await cancelResponseBody(response);
+      return null;
+    }
+
+    const body = await readBoundedText(response, MAX_DNS_RESPONSE_BYTES);
+    const payload = JSON.parse(body);
+    if (!Number.isInteger(payload?.Status)) {
+      return null;
+    }
+
+    return {
+      status: payload.Status,
+      ad: payload.AD === true,
+      answers: Array.isArray(payload.Answer)
+        ? payload.Answer.flatMap((answer) =>
+            typeof answer?.data === 'string' ? [answer.data] : []
+          )
+        : [],
+    };
+  } catch {
+    return null;
+  } finally {
+    cancel();
+  }
+}
+
+function hostnamesMatch(left, right) {
+  return stripLeadingWww(left) === stripLeadingWww(right);
+}
+
+function stripLeadingWww(hostname) {
+  return hostname.toLowerCase().replace(/^www\./, '');
+}
+
+function buildHttpsUrl(hostname, pathname) {
+  return buildUrl('https:', hostname, pathname);
+}
+
+function buildHttpUrl(hostname, pathname) {
+  return buildUrl('http:', hostname, pathname);
+}
+
+function buildUrl(protocol, hostname, pathname) {
+  const target = new URL(`${protocol}//example.invalid/`);
+  target.hostname = hostname;
+  target.pathname = pathname;
+  return target.toString();
+}
+
+async function readBoundedText(response, maxResponseBytes = MAX_RESPONSE_BYTES) {
   const contentLengthHeader = response.headers.get('content-length');
   if (contentLengthHeader) {
     const contentLength = Number.parseInt(contentLengthHeader, 10);
-    if (Number.isFinite(contentLength) && contentLength > MAX_RESPONSE_BYTES) {
+    if (Number.isFinite(contentLength) && contentLength > maxResponseBytes) {
       throw new Error('Response exceeded the checker size limit.');
     }
   }
@@ -1000,7 +1524,7 @@ async function readBoundedText(response) {
     }
 
     totalBytes += value.byteLength;
-    if (totalBytes > MAX_RESPONSE_BYTES) {
+    if (totalBytes > maxResponseBytes) {
       await reader.cancel();
       throw new Error('Response exceeded the checker size limit.');
     }
@@ -1192,5 +1716,22 @@ function json(body, status, extraHeaders = {}) {
       'x-content-type-options': 'nosniff',
       ...extraHeaders,
     },
+  });
+}
+
+async function serveAssetWithSecurityHeaders(request, env) {
+  const asset = await env.ASSETS.fetch(request);
+  const headers = new Headers(asset.headers);
+
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
+    if (!headers.has(name)) {
+      headers.set(name, value);
+    }
+  }
+
+  return new Response(asset.body, {
+    status: asset.status,
+    statusText: asset.statusText,
+    headers,
   });
 }
