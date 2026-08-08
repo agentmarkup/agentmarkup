@@ -250,6 +250,7 @@ function buildReportMarkdown(
 function SecurityScan() {
   const [targetUrl, setTargetUrl] = useState('');
   const [authorized, setAuthorized] = useState(false);
+  const [needsConsent, setNeedsConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<SecurityScanResponse | null>(null);
@@ -380,6 +381,7 @@ function SecurityScan() {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!authorized) {
+      setNeedsConsent(true);
       setError(
         'Confirm that you own or are authorized to assess this website before running the scan.'
       );
@@ -450,19 +452,23 @@ function SecurityScan() {
                 spellCheck={false}
                 required
               />
-              <button
-                className="checker-submit"
-                type="submit"
-                disabled={loading || !authorized}
-              >
+              <button className="checker-submit" type="submit" disabled={loading}>
                 {loading ? 'Scanning...' : 'Run security scan'}
               </button>
             </div>
-            <label className="checker-consent">
+            <label
+              className={`checker-consent${
+                needsConsent ? ' checker-consent-required' : ''
+              }`}
+            >
               <input
                 type="checkbox"
                 checked={authorized}
-                onChange={(event) => setAuthorized(event.target.checked)}
+                aria-invalid={needsConsent}
+                onChange={(event) => {
+                  setAuthorized(event.target.checked);
+                  if (event.target.checked) setNeedsConsent(false);
+                }}
               />
               <span>
                 I own this website or am authorized to assess it, and I accept
@@ -477,6 +483,34 @@ function SecurityScan() {
             counts as one request against that shared budget, not one request
             per internal fetch.
           </p>
+        </section>
+
+        <section className="checker-overview">
+          <h2>What this scan checks</h2>
+          <p className="checker-note">
+            An overview of the areas the scan looks at. All of it is read from
+            public responses and public DNS records.
+          </p>
+          <ul>
+            <li>
+              <strong>Transport security:</strong> whether the site is reachable
+              over HTTPS, whether plain HTTP redirects to HTTPS, and HSTS.
+            </li>
+            <li>
+              <strong>Response headers:</strong> Content-Security-Policy,
+              clickjacking protection, MIME-sniffing protection, Referrer-Policy,
+              Permissions-Policy, and cross-origin isolation.
+            </li>
+            <li>
+              <strong>Content and cookies:</strong> cookie security flags,
+              exposed server or framework version headers, mixed content, and
+              Subresource Integrity on cross-origin scripts.
+            </li>
+            <li>
+              <strong>Discovery and email:</strong> a security.txt contact file,
+              and SPF, DMARC, and DNSSEC read from public DNS.
+            </li>
+          </ul>
         </section>
 
         <section className="checker-findings">
