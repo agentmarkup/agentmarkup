@@ -115,6 +115,28 @@ const informationalPages = [
       },
     ],
   },
+  {
+    path: '/terms/',
+    schemas: [
+      {
+        '@type': 'WebPage',
+        name: 'Terms of Service - agentmarkup',
+        url: `${siteUrl}/terms/`,
+        description: 'Terms of Service for agentmarkup.dev, including authorized-use, no-warranty, and limitation-of-liability terms for the website checker and passive security scan.',
+      },
+    ],
+  },
+  {
+    path: '/privacy/',
+    schemas: [
+      {
+        '@type': 'WebPage',
+        name: 'Privacy Policy - agentmarkup',
+        url: `${siteUrl}/privacy/`,
+        description: 'Privacy Policy for agentmarkup.dev: what data the website checker and passive security scan process, the legal basis, retention, and third-party processors.',
+      },
+    ],
+  },
 ]
 
 export default defineConfig({
@@ -153,6 +175,8 @@ export default defineConfig({
         'blog-website-checker': resolve(__dirname, 'blog/website-checker/index.html'),
         'author': resolve(__dirname, 'authors/sebastian-cochinescu/index.html'),
         'license': resolve(__dirname, 'license/index.html'),
+        'terms': resolve(__dirname, 'terms/index.html'),
+        'privacy': resolve(__dirname, 'privacy/index.html'),
         'prerender-main': resolve(__dirname, 'src/main.tsx'),
         'prerender-checker': resolve(__dirname, 'src/entries/checker.tsx'),
         'prerender-security-scan': resolve(__dirname, 'src/entries/security-scan.tsx'),
@@ -177,6 +201,8 @@ export default defineConfig({
         'prerender-blog-website-checker': resolve(__dirname, 'src/entries/blog-post-8.tsx'),
         'prerender-author': resolve(__dirname, 'src/entries/author.tsx'),
         'prerender-license': resolve(__dirname, 'src/entries/license.tsx'),
+        'prerender-terms': resolve(__dirname, 'src/entries/terms.tsx'),
+        'prerender-privacy': resolve(__dirname, 'src/entries/privacy.tsx'),
       },
     },
   },

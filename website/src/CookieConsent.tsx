@@ -230,7 +230,7 @@ function CookieConsent() {
 
   return (
     <div className="cookie-banner">
-      <p>This site uses cookies for anonymous analytics (Google Analytics). No personal data is collected.</p>
+      <p>This site uses cookies for anonymous analytics (Google Analytics) only if you accept. See our <a href="/privacy/">Privacy Policy</a>.</p>
       <div className="cookie-actions">
         <button className="cookie-btn cookie-decline" onClick={decline}>Decline</button>
         <button className="cookie-btn cookie-accept" onClick={accept}>Accept</button>

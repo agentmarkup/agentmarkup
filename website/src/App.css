@@ -1921,3 +1921,109 @@ html[data-cookie-consent-ready="true"][data-cookie-consent="pending"] .cookie-ba
   font-weight: 600;
   white-space: nowrap;
 }
+
+/* Security scan: authorization checkbox, report actions, disclaimer, print */
+.checker-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin-top: 0.9rem;
+  font-size: 0.9rem;
+  color: var(--text-body);
+  line-height: 1.5;
+}
+
+.checker-consent input {
+  margin-top: 0.2rem;
+  flex: none;
+}
+
+.checker-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1.25rem 0 0.5rem;
+}
+
+.checker-download {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.checker-download:hover {
+  border-color: var(--text);
+}
+
+.checker-actions-note {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.checker-disclaimer {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin: 1rem 0 1.5rem;
+  background: var(--surface);
+}
+
+.checker-disclaimer h2 {
+  font-size: 0.95rem;
+  margin: 0 0 0.5rem;
+}
+
+.checker-disclaimer p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin: 0.4rem 0;
+  line-height: 1.55;
+}
+
+/* Print-only report block: hidden on screen, revealed for Save as PDF */
+.security-report-print {
+  display: none;
+}
+
+@media print {
+  body.printing-security-report {
+    background: #fff !important;
+  }
+
+  body.printing-security-report * {
+    visibility: hidden !important;
+  }
+
+  body.printing-security-report .security-report-print,
+  body.printing-security-report .security-report-print * {
+    visibility: visible !important;
+  }
+
+  body.printing-security-report .security-report-print {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 1.5rem;
+    color: #000;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  body.printing-security-report .security-report-item {
+    margin: 0 0 0.75rem;
+    page-break-inside: avoid;
+  }
+
+  body.printing-security-report .security-report-item-title {
+    font-weight: 700;
+    margin: 0 0 0.2rem;
+  }
+}

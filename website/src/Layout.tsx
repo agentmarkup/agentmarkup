@@ -158,10 +158,16 @@ function Layout({ children }: { children: React.ReactNode }) {
               <a href="https://github.com/agentmarkup/agentmarkup/issues" target="_blank" rel="noopener noreferrer">Issues</a>
               <a href="/blog/">Blog</a>
             </div>
+            <div className="footer-col">
+              <h4>Legal</h4>
+              <a href="/terms/">Terms of Service</a>
+              <a href="/privacy/">Privacy Policy</a>
+              <a href="/license/">MIT License</a>
+            </div>
           </div>
           <div className="footer-bottom">
             <p>
-              &copy; 2026 <a href="/authors/sebastian-cochinescu/">Sebastian Cochinescu</a>. <a href="/license/">MIT License</a>.
+              &copy; 2026 <a href="/authors/sebastian-cochinescu/">Sebastian Cochinescu</a>. <a href="/terms/">Terms</a>. <a href="/privacy/">Privacy</a>. <a href="/license/">MIT License</a>.
             </p>
             <p>
               Used in production on <a href="https://animafelix.com" target="_blank" rel="noopener noreferrer">Anima Felix</a>.
