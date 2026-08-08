@@ -273,6 +273,23 @@ function SecurityScan() {
     useState<TurnstileChallengeState | null>(null);
   const turnstileContainerRef = useRef<HTMLDivElement | null>(null);
   const turnstileWidgetIdRef = useRef<string | null>(null);
+  const urlInputRef = useRef<HTMLInputElement | null>(null);
+  const resultsHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const justResetRef = useRef(false);
+
+  const showResults = Boolean(analysis && result);
+
+  // Move focus when the view switches so keyboard and screen-reader users are
+  // not left on a control that just unmounted: to the results heading when
+  // results appear, and back to the URL input after "Scan another site".
+  useEffect(() => {
+    if (showResults) {
+      resultsHeadingRef.current?.focus();
+    } else if (justResetRef.current) {
+      justResetRef.current = false;
+      urlInputRef.current?.focus();
+    }
+  }, [showResults]);
 
   async function performScan(rawUrl: string, turnstileToken?: string) {
     const trimmedUrl = normalizeWebsiteInput(rawUrl);
@@ -429,10 +446,24 @@ function SecurityScan() {
     window.print();
   }
 
+  function handleNewScan() {
+    justResetRef.current = true;
+    setResult(null);
+    setAnalysis(null);
+    setError(null);
+    setNeedsConsent(false);
+    setAuthorized(false);
+    setTargetUrl('');
+    setTurnstileChallenge(null);
+    window.scrollTo({ top: 0 });
+  }
+
   return (
     <main>
       <article className="doc-page checker-page security-scan-page">
         <h1>Passive security scan for public websites</h1>
+        {!showResults ? (
+          <>
         <p className="doc-intro checker-intro">
           Inspect the public HTTPS response, defensive headers, cookies,
           embedded resources, security.txt, and basic email authentication.
@@ -453,6 +484,7 @@ function SecurityScan() {
             <div className="checker-form-row">
               <input
                 id="security-scan-url"
+                ref={urlInputRef}
                 className="checker-input"
                 type="text"
                 placeholder="https://example.com"
@@ -568,6 +600,8 @@ function SecurityScan() {
             </article>
           </div>
         </section>
+          </>
+        ) : null}
 
         {turnstileChallenge ? (
           <section className="checker-state checker-state-challenge">
@@ -605,9 +639,21 @@ function SecurityScan() {
 
         {analysis && result ? (
           <>
+            <div className="checker-results-top">
+              <button
+                type="button"
+                className="checker-action"
+                onClick={handleNewScan}
+              >
+                Scan another site
+              </button>
+            </div>
+
             <section className="checker-summary">
               <div>
-                <h2>Results for {analysis.normalizedUrl}</h2>
+                <h2 ref={resultsHeadingRef} tabIndex={-1}>
+                  Results for {analysis.normalizedUrl}
+                </h2>
                 <p className="checker-summary-text">
                   Scanned at {new Date(result.fetchedAt).toLocaleString()}.
                   {analysis.normalizedFrom ? (

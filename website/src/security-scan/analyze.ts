@@ -834,9 +834,28 @@ function getHeader(
   name: string
 ): string | null {
   const exact = headers[name];
-  if (exact !== undefined) return exact?.trim() || null;
+  if (exact !== undefined) return dedupeHeaderValue(exact);
   const key = Object.keys(headers).find((candidate) => candidate.toLowerCase() === name);
-  return key ? headers[key]?.trim() || null : null;
+  return key ? dedupeHeaderValue(headers[key]) : null;
+}
+
+// When a site sends the same response header more than once, the worker's
+// Headers.get() comma-joins the copies (e.g. "policy, policy"). Collapse a
+// value made entirely of identical comma-separated tokens back to one, without
+// touching legitimate directive lists whose tokens differ.
+function dedupeHeaderValue(raw: string | null | undefined): string | null {
+  const value = raw?.trim();
+  if (!value) return null;
+  if (!value.includes(',')) return value;
+  // Drop empty tokens (trailing commas, stray whitespace) before comparing, so
+  // "policy, policy," still collapses, and a comma-only value becomes null.
+  const parts = value
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (parts.length === 0) return null;
+  const unique = [...new Set(parts)];
+  return unique.length === 1 ? unique[0] : value;
 }
 
 function parseCsp(value: string): CspDirectives {

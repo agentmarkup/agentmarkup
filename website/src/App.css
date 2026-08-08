@@ -2240,6 +2240,35 @@ main > section { margin-bottom: 112px; }
   margin: 1.25rem 0 0.5rem;
 }
 
+.checker-results-top {
+  margin-bottom: 1.25rem;
+}
+
+.checker-action {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.checker-action:hover {
+  border-color: var(--text);
+}
+
+/* The results heading receives focus when results appear; keep it unobtrusive. */
+.checker-summary h2[tabindex]:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: 4px;
+}
+
+.checker-summary h2[tabindex]:focus:not(:focus-visible) {
+  outline: none;
+}
+
 .checker-download {
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -2290,25 +2319,49 @@ main > section { margin-bottom: 112px; }
     background: #fff !important;
   }
 
-  body.printing-security-report * {
-    visibility: hidden !important;
-  }
-
-  body.printing-security-report .security-report-print,
-  body.printing-security-report .security-report-print * {
-    visibility: visible !important;
+  /* Remove everything except the report from the layout entirely (display:none,
+     not visibility:hidden) so the tall interactive results view does not leave
+     blank trailing pages. The report renders in normal flow. The :has() rule
+     robustly drops any body-level chrome (nav, footer, modals, toasts) that does
+     not contain the report; the explicit classes are a fallback where :has is
+     unsupported. */
+  body.printing-security-report > *:not(:has(.security-report-print)),
+  body.printing-security-report .site-nav,
+  body.printing-security-report .site-footer,
+  body.printing-security-report .cookie-banner,
+  body.printing-security-report main > article > *:not(.security-report-print) {
+    display: none !important;
   }
 
   body.printing-security-report .security-report-print {
     display: block !important;
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    padding: 1.5rem;
-    color: #000;
-    font-size: 12px;
+    padding: 0;
+    font-size: 11px;
     line-height: 1.5;
+  }
+
+  /* Force real black text; the report's h1/h2/p otherwise inherit the site's
+     dark-theme colors (light gray), which are unreadable on white paper. */
+  body.printing-security-report .security-report-print,
+  body.printing-security-report .security-report-print * {
+    color: #000 !important;
+  }
+
+  body.printing-security-report .security-report-print h1 {
+    font-size: 20px;
+    margin: 0 0 0.6rem;
+  }
+
+  body.printing-security-report .security-report-print h2 {
+    font-size: 14px;
+    margin: 1.1rem 0 0.5rem;
+    padding-bottom: 0.2rem;
+    border-bottom: 1px solid #ccc;
+  }
+
+  body.printing-security-report .security-report-print p,
+  body.printing-security-report .security-report-print li {
+    margin: 0 0 0.35rem;
   }
 
   body.printing-security-report .security-report-item {
