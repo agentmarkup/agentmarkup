@@ -1987,6 +1987,35 @@ html[data-cookie-consent-ready="true"][data-cookie-consent="pending"] .cookie-ba
   margin: 1.25rem 0 0.5rem;
 }
 
+.checker-results-top {
+  margin-bottom: 1.25rem;
+}
+
+.checker-action {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.checker-action:hover {
+  border-color: var(--text);
+}
+
+/* The results heading receives focus when results appear; keep it unobtrusive. */
+.checker-summary h2[tabindex]:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: 4px;
+}
+
+.checker-summary h2[tabindex]:focus:not(:focus-visible) {
+  outline: none;
+}
+
 .checker-download {
   border: 1px solid var(--border);
   border-radius: 8px;
