@@ -728,7 +728,25 @@ h2 {
 
 .checker-submit:disabled {
   cursor: wait;
-  opacity: 0.75;
+  opacity: 0.85;
+}
+
+.checker-spinner {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  margin-right: 0.5em;
+  vertical-align: -0.12em;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: checker-spin 0.7s linear infinite;
+}
+
+@keyframes checker-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .checker-note,

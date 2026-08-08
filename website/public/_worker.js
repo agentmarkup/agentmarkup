@@ -102,8 +102,18 @@ export default {
     }
 
     if (url.pathname === '/api/security-scan') {
-      if (!['GET', 'POST'].includes(request.method)) {
-        return json({ error: 'Method not allowed.' }, 405);
+      // POST-only: a scan mutates rate-limit state and runs on the caller's
+      // behalf, so it must not be triggerable by a cross-site GET (e.g. an
+      // <img> or link) that would bypass the on-page authorization gate.
+      if (request.method !== 'POST') {
+        return json({ error: 'Method not allowed. Use POST.' }, 405);
+      }
+      // Reject cross-site browser requests to prevent CSRF-style scans that
+      // consume a visitor's shared rate-limit budget. Non-browser clients omit
+      // Sec-Fetch-Site and are not a CSRF vector.
+      const fetchSite = request.headers.get('sec-fetch-site');
+      if (fetchSite === 'cross-site' || fetchSite === 'same-site') {
+        return json({ error: 'Cross-site requests are not allowed.' }, 403);
       }
 
       return handleSecurityScanRequest(request, url, env, Date.now());
@@ -946,6 +956,10 @@ function normalizePublicUrl(value) {
       throw new Error('unsupported-port');
     }
 
+    if (!isValidScanHostname(parsed.hostname)) {
+      throw new Error('invalid-hostname');
+    }
+
     parsed.hash = '';
     parsed.search = '';
     parsed.pathname = '/';
@@ -954,6 +968,29 @@ function normalizePublicUrl(value) {
   } catch {
     throw new Error('Enter a public http:// or https:// website URL.');
   }
+}
+
+// Accept only real IP literals or plausible public domains: at least two
+// labels, each a valid DNS label (no leading/trailing hyphen, not all hyphens),
+// with an alphabetic top-level domain. Rejects inputs like "https://--------".
+function isValidScanHostname(hostname) {
+  const lower = hostname.toLowerCase();
+  if (parseIpv4(lower)) {
+    return true;
+  }
+  if (parseIpv6(lower.replace(/^\[|\]$/g, ''))) {
+    return true;
+  }
+
+  const labels = lower.split('.');
+  if (labels.length < 2) {
+    return false;
+  }
+  const labelPattern = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+  if (!labels.every((label) => labelPattern.test(label))) {
+    return false;
+  }
+  return /^[a-z]{2,}$/.test(labels[labels.length - 1]);
 }
 
 function toSiteRootUrl(value) {
@@ -1219,14 +1256,26 @@ async function fetchText(targetUrl, checkStartTime, options = {}) {
           continue;
         }
 
+        // Capture response metadata BEFORE reading the body. A body-read
+        // failure (size limit, timeout, decode) must not discard the status,
+        // final URL, and captured headers, so header and transport checks can
+        // still run on a large or slow homepage (partial results).
+        let body = null;
+        let bodyError;
+        try {
+          body = await readBoundedText(response);
+        } catch (error) {
+          bodyError = mapFetchError(error);
+        }
         const result = {
           requestedUrl: targetUrl,
           finalUrl: currentUrl,
           status: response.status,
           ok: response.ok,
           contentType: response.headers.get('content-type'),
-          body: await readBoundedText(response),
+          body,
           xRobotsTag: response.headers.get('x-robots-tag'),
+          ...(bodyError ? { error: bodyError } : {}),
         };
         return withCapturedResponseMetadata(
           result,
@@ -1283,7 +1332,22 @@ function captureResponseCookies(response, capturedCookies, previousSupport) {
     for (const setCookie of response.headers.getSetCookie()) {
       const cookie = parseCookieMetadata(setCookie);
       if (cookie) {
-        capturedCookies.set(cookie.name, cookie);
+        // Merge conservatively across redirect hops: if the same cookie name
+        // appears more than once, a missing flag on any occurrence must remain
+        // reported, so a later secure cookie cannot mask an earlier insecure one.
+        const existing = capturedCookies.get(cookie.name);
+        capturedCookies.set(
+          cookie.name,
+          existing
+            ? {
+                name: cookie.name,
+                secure: existing.secure && cookie.secure,
+                httpOnly: existing.httpOnly && cookie.httpOnly,
+                sameSite:
+                  existing.sameSite && cookie.sameSite ? cookie.sameSite : null,
+              }
+            : cookie
+        );
       }
     }
     return previousSupport === false ? false : true;
