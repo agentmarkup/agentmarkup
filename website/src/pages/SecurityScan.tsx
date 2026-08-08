@@ -431,7 +431,7 @@ function SecurityScan() {
 
   return (
     <main>
-      <article className="doc-page checker-page">
+      <article className="doc-page checker-page security-scan-page">
         <h1>Passive security scan for public websites</h1>
         <p className="doc-intro checker-intro">
           Inspect the public HTTPS response, defensive headers, cookies,
@@ -539,7 +539,7 @@ function SecurityScan() {
           </ul>
         </section>
 
-        <section className="checker-findings">
+        <section className="checker-findings security-scan-notice">
           <h2>Passive and authorized use only</h2>
           <div className="checker-finding-list">
             <article className="checker-finding checker-finding-pass">

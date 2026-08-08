@@ -7,55 +7,67 @@
 }
 
 :root {
-  --bg: #0a0a0a;
-  --text: #ededed;
-  --text-muted: #888;
-  --text-dim: #555;
-  --text-body: #aaa;
-  --text-doc: #bbb;
-  --text-doc-code: #ddd;
-  --border: #222;
-  --surface: #111;
-  --surface-code: #1a1a1a;
-  --link: #ccc;
-  --link-hover: #fff;
-  --line-numbers: #444;
-  --copy-btn: #666;
-  --copy-btn-border: #333;
-  --copy-btn-hover: #ccc;
-  --copy-btn-border-hover: #555;
-  --table-header: #999;
-  --credit: #777;
-  color-scheme: dark;
-}
-
-[data-theme="light"] {
-  --bg: #fafafa;
-  --text: #111;
-  --text-muted: #666;
-  --text-dim: #888;
-  --text-body: #555;
-  --text-doc: #444;
-  --text-doc-code: #333;
-  --border: #ddd;
-  --surface: #f0f0f0;
-  --surface-code: #e8e8e8;
-  --link: #444;
-  --link-hover: #000;
-  --line-numbers: #aaa;
-  --copy-btn: #999;
-  --copy-btn-border: #ccc;
-  --copy-btn-hover: #333;
-  --copy-btn-border-hover: #999;
-  --table-header: #666;
-  --credit: #888;
+  --bg: #fffefc;
+  --surface: #f8f5f0;
+  --surface-elevated: #fff;
+  --text: #111a43;
+  --text-muted: #6d748b;
+  --text-dim: #9296a5;
+  --text-body: #49506a;
+  --text-doc: #3e4660;
+  --text-doc-code: #19244c;
+  --border: #e5e0d9;
+  --border-strong: #cfc7bc;
+  --cobalt-500: #273a8a;
+  --coral: #ff6e59;
+  --apricot: #ffd3a8;
+  --blush: #f8b9b7;
+  --status-success: #238253;
+  --status-warning: #a96e0b;
+  --surface-code: #f1eee8;
+  --link: #273a8a;
+  --link-hover: #ff6e59;
+  --line-numbers: #a4a5ad;
+  --copy-btn: #6d748b;
+  --copy-btn-border: #dcd6ce;
+  --copy-btn-hover: #111a43;
+  --copy-btn-border-hover: #a8a19a;
+  --table-header: #49506a;
+  --credit: #777e92;
   color-scheme: light;
 }
 
+[data-theme="dark"] {
+  --bg: #10121a;
+  --surface: #1a1d29;
+  --surface-elevated: #222635;
+  --text: #f8f5ef;
+  --text-muted: #a4abbc;
+  --text-dim: #747b90;
+  --text-body: #c7cad6;
+  --text-doc: #d9dce5;
+  --text-doc-code: #f6f4ef;
+  --border: #353a4c;
+  --border-strong: #596078;
+  --cobalt-500: #aab8ff;
+  --coral: #ff8877;
+  --apricot: #795341;
+  --blush: #704b60;
+  --surface-code: #171a24;
+  --link: #d4dcff;
+  --link-hover: #ffb3a8;
+  --line-numbers: #73798c;
+  --copy-btn: #a4abbc;
+  --copy-btn-border: #454b5c;
+  --copy-btn-hover: #fff;
+  --copy-btn-border-hover: #73798c;
+  --table-header: #c7cad6;
+  --credit: #9ba1b2;
+  color-scheme: dark;
+}
+
 body {
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
-    Ubuntu, Cantarell, sans-serif;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;

@@ -62,6 +62,17 @@ function Layout({ children }: { children: React.ReactNode }) {
         <div className="nav-inner">
           <a href="/" className="nav-brand"><img src="/favicon-32x32.png" alt="" width="26" height="26" className="nav-logo" />agentmarkup</a>
           <div className="nav-right">
+            <div className="nav-links">
+              <a href="/checker/">Checker</a>
+              <a href="/security-scan/">Security</a>
+              <a href="/docs/audit/">Audit</a>
+              <a href="/docs/llms-txt/">llms.txt</a>
+              <a href="/docs/json-ld/">JSON-LD</a>
+              <a href="/docs/ai-crawlers/">AI Crawlers</a>
+              <a href="/blog/">Blog</a>
+              <a href="https://github.com/agentmarkup/agentmarkup" target="_blank" rel="noopener noreferrer">GitHub</a>
+            </div>
+            <div className="nav-actions">
             <button className="theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
               {theme === 'dark' ? (
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -100,15 +111,6 @@ function Layout({ children }: { children: React.ReactNode }) {
                 </svg>
               )}
             </button>
-            <div className="nav-links">
-              <a href="/checker/">Checker</a>
-              <a href="/security-scan/">Security</a>
-              <a href="/docs/audit/">Audit</a>
-              <a href="/docs/llms-txt/">llms.txt</a>
-              <a href="/docs/json-ld/">JSON-LD</a>
-              <a href="/docs/ai-crawlers/">AI Crawlers</a>
-              <a href="/blog/">Blog</a>
-              <a href="https://github.com/agentmarkup/agentmarkup" target="_blank" rel="noopener noreferrer">GitHub</a>
             </div>
           </div>
         </div>
