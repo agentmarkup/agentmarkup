@@ -102,6 +102,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             </button>
             <div className="nav-links">
               <a href="/checker/">Checker</a>
+              <a href="/security-scan/">Security</a>
               <a href="/docs/audit/">Audit</a>
               <a href="/docs/llms-txt/">llms.txt</a>
               <a href="/docs/json-ld/">JSON-LD</a>
@@ -114,6 +115,7 @@ function Layout({ children }: { children: React.ReactNode }) {
         {menuOpen && (
           <div className="mobile-menu">
             <a href="/checker/" onClick={() => setMenuOpen(false)}>Checker</a>
+            <a href="/security-scan/" onClick={() => setMenuOpen(false)}>Security scan</a>
             <a href="/docs/audit/" onClick={() => setMenuOpen(false)}>Audit</a>
             <a href="/docs/llms-txt/" onClick={() => setMenuOpen(false)}>llms.txt</a>
             <a href="/docs/json-ld/" onClick={() => setMenuOpen(false)}>JSON-LD</a>
@@ -144,6 +146,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             <div className="footer-col">
               <h4>Docs</h4>
               <a href="/checker/">Website checker</a>
+              <a href="/security-scan/">Security scan</a>
               <a href="/docs/audit/">Audit guide</a>
               <a href="/docs/llms-txt/">llms.txt guide</a>
               <a href="/docs/json-ld/">JSON-LD guide</a>

@@ -131,6 +131,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         checker: resolve(__dirname, 'checker/index.html'),
+        'security-scan': resolve(__dirname, 'security-scan/index.html'),
         'docs-llms-txt': resolve(__dirname, 'docs/llms-txt/index.html'),
         'docs-json-ld': resolve(__dirname, 'docs/json-ld/index.html'),
         'docs-ai-crawlers': resolve(__dirname, 'docs/ai-crawlers/index.html'),
@@ -154,6 +155,7 @@ export default defineConfig({
         'license': resolve(__dirname, 'license/index.html'),
         'prerender-main': resolve(__dirname, 'src/main.tsx'),
         'prerender-checker': resolve(__dirname, 'src/entries/checker.tsx'),
+        'prerender-security-scan': resolve(__dirname, 'src/entries/security-scan.tsx'),
         'prerender-docs-llms-txt': resolve(__dirname, 'src/entries/llms-txt.tsx'),
         'prerender-docs-json-ld': resolve(__dirname, 'src/entries/json-ld.tsx'),
         'prerender-docs-ai-crawlers': resolve(__dirname, 'src/entries/ai-crawlers.tsx'),
@@ -206,6 +208,7 @@ export default defineConfig({
             title: 'Guides',
             entries: [
               { title: 'Website checker', url: '/checker/', description: 'Check any public site for llms.txt, JSON-LD, robots.txt, sitemap discovery, markdown mirrors, and machine-readable basics' },
+              { title: 'Security scan', url: '/security-scan/', description: 'Passive security scan for public sites: HTTPS/HSTS, CSP, clickjacking and sniffing protections, cookies, mixed content, security.txt, and SPF/DMARC/DNSSEC' },
               { title: 'How to audit AI crawler access', url: '/docs/audit/', description: 'Fetch any live URL as each major AI crawler with @agentmarkup/audit, diff against a browser, and gate machine-readability in CI' },
               { title: 'How to generate llms.txt', url: '/docs/llms-txt/', description: 'Generate a spec-compliant llms.txt file at build time for AI model discovery' },
               { title: 'How to add JSON-LD structured data', url: '/docs/json-ld/', description: 'Inject schema.org JSON-LD with type-safe presets and XSS-safe serialization' },
@@ -308,6 +311,17 @@ export default defineConfig({
               name: 'agentmarkup website checker',
               url: `${siteUrl}/checker/`,
               description: 'Check any public website for llms.txt, JSON-LD structured data, markdown mirrors, robots.txt AI crawler rules, sitemap discovery, and thin client-rendered HTML.',
+            },
+          ],
+        },
+        {
+          path: '/security-scan/',
+          schemas: [
+            {
+              '@type': 'WebPage',
+              name: 'agentmarkup passive security scan',
+              url: `${siteUrl}/security-scan/`,
+              description: 'Passive security scan for public websites: HTTPS and HSTS, Content-Security-Policy, clickjacking and sniffing protections, cookie flags, mixed content, and security.txt.',
             },
           ],
         },
