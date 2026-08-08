@@ -519,9 +519,15 @@ h2 {
 
 .footer-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 2rem;
   margin-bottom: 2.5rem;
+}
+
+@media (min-width: 601px) and (max-width: 900px) {
+  .footer-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .footer-col {
