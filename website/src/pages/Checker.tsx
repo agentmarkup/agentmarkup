@@ -206,6 +206,23 @@ function Checker() {
     useState<TurnstileChallengeState | null>(null);
   const turnstileContainerRef = useRef<HTMLDivElement | null>(null);
   const turnstileWidgetIdRef = useRef<string | null>(null);
+  const urlInputRef = useRef<HTMLInputElement | null>(null);
+  const resultsHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const justResetRef = useRef(false);
+
+  const showResults = Boolean(analysis && result);
+
+  // Move focus when the view switches so keyboard and screen-reader users are
+  // not left on a control that just unmounted: to the results heading when
+  // results appear, and back to the URL input after "Check another site".
+  useEffect(() => {
+    if (showResults) {
+      resultsHeadingRef.current?.focus();
+    } else if (justResetRef.current) {
+      justResetRef.current = false;
+      urlInputRef.current?.focus();
+    }
+  }, [showResults]);
 
   async function performCheck(rawUrl: string, turnstileToken?: string) {
     const trimmedUrl = normalizeWebsiteInput(rawUrl);
@@ -398,10 +415,22 @@ function Checker() {
     void performCheck(targetUrl);
   }
 
+  function handleNewCheck() {
+    justResetRef.current = true;
+    setResult(null);
+    setAnalysis(null);
+    setError(null);
+    setTargetUrl('');
+    setTurnstileChallenge(null);
+    window.scrollTo({ top: 0 });
+  }
+
   return (
     <main>
       <article className="doc-page checker-page">
         <h1>Check your website before AI crawlers and search engines do</h1>
+        {!showResults ? (
+          <>
         <p className="doc-intro checker-intro">
           The checker fetches your public homepage, markdown mirrors, <code>/llms.txt</code>, <code>/robots.txt</code>, and sitemap, then shows deterministic pass, warning, and error findings. It also follows at most one same-origin page link to see what a real LLM-style fetch would actually get. No score. No vague advice. Just the exact metadata, crawler, and thin-HTML issues that need fixing.
         </p>
@@ -419,6 +448,7 @@ function Checker() {
             <div className="checker-form-row">
               <input
                 id="checker-url"
+                ref={urlInputRef}
                 className="checker-input"
                 type="text"
                 placeholder="https://example.com"
@@ -441,6 +471,8 @@ function Checker() {
             The checker normalizes input to the site root and looks for homepage metadata, JSON-LD, markdown alternate links, llms.txt, robots.txt, sitemap discovery, and common AI crawler rules. It samples one internal link only, so it stays deterministic and does not flood the checked site. The checker and the <a href="/security-scan/">security scan</a> share the same per-IP rate limit.
 </p>
         </section>
+          </>
+        ) : null}
 
         {turnstileChallenge ? (
           <section className="checker-state checker-state-challenge">
@@ -474,9 +506,21 @@ function Checker() {
 
         {analysis && result ? (
           <>
+            <div className="checker-results-top">
+              <button
+                type="button"
+                className="checker-action"
+                onClick={handleNewCheck}
+              >
+                Check another site
+              </button>
+            </div>
+
             <section className="checker-summary">
               <div>
-                <h2>Results for {analysis.normalizedUrl}</h2>
+                <h2 ref={resultsHeadingRef} tabIndex={-1}>
+                  Results for {analysis.normalizedUrl}
+                </h2>
                 <p className="checker-summary-text">
                   Checked at {new Date(result.fetchedAt).toLocaleString()}.
                   {analysis.normalizedFrom ? (
