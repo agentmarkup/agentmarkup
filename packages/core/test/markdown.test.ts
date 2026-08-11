@@ -229,6 +229,16 @@ describe('resolveMarkdownCanonicalUrl', () => {
     ).toBe('https://example.com/docs/');
   });
 
+  it('uses the authored canonical regardless of link attribute order', () => {
+    expect(
+      resolveMarkdownCanonicalUrl({
+        html: '<html><head><link href="https://example.com/docs/" rel="canonical" /></head></html>',
+        pagePath: '/docs',
+        siteUrl: 'https://example.com',
+      })
+    ).toBe('https://example.com/docs/');
+  });
+
   it('falls back to the configured site and page path when no canonical is authored', () => {
     expect(
       resolveMarkdownCanonicalUrl({

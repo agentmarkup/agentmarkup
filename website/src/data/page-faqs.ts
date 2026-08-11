@@ -92,7 +92,7 @@ export const llmsTxtFaqs: PageFaqItem[] = [
 
 export const jsonLdFaqs: PageFaqItem[] = [
   { question: 'Do I need JSON-LD if I already have meta tags?', answer: 'Yes. Meta tags (title, description) help search engines understand a single page. JSON-LD tells them what kind of thing the page represents (a product, an article, an FAQ) with structured fields they can use for rich results.' },
-  { question: 'Can I add multiple schemas to one page?', answer: 'Yes. Use the pages config to add multiple schemas per path. Each schema generates its own script type="application/ld+json" tag. Global schemas are also added to every page.' },
+  { question: 'Can I add multiple schemas to one page?', answer: 'Yes. Use the pages config to add multiple schemas per path. Each schema generates its own <script type="application/ld+json"> tag. Global schemas are also added to every page.' },
   { question: 'What if I need a schema type that is not a preset?', answer: 'Pass any object with an @type field. agentmarkup will add @context automatically and serialize it safely. Presets just save you from remembering required fields.' },
 ];
 

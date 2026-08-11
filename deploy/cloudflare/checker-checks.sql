@@ -19,11 +19,6 @@ CREATE INDEX IF NOT EXISTS idx_checker_checks_checked_at
 CREATE INDEX IF NOT EXISTS idx_checker_checks_normalized_url
   ON checker_checks (normalized_url);
 
--- Redact any legacy rows written before requested_input became normalized-only.
-UPDATE checker_checks
-SET requested_input = normalized_url
-WHERE requested_input <> normalized_url;
-
 CREATE TABLE IF NOT EXISTS checker_request_events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   ip_hash TEXT NOT NULL,

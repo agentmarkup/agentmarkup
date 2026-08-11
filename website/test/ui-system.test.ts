@@ -225,7 +225,6 @@ describe('sitewide React Bits visual system', () => {
   })
 
   it('keeps the cobalt action ramp token-driven and removes the violet specular treatment', () => {
-    const design = readFileSync(`${websiteRoot}/DESIGN.md`, 'utf8')
     const foundations = readFileSync(`${websiteRoot}/src/styles/foundations.css`, 'utf8')
     const components = readFileSync(`${websiteRoot}/src/styles/components.css`, 'utf8')
     const pages = readFileSync(`${websiteRoot}/src/styles/pages.css`, 'utf8')
@@ -251,7 +250,7 @@ describe('sitewide React Bits visual system', () => {
     expect(threads).toContain("window.matchMedia('(max-width: 47.99rem), (pointer: coarse)')")
     expect(threads).toContain('vec3(1.0) * sum')
 
-    const paletteSources = [design, foundations, components, threads, layout].join('\n')
+    const paletteSources = [foundations, components, pages, threads, layout].join('\n')
     for (const retiredColor of [
       '#e2daff',
       'rgba(142, 119, 255',

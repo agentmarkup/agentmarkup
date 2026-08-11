@@ -103,12 +103,31 @@ function extractHeadMetadata(html: string): HeadMetadata {
       /<meta\b[^>]*name=(['"])description\1[^>]*content=(['"])([\s\S]*?)\2[^>]*>/i,
       3
     ),
-    canonical: extractHeadValue(
-      html,
-      /<link\b[^>]*rel=(['"])canonical\1[^>]*href=(['"])([\s\S]*?)\2[^>]*>/i,
-      3
-    ),
+    canonical: extractCanonicalLink(html),
   };
+}
+
+function extractCanonicalLink(html: string): string | null {
+  for (const match of html.matchAll(/<link\b[^>]*>/gi)) {
+    const rel = extractAttributeValue(match[0], 'rel');
+    if (!rel?.toLowerCase().split(/\s+/).includes('canonical')) {
+      continue;
+    }
+
+    return extractAttributeValue(match[0], 'href');
+  }
+
+  return null;
+}
+
+function extractAttributeValue(tag: string, name: string): string | null {
+  const match = tag.match(new RegExp(`\\b${name}\\s*=\\s*(['"])([\\s\\S]*?)\\1`, 'i'));
+  if (!match) {
+    return null;
+  }
+
+  const value = decodeHtmlEntities(match[2].trim());
+  return value || null;
 }
 
 function extractHeadValue(

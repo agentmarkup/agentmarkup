@@ -453,7 +453,7 @@ function Checker() {
                 <p className="section-kicker">Free website check</p>
                 <h1>Check your website before AI crawlers and search engines do</h1>
                 <p className="doc-intro checker-intro">
-                  See what machines can find, understand, and access — then get a clear next step.
+                  See what machines can find, understand, and access, then get a clear next step.
                 </p>
               </header>
 
@@ -564,7 +564,7 @@ function Checker() {
             <p>
               Every finding is based on a response the checker received. Results are labelled
               <strong> looks good</strong>, <strong>needs attention</strong>, or
-              <strong> action required</strong>—there is no invented score. The checker samples one
+              <strong> action required</strong>. There is no invented score. The checker samples one
               homepage and one internal page, so it gives a useful first view without crawling your
               whole site.
             </p>

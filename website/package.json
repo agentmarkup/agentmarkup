@@ -9,9 +9,11 @@
     "prebuild": "pnpm -C ../packages/vite build",
     "build": "tsc -b && vite build",
     "smoke": "pnpm build",
+    "pretest": "pnpm -C ../packages/vite build",
     "test": "vitest run",
     "verify:seo": "node scripts/seo-structure.mjs verify",
     "lint": "eslint .",
+    "pretypecheck": "pnpm -C ../packages/vite build",
     "typecheck": "tsc -b",
     "preview": "vite preview"
   },
