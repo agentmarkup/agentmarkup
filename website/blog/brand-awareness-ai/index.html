@@ -2,13 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <script>(function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t);document.documentElement.style.backgroundColor=t==='light'?'#fafafa':'#0a0a0a';document.documentElement.style.colorScheme=t})()</script>
+    <script>
+      (function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.style.backgroundColor=t==='light'?'#fffefc':'#10121a';document.documentElement.style.colorScheme=t})()
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>How to make your brand appear in AI conversations - agentmarkup</title>
     <meta name="description" content="When people ask AI for recommendations, does your brand show up? Learn how Organization schema, llms.txt, FAQ markup, and clear content structure make your brand visible in ChatGPT, Claude, and Perplexity answers." />
     <meta name="keywords" content="brand awareness ai, ai brand visibility, organization schema, llms.txt branding, ai recommendations, chatgpt brand mentions, ai conversations, brand structured data" />
     <meta name="author" content="Sebastian Cochinescu" />
     <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
+    <link rel="preload" href="/fonts/manrope-latin-variable.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/source-serif-4-latin-variable.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="canonical" href="https://agentmarkup.dev/blog/brand-awareness-ai/" />
     <meta property="og:title" content="How to make your brand appear in AI conversations" />
     <meta property="og:description" content="Make your brand visible in ChatGPT, Claude, and Perplexity answers with structured data and clear content." />

@@ -41,4 +41,5 @@ pnpm build
 - Build and publish with `./deploy/website-deploy.sh [cloudflare-project-name]`.
 - The deploy script runs `pnpm install --frozen-lockfile`, builds the workspace package plus website, and uploads `website/dist` to Cloudflare Pages with the workspace-pinned `wrangler` CLI.
 - `CLOUDFLARE_ACCOUNT_ID` must be set in the shell before running the deploy script.
+- The Pages project must have the required `CHECKS_DB` binding and Turnstile site/secret keys documented in `deploy/CLAUDE.md`; API requests fail closed when protection is unavailable.
 - Cloudflare Pages security headers live in `website/public/_headers`; keep them aligned with any inline scripts or third-party origins used by the site.

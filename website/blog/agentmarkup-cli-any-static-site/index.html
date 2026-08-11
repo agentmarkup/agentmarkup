@@ -2,13 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <script>(function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t);document.documentElement.style.backgroundColor=t==='light'?'#fafafa':'#0a0a0a';document.documentElement.style.colorScheme=t})()</script>
+    <script>
+      (function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.style.backgroundColor=t==='light'?'#fffefc':'#10121a';document.documentElement.style.colorScheme=t})()
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Run agentmarkup on any static site with the CLI - agentmarkup</title>
     <meta name="description" content="Use @agentmarkup/cli to run llms.txt, JSON-LD, markdown mirrors, and AI crawler controls over any built static output, with a CI check command." />
     <meta name="keywords" content="agentmarkup cli, llms.txt cli, static site llms.txt, ci machine readable, eleventy llms.txt, hugo llms.txt, gatsby llms.txt, agentmarkup" />
     <meta name="author" content="Sebastian Cochinescu" />
     <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
+    <link rel="preload" href="/fonts/manrope-latin-variable.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/source-serif-4-latin-variable.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="canonical" href="https://agentmarkup.dev/blog/agentmarkup-cli-any-static-site/" />
     <meta property="og:title" content="Run agentmarkup on any static site with the CLI" />
     <meta property="og:description" content="Use @agentmarkup/cli to run llms.txt, JSON-LD, markdown mirrors, and AI crawler controls over any built static output, with a CI check command." />

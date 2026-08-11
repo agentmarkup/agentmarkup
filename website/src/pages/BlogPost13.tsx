@@ -21,7 +21,7 @@ function AuditGuide() {
   return (
     <main>
       <article className="doc-page blog-post">
-        <Byline date="2026-07-02" readingTime="6 min read" />
+        <Byline date="2026-07-02" readingTime="6 min read" slug="audit-ai-crawler-access" />
         <h1>See your website the way AI crawlers do</h1>
         <p className="doc-intro">
           Most tools that grade a website fetch it once, as a browser, and score

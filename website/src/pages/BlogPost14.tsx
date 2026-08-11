@@ -94,10 +94,40 @@ function Stat({
   )
 }
 
+const countRows = (predicate: (row: F500Row) => boolean) => fortune500.filter(predicate).length
+const percentOfRows = (count: number) => Math.round((count / fortune500.length) * 100)
+const GRID_COLUMNS = 28
+const AUDIT_SUMMARY = {
+  total: fortune500.length,
+  usableJsonLd: countRows((row) => row.j === 2),
+  validLlmsTxt: countRows((row) => row.l === 2),
+  contentSignalSet: countRows((row) => row.c === 1),
+  blankPage: countRows((row) => row.s === 0),
+  thinHtml: countRows((row) => row.s === 1),
+  robotsDisallow: countRows((row) => row.r === 1),
+  brokenJsonLd: countRows((row) => row.j === 1),
+  crawlerGetsLess: countRows((row) => row.x === 1),
+  hardErrors: countRows((row) => row.w === 'e'),
+  warnings: countRows((row) => row.w === 'w'),
+}
+const fullyClean = AUDIT_SUMMARY.total - AUDIT_SUMMARY.hardErrors - AUDIT_SUMMARY.warnings
+
 const SIGNALS: { name: string; note: string; on: (r: F500Row) => boolean }[] = [
-  { name: 'Structured data', note: '201 / 370 · 54%', on: (r) => r.j === 2 },
-  { name: 'llms.txt', note: '50 / 370 · 14%', on: (r) => r.l === 2 },
-  { name: 'Content-Signal', note: '3 / 370 · under 1%', on: (r) => r.c === 1 },
+  {
+    name: 'Structured data',
+    note: `${AUDIT_SUMMARY.usableJsonLd} / ${AUDIT_SUMMARY.total} · ${percentOfRows(AUDIT_SUMMARY.usableJsonLd)}%`,
+    on: (r) => r.j === 2,
+  },
+  {
+    name: 'llms.txt',
+    note: `${AUDIT_SUMMARY.validLlmsTxt} / ${AUDIT_SUMMARY.total} · ${percentOfRows(AUDIT_SUMMARY.validLlmsTxt)}%`,
+    on: (r) => r.l === 2,
+  },
+  {
+    name: 'Content-Signal',
+    note: `${AUDIT_SUMMARY.contentSignalSet} / ${AUDIT_SUMMARY.total} · under 1%`,
+    on: (r) => r.c === 1,
+  },
 ]
 
 function SignalGrid({
@@ -108,6 +138,27 @@ function SignalGrid({
   onPick: (i: number) => void
 }) {
   const ref = useReveal<HTMLDivElement>()
+  const [activeIndex, setActiveIndex] = useState(0)
+  const gridRows = Array.from({ length: Math.ceil(fortune500.length / GRID_COLUMNS) }, (_, rowIndex) =>
+    fortune500.slice(rowIndex * GRID_COLUMNS, (rowIndex + 1) * GRID_COLUMNS),
+  )
+
+  const handleGridKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const grid = event.currentTarget.closest('[role="grid"]')
+    const columns = GRID_COLUMNS
+    let nextIndex = index
+    if (event.key === 'ArrowRight') nextIndex = Math.min(fortune500.length - 1, index + 1)
+    else if (event.key === 'ArrowLeft') nextIndex = Math.max(0, index - 1)
+    else if (event.key === 'ArrowDown') nextIndex = Math.min(fortune500.length - 1, index + columns)
+    else if (event.key === 'ArrowUp') nextIndex = Math.max(0, index - columns)
+    else if (event.key === 'Home') nextIndex = 0
+    else if (event.key === 'End') nextIndex = fortune500.length - 1
+    else return
+    event.preventDefault()
+    setActiveIndex(nextIndex)
+    grid?.querySelectorAll<HTMLButtonElement>('button')[nextIndex]?.focus()
+  }
+
   return (
     <div>
       <div className="f500-unit-cap">
@@ -117,23 +168,33 @@ function SignalGrid({
       <div
         className="f500-grid is-interactive"
         ref={ref}
-        onClick={(e) => {
-          const cell = (e.target as HTMLElement).closest<HTMLElement>('[data-idx]')
-          if (cell) onPick(Number(cell.dataset.idx))
-        }}
+        role="grid"
+        aria-label={`${signal.name} by company. Use arrow keys to explore.`}
       >
-        {fortune500.map((r, i) => {
-          const on = signal.on(r)
-          return (
-            <span
-              key={i}
-              data-idx={i}
-              title={r.d}
-              className={on ? 'f500-cell is-on' : 'f500-cell'}
-              style={on ? ({ ['--i']: i } as CSSProperties) : undefined}
-            />
-          )
-        })}
+        {gridRows.map((row, rowIndex) => (
+          <div className="f500-grid-row" role="row" key={row[0].d}>
+            {row.map((company, columnIndex) => {
+              const index = rowIndex * GRID_COLUMNS + columnIndex
+              const on = signal.on(company)
+              return (
+                <button
+                  type="button"
+                  key={company.d}
+                  data-idx={index}
+                  title={company.d}
+                  className={on ? 'f500-cell on' : 'f500-cell off'}
+                  style={on ? ({ ['--i']: index } as CSSProperties) : undefined}
+                  role="gridcell"
+                  tabIndex={activeIndex === index ? 0 : -1}
+                  aria-label={`${company.d}: ${on ? `has ${signal.name}` : `does not have ${signal.name}`}`}
+                  onFocus={() => setActiveIndex(index)}
+                  onKeyDown={(event) => handleGridKeyDown(event, index)}
+                  onClick={() => onPick(index)}
+                />
+              )
+            })}
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -152,36 +213,34 @@ function verdictRows(r: F500Row): [string, string, boolean][] {
 }
 
 function CompanyModal({ row, onClose }: { row: F500Row; onClose: () => void }) {
+  const dialogRef = useRef<HTMLDialogElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null
+    const dialog = dialogRef.current
+    dialog?.showModal()
     closeRef.current?.focus()
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKey)
     const prevOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
-      document.removeEventListener('keydown', onKey)
       document.body.style.overflow = prevOverflow
       prev?.focus?.()
     }
-  }, [onClose])
+  }, [])
 
   return (
-    <div className="f500-modal-backdrop" onClick={onClose}>
-      <div
+      <dialog
+        ref={dialogRef}
         className="f500-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label={`Audit results for ${row.d}`}
-        onClick={(e) => e.stopPropagation()}
+        aria-labelledby="f500-dialog-title"
+        onKeyDown={(event) => { if (event.key === 'Escape') { event.preventDefault(); dialogRef.current?.close() } }}
+        onClose={onClose}
+        onClick={(event) => { if (event.target === event.currentTarget) dialogRef.current?.close() }}
       >
-        <button className="f500-modal-close" ref={closeRef} onClick={onClose} aria-label="Close">
+        <button className="f500-modal-close" ref={closeRef} onClick={() => dialogRef.current?.close()} aria-label="Close">
           &times;
         </button>
-        <div className="f500-modal-domain">{row.d}</div>
+        <h2 className="f500-modal-domain" id="f500-dialog-title">{row.d}</h2>
         <div className={row.w === 'e' ? 'f500-modal-verdict is-err' : 'f500-modal-verdict'}>
           {row.w === 'e' ? 'Has a build-breaking error' : 'Warnings only, no hard errors'}
         </div>
@@ -189,16 +248,19 @@ function CompanyModal({ row, onClose }: { row: F500Row; onClose: () => void }) {
           {verdictRows(row).map(([label, val, ok]) => (
             <li key={label}>
               <span className={ok ? 'f500-modal-mark ok' : 'f500-modal-mark no'} aria-hidden="true">
-                {ok ? '✓' : '✕'}
+                {ok ? (
+                  <svg viewBox="0 0 24 24"><path d="m6.5 12.5 3.5 3.5 7.5-8" /></svg>
+                ) : (
+                  <svg viewBox="0 0 24 24"><path d="m8 8 8 8M16 8l-8 8" /></svg>
+                )}
               </span>
               <span className="f500-modal-k">{label}</span>
               <span className="f500-modal-v">{val}</span>
             </li>
           ))}
         </ul>
-        <pre className="f500-cmd"><code>npx @agentmarkup/audit https://{row.d}</code></pre>
-      </div>
-    </div>
+        <pre className="f500-cmd" tabIndex={0} aria-label="Audit command"><code>npx @agentmarkup/audit https://{row.d}</code></pre>
+      </dialog>
   )
 }
 
@@ -219,7 +281,7 @@ function Explorer() {
     <div>
       <p className="f500-hint">
         Each square is one of the 370 companies, inked in if it has the signal.
-        Click any square, or search, to see that company's full result.
+        Click any square, use the arrow keys, or search to see that company's full result.
       </p>
       <input
         className="f500-search"
@@ -251,8 +313,9 @@ function Explorer() {
         ))}
       </div>
       <p className="f500-units-legend">
-        <span className="f500-key on" aria-hidden="true" />has the signal
-        <span className="f500-key off" aria-hidden="true" />does not &middot; click a square for details
+        <span className="f500-key on">has the signal</span>
+        <span className="f500-key off">does not have the signal</span>
+        <span>Click a square or use arrow keys for details.</span>
       </p>
 
       {selected && <CompanyModal row={selected} onClose={() => setSelected(null)} />}
@@ -263,8 +326,8 @@ function Explorer() {
 function FortuneReport() {
   return (
     <main>
-      <article className="doc-page blog-post">
-        <Byline date="2026-07-02" readingTime="5 min read" />
+    <article className="doc-page blog-post f500-report">
+        <Byline date="2026-07-02" readingTime="5 min read" slug="ai-crawler-audit-500-companies" />
         <h1>We ran 500 of America's biggest companies through an AI-crawler audit</h1>
         <p className="doc-intro">
           America's biggest companies built their websites for Google's crawler.
@@ -277,10 +340,10 @@ function FortuneReport() {
 
         <section>
           <div className="f500-stats">
-            <Stat kicker="Structured data" end={46} suffix="%" label="have no usable JSON-LD" sub="nothing machine-readable saying what the page is" />
-            <Stat kicker="Discovery" end={86} suffix="%" label="have no llms.txt" sub="the emerging AI-discovery file" />
-            <Stat kicker="Usage rules" end={99} suffix="%" label="set no AI-usage signal" sub="Content-Signal, the new opt-in standard" />
-            <Stat kicker="Broken" end={7} label="serve crawlers a blank page" sub="content hidden behind JavaScript they don't run" />
+            <Stat kicker="Structured data" end={percentOfRows(AUDIT_SUMMARY.total - AUDIT_SUMMARY.usableJsonLd)} suffix="%" label="have no usable JSON-LD" sub="nothing machine-readable saying what the page is" />
+            <Stat kicker="Discovery" end={percentOfRows(AUDIT_SUMMARY.total - AUDIT_SUMMARY.validLlmsTxt)} suffix="%" label="have no valid llms.txt" sub="missing or malformed AI-discovery file" />
+            <Stat kicker="Usage rules" end={percentOfRows(AUDIT_SUMMARY.total - AUDIT_SUMMARY.contentSignalSet)} suffix="%" label="set no AI-usage signal" sub="Content-Signal, the new opt-in standard" />
+            <Stat kicker="Broken" end={AUDIT_SUMMARY.blankPage} label="serve crawlers a blank page" sub="content hidden behind JavaScript they don't run" />
           </div>
         </section>
 
@@ -301,24 +364,24 @@ function FortuneReport() {
             provable from the response itself, the kind that fails a CI check.
           </p>
           <div className="f500-stats">
-            <Stat kicker="robots.txt" end={7} label="disallow an AI crawler" sub="block GPTBot or a peer outright" />
-            <Stat kicker="Structured data" end={6} label="ship broken JSON-LD" sub="markup an agent cannot parse" />
-            <Stat kicker="Bait and switch" end={6} label="show crawlers less than a browser" sub="the bot gets a thinner page than you" />
-            <Stat kicker="Near-empty" end={17} label="serve thin HTML" sub="barely enough for a crawler to use" />
+            <Stat kicker="robots.txt" end={AUDIT_SUMMARY.robotsDisallow} label="disallow an AI crawler" sub="block GPTBot or a peer outright" />
+            <Stat kicker="Structured data" end={AUDIT_SUMMARY.brokenJsonLd} label="ship broken JSON-LD" sub="markup an agent cannot parse" />
+            <Stat kicker="Bait and switch" end={AUDIT_SUMMARY.crawlerGetsLess} label="show crawlers less than a browser" sub="the bot gets a thinner page than you" />
+            <Stat kicker="Near-empty" end={AUDIT_SUMMARY.thinHtml} label="serve thin HTML" sub="barely enough for a crawler to use" />
           </div>
           <p style={{ marginTop: '1.5rem' }}>
             And not one earned a clean bill of health. Every site tripped at least
-            one check, most often the missing llms.txt; 27 tripped a hard,
+            one check, most often the missing llms.txt; {AUDIT_SUMMARY.hardErrors} tripped a hard,
             build-breaking error.
           </p>
           <div className="f500-segbar" aria-hidden="true">
-            <div className="f500-seg err" style={{ width: '7.3%' }} />
-            <div className="f500-seg warn" style={{ width: '92.7%' }} />
+            <div className="f500-seg err" style={{ width: `${(AUDIT_SUMMARY.hardErrors / AUDIT_SUMMARY.total) * 100}%` }} />
+            <div className="f500-seg warn" style={{ width: `${(AUDIT_SUMMARY.warnings / AUDIT_SUMMARY.total) * 100}%` }} />
           </div>
           <div className="f500-seglabels">
-            <span><b>27</b> hard errors</span>
-            <span><b>343</b> with warnings</span>
-            <span><b>0</b> fully clean</span>
+            <span><b>{AUDIT_SUMMARY.hardErrors}</b> hard errors</span>
+            <span><b>{AUDIT_SUMMARY.warnings}</b> with warnings</span>
+            <span><b>{fullyClean}</b> fully clean</span>
           </div>
         </section>
 
@@ -380,7 +443,7 @@ function FortuneReport() {
             You do not have to take our word for any of this. Point the same audit
             at your homepage:
           </p>
-          <pre className="f500-cmd"><code>npx @agentmarkup/audit https://yourdomain.com</code></pre>
+          <pre className="f500-cmd" tabIndex={0} aria-label="Audit command"><code>npx @agentmarkup/audit https://yourdomain.com</code></pre>
           <p>
             Prefer a browser? Run the hosted{' '}
             <a href="/checker/">website checker</a>. When it finds gaps, the{' '}

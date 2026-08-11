@@ -67,7 +67,7 @@ function NextJsGuide() {
   return (
     <main>
       <article className="doc-page blog-post">
-        <Byline date="2026-03-23" readingTime="8 min read" />
+        <Byline date="2026-03-23" readingTime="8 min read" slug="nextjs-llms-txt-json-ld" />
         <h1>How to add llms.txt, JSON-LD, and AI crawler controls to Next.js</h1>
         <p className="doc-intro">
           Next.js sites need the same machine-readable surface as any other modern website:{' '}

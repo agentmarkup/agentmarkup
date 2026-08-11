@@ -40,7 +40,7 @@ function CliGuide() {
   return (
     <main>
       <article className="doc-page blog-post">
-        <Byline date="2026-06-21" readingTime="6 min read" />
+        <Byline date="2026-06-21" readingTime="6 min read" slug="agentmarkup-cli-any-static-site" />
         <h1>Run agentmarkup on any static site with the CLI</h1>
         <p className="doc-intro">
           Not every site uses a framework with a dedicated adapter. <code>@agentmarkup/cli</code> runs

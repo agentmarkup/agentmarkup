@@ -1,45 +1,60 @@
-import { author, blogPosts, type BlogPostMeta } from './data/editorial'
+import { author } from './data/editorial'
+import { getBlogFooterModel } from './data/blog-footer'
 import { formatEditorialDate } from './formatDate'
+import { EditorialMeta } from './ui/EditorialMeta'
 
 function BlogFooter({ currentSlug }: { currentSlug: string }) {
-  const otherPosts = blogPosts.filter(p => p.slug !== currentSlug)
+  const { previousPost, nextPost, orientation, recommendedPosts } = getBlogFooterModel(currentSlug)
 
   return (
     <div className="blog-footer">
-      <section className="blog-cta">
-        <h2>Make your website machine-readable</h2>
-        <p>
-          agentmarkup is an open-source build-time toolkit for Vite, Astro,
-          Next.js, and Nuxt (plus a framework-agnostic CLI) that generates
-          llms.txt, injects JSON-LD structured data, creates optional markdown
-          mirrors from final HTML when raw pages need a cleaner agent-facing
-          fetch path, manages AI crawler robots.txt rules, patches optional
-          Content-Signal and canonical mirror headers, and validates everything
-          at build time. Zero runtime cost.
-        </p>
-        <div className="blog-cta-actions">
-          <a href="/" className="blog-cta-link">Learn more</a>
-          <a href="https://github.com/agentmarkup/agentmarkup" target="_blank" rel="noopener noreferrer" className="blog-cta-link">GitHub</a>
-          <pre className="blog-cta-install"><code>pnpm add -D @agentmarkup/vite  # or @agentmarkup/astro, @agentmarkup/next, @agentmarkup/nuxt, @agentmarkup/cli</code></pre>
-        </div>
-      </section>
+      <div className="blog-outro-card">
+        <section className="blog-author-card">
+          <p className="blog-author-label">Written by</p>
+          <p className="blog-author-name">
+            <a href={author.profilePath}>{author.name}</a>
+            <span className="blog-author-role"> &middot; {author.role}</span>
+          </p>
+          <p className="blog-author-bio">{author.bio}</p>
+        </section>
+        <aside className="article-orientation" aria-label="Recommended next reading">
+          <p className="article-orientation-label">Continue reading</p>
+          <a href={orientation.href}>
+            <strong>{orientation.title}</strong>
+            <span aria-hidden="true">→</span>
+          </a>
+          <p>{orientation.description}</p>
+        </aside>
+      </div>
 
-      <section className="blog-author-card">
-        <p className="blog-author-label">Written by</p>
-        <p className="blog-author-name">
-          <a href={author.profilePath}>{author.name}</a>
-          <span className="blog-author-role"> &middot; {author.role}</span>
-        </p>
-        <p className="blog-author-bio">{author.bio}</p>
-      </section>
+      {previousPost || nextPost ? (
+        <nav className="article-pagination" aria-label="Article order">
+          {previousPost ? (
+            <a href={`/blog/${previousPost.slug}/`} className="article-pagination-previous">
+              <span>← Previous article</span>
+              <strong>{previousPost.title}</strong>
+            </a>
+          ) : null}
+          {nextPost ? (
+            <a href={`/blog/${nextPost.slug}/`} className="article-pagination-next">
+              <span>Next article →</span>
+              <strong>{nextPost.title}</strong>
+            </a>
+          ) : null}
+        </nav>
+      ) : null}
 
       <section className="blog-related">
-        <h2>More from the blog</h2>
+        <div className="blog-related-heading">
+          <h2>More from the blog</h2>
+          <a href="/blog/">View all articles →</a>
+        </div>
         <div className="blog-list">
-          {otherPosts.map((post: BlogPostMeta) => (
+          {recommendedPosts.map((post) => (
             <a key={post.slug} href={`/blog/${post.slug}/`} className="blog-card">
               <h3>{post.title}</h3>
               <p>{post.description}</p>
+              <EditorialMeta post={post} compact />
               <span className="blog-date">{formatDate(post.date)} &middot; {post.readingTime}</span>
             </a>
           ))}

@@ -3,6 +3,11 @@ import type { FormEvent } from 'react';
 
 import { analyzeSiteCheck } from '../checker/analyze';
 import { normalizeWebsiteInput } from '../normalizeWebsiteInput';
+import { StatusIcon } from '../ui/Status';
+import { getOverallVerdict, levelToStatus, statusLabels } from '../ui/status-model';
+import { FindingFilter, OverallVerdictPanel, ResultCount } from '../ui/ToolResults';
+import { ContextualFaq } from '../ui/ContextualFaq';
+import { checkerFaqs } from '../data/page-faqs';
 import type {
   AuditItem,
   CheckerErrorResponse,
@@ -16,6 +21,7 @@ interface TurnstileApi {
     container: HTMLElement,
     options: {
       sitekey: string;
+      action?: string;
       theme?: 'auto' | 'light' | 'dark';
       callback: (token: string) => void;
       'error-callback'?: () => void;
@@ -200,10 +206,12 @@ function Checker() {
   const [targetUrl, setTargetUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldError, setFieldError] = useState<string | null>(null);
   const [result, setResult] = useState<SiteCheckResponse | null>(null);
   const [analysis, setAnalysis] = useState<SiteAnalysis | null>(null);
   const [turnstileChallenge, setTurnstileChallenge] =
     useState<TurnstileChallengeState | null>(null);
+  const [findingFilter, setFindingFilter] = useState<'all' | 'error' | 'warning' | 'pass'>('all');
   const turnstileContainerRef = useRef<HTMLDivElement | null>(null);
   const turnstileWidgetIdRef = useRef<string | null>(null);
   const urlInputRef = useRef<HTMLInputElement | null>(null);
@@ -211,6 +219,10 @@ function Checker() {
   const justResetRef = useRef(false);
 
   const showResults = Boolean(analysis && result);
+  const verdict = analysis ? getOverallVerdict(analysis.counts) : null;
+  const visibleItems = analysis
+    ? analysis.items.filter((item) => findingFilter === 'all' || item.level === findingFilter)
+    : [];
 
   // Move focus when the view switches so keyboard and screen-reader users are
   // not left on a control that just unmounted: to the results heading when
@@ -227,7 +239,8 @@ function Checker() {
   async function performCheck(rawUrl: string, turnstileToken?: string) {
     const trimmedUrl = normalizeWebsiteInput(rawUrl);
     if (!trimmedUrl) {
-      setError('Enter a public website URL to run the checker.');
+      setFieldError('Enter a public website URL to run the checker.');
+      setError(null);
       setResult(null);
       setAnalysis(null);
       setTurnstileChallenge(null);
@@ -235,6 +248,7 @@ function Checker() {
     }
 
     setLoading(true);
+    setFieldError(null);
     setError(null);
 
     if (!turnstileToken) {
@@ -305,6 +319,7 @@ function Checker() {
 
     setLoading(true);
     setError(null);
+    setFieldError(null);
 
     void requestSiteCheck(initialUrl)
       .then((payload) => {
@@ -374,6 +389,7 @@ function Checker() {
 
         turnstileWidgetIdRef.current = turnstile.render(container, {
           sitekey: challenge.siteKey,
+          action: 'public-scan',
           theme: 'auto',
           callback: (token) => {
             handleTurnstileToken(token);
@@ -420,62 +436,148 @@ function Checker() {
     setResult(null);
     setAnalysis(null);
     setError(null);
+    setFieldError(null);
     setTargetUrl('');
     setTurnstileChallenge(null);
+    setFindingFilter('all');
     window.scrollTo({ top: 0 });
   }
 
   return (
     <main>
       <article className="doc-page checker-page">
-        <h1>Check your website before AI crawlers and search engines do</h1>
         {!showResults ? (
           <>
-        <p className="doc-intro checker-intro">
-          The checker fetches your public homepage, markdown mirrors, <code>/llms.txt</code>, <code>/robots.txt</code>, and sitemap, then shows deterministic pass, warning, and error findings. It also follows at most one same-origin page link to see what a real LLM-style fetch would actually get. No score. No vague advice. Just the exact metadata, crawler, and thin-HTML issues that need fixing.
-        </p>
+            <section className="checker-start">
+              <header className="checker-heading">
+                <p className="section-kicker">Free website check</p>
+                <h1>Check your website before AI crawlers and search engines do</h1>
+                <p className="doc-intro checker-intro">
+                  See what machines can find, understand, and access — then get a clear next step.
+                </p>
+              </header>
 
-        <section className="checker-panel">
-          <form className="checker-form" onSubmit={handleSubmit}>
-            <label className="checker-label" htmlFor="checker-url">
-              Website URL
-            </label>
-            <p className="checker-field-note">
-              Only the root website is checked first. Enter any public page URL
-              and the checker will normalize it to the site root before
-              fetching metadata.
-            </p>
-            <div className="checker-form-row">
-              <input
-                id="checker-url"
-                ref={urlInputRef}
-                className="checker-input"
-                type="text"
-                placeholder="https://example.com"
-                value={targetUrl}
-                onChange={(event) => setTargetUrl(event.target.value)}
-                onBlur={() =>
-                  setTargetUrl((currentUrl) => normalizeWebsiteInput(currentUrl))
-                }
-                inputMode="url"
-                autoComplete="url"
-                spellCheck={false}
-                required
-              />
-              <button className="checker-submit" type="submit" disabled={loading}>
-                {loading ? 'Checking...' : 'Run checker'}
-              </button>
-            </div>
-          </form>
-          <p className="checker-note">
-            The checker normalizes input to the site root and looks for homepage metadata, JSON-LD, markdown alternate links, llms.txt, robots.txt, sitemap discovery, and common AI crawler rules. It samples one internal link only, so it stays deterministic and does not flood the checked site. The checker and the <a href="/security-scan/">security scan</a> share the same per-IP rate limit.
-</p>
+              <div className="checker-panel">
+                <form className="checker-form" onSubmit={handleSubmit} aria-busy={loading} noValidate>
+                  <label className="checker-label" htmlFor="checker-url">
+                    Enter your website address
+                  </label>
+                  <p className="checker-field-note" id="checker-url-help">
+                    Any public page works. We automatically check the website root.
+                  </p>
+                  <div className="checker-form-row">
+                    <input
+                      id="checker-url"
+                      ref={urlInputRef}
+                      className="checker-input"
+                      type="text"
+                      placeholder="https://example.com"
+                      value={targetUrl}
+                      onChange={(event) => {
+                        setTargetUrl(event.target.value);
+                        if (fieldError) setFieldError(null);
+                      }}
+                      onBlur={() =>
+                        setTargetUrl((currentUrl) => normalizeWebsiteInput(currentUrl))
+                      }
+                      inputMode="url"
+                      autoComplete="url"
+                      spellCheck={false}
+                      aria-describedby={`checker-url-help${fieldError ? ' checker-url-error' : ''}`}
+                      aria-invalid={Boolean(fieldError)}
+                      required
+                    />
+                    <button className="checker-submit" type="submit" disabled={loading} aria-busy={loading}>
+                      {loading ? <><span className="checker-spinner" aria-hidden="true" />Checking...</> : 'Check website'}
+                    </button>
+                  </div>
+                  {fieldError ? <p className="field-error" id="checker-url-error" role="alert"><StatusIcon status="action" />{fieldError}</p> : null}
+                </form>
+                <p className="checker-note">
+                  No score or account. One homepage and one internal page are sampled. Also looking for public security issues? <a href="/security-scan/">Use the security scan</a>. <a href="/blog/website-checker/">How this check works</a>.
+                </p>
+              </div>
+            </section>
+
+        <section className="checker-answer-overview" aria-label="What the checker tells you">
+          <div className="checker-answer-grid">
+            <article>
+              <span>Find</span>
+                  <h2>Can AI find your site?</h2>
+              <p>Checks your sitemap, discovery links, and public pages.</p>
+            </article>
+            <article>
+              <span>Understand</span>
+                  <h2>Can AI understand your pages?</h2>
+              <p>Checks content, structured information, and machine-readable versions.</p>
+            </article>
+            <article>
+              <span>Access</span>
+                  <h2>Are your access rules clear?</h2>
+              <p>Checks crawler rules and whether important AI services receive a usable response.</p>
+            </article>
+          </div>
         </section>
+
+        <section className="checker-scope" aria-labelledby="checker-scope-title">
+          <header className="checker-scope-heading">
+            <h2 id="checker-scope-title">What this website checker checks</h2>
+            <p>
+              The check reads public signals already available on your website. It does not log in,
+              change your pages, or install anything.
+            </p>
+          </header>
+
+          <div className="checker-scope-grid">
+            <article>
+              <h3>Pages and discovery</h3>
+              <p>
+                Your homepage, one internal page, sitemap discovery, canonical URLs, and the links
+                machines can use to find important content.
+              </p>
+            </article>
+            <article>
+              <h3>Content and structured data</h3>
+              <p>
+                Page titles, descriptions, readable HTML, and JSON-LD structured data that helps
+                search engines and AI systems interpret a page.
+              </p>
+            </article>
+            <article>
+              <h3>AI-readable files</h3>
+              <p>
+                Public <code>llms.txt</code> files, markdown alternatives, and other machine-readable
+                versions advertised by the website.
+              </p>
+            </article>
+            <article>
+              <h3>Crawler access</h3>
+              <p>
+                <code>robots.txt</code> rules and live responses for common AI crawlers, so you can
+                see what is allowed, blocked, or difficult to retrieve.
+              </p>
+            </article>
+          </div>
+
+          <aside className="checker-method" aria-labelledby="checker-method-title">
+            <h3 id="checker-method-title">How the result is decided</h3>
+            <p>
+              Every finding is based on a response the checker received. Results are labelled
+              <strong> looks good</strong>, <strong>needs attention</strong>, or
+              <strong> action required</strong>—there is no invented score. The checker samples one
+              homepage and one internal page, so it gives a useful first view without crawling your
+              whole site.
+            </p>
+          </aside>
+        </section>
+        <ContextualFaq items={checkerFaqs} />
           </>
         ) : null}
 
+        {showResults ? <h1>Check your website before AI crawlers and search engines do</h1> : null}
+
         {turnstileChallenge ? (
-          <section className="checker-state checker-state-challenge">
+          <section className="checker-state checker-state-challenge" role="status" aria-live="polite">
             <h2>Verification required</h2>
             <p>{turnstileChallenge.message}</p>
             {formatRetryAfter(turnstileChallenge.retryAfterSeconds) ? (
@@ -491,14 +593,14 @@ function Checker() {
         ) : null}
 
         {error ? (
-          <section className="checker-state checker-state-error">
+          <section className="checker-state checker-state-error" id="checker-error-message" role="alert">
             <h2>Checker request failed</h2>
             <p>{error}</p>
           </section>
         ) : null}
 
         {loading ? (
-          <section className="checker-state">
+          <section className="checker-state" role="status" aria-live="polite">
             <h2>Fetching public metadata</h2>
             <p>The checker is requesting the homepage, markdown mirrors, llms.txt, robots.txt, sitemap, and one sampled internal page right now.</p>
           </section>
@@ -521,6 +623,7 @@ function Checker() {
                 <h2 ref={resultsHeadingRef} tabIndex={-1}>
                   Results for {analysis.normalizedUrl}
                 </h2>
+                {verdict ? <OverallVerdictPanel status={verdict} /> : null}
                 <p className="checker-summary-text">
                   Checked at {new Date(result.fetchedAt).toLocaleString()}.
                   {analysis.normalizedFrom ? (
@@ -547,47 +650,40 @@ function Checker() {
                 </p>
               </div>
               <div className="checker-counts" aria-label="Result counts">
-                <ResultCount label="Errors" value={analysis.counts.error} level="error" />
-                <ResultCount label="Warnings" value={analysis.counts.warning} level="warning" />
-                <ResultCount label="Passes" value={analysis.counts.pass} level="pass" />
+                <ResultCount label="Action required" value={analysis.counts.error} level="error" />
+                <ResultCount label="Needs attention" value={analysis.counts.warning} level="warning" />
+                <ResultCount label="Looks good" value={analysis.counts.pass} level="pass" />
               </div>
-            </section>
-
-            <section className="checker-resources">
-              {analysis.resources.map((resource) => (
-                <ResourceCard key={resource.key} resource={resource} />
-              ))}
             </section>
 
             <section className="checker-findings">
               <h2>Findings</h2>
+              <div className="finding-filters" aria-label="Filter findings">
+                <FindingFilter active={findingFilter === 'all'} count={analysis.items.length} label="All" onClick={() => setFindingFilter('all')} />
+                <FindingFilter active={findingFilter === 'error'} count={analysis.counts.error} label="Action required" onClick={() => setFindingFilter('error')} />
+                <FindingFilter active={findingFilter === 'warning'} count={analysis.counts.warning} label="Needs attention" onClick={() => setFindingFilter('warning')} />
+                <FindingFilter active={findingFilter === 'pass'} count={analysis.counts.pass} label="Looks good" onClick={() => setFindingFilter('pass')} />
+              </div>
+              <p className="sr-only" role="status" aria-live="polite">{visibleItems.length} finding{visibleItems.length === 1 ? '' : 's'} shown.</p>
               <div className="checker-finding-list">
-                {analysis.items.map((item, index) => (
+                {visibleItems.length ? visibleItems.map((item, index) => (
                   <FindingCard key={`${item.level}-${item.title}-${index}`} item={item} />
-                ))}
+                )) : <p className="finding-empty">No findings in this category.</p>}
               </div>
             </section>
+
+            <details className="checker-technical-details">
+              <summary>Technical details and resources</summary>
+              <section className="checker-resources">
+                {analysis.resources.map((resource) => (
+                  <ResourceCard key={resource.key} resource={resource} />
+                ))}
+              </section>
+            </details>
           </>
         ) : null}
       </article>
     </main>
-  );
-}
-
-function ResultCount({
-  label,
-  value,
-  level,
-}: {
-  label: string;
-  value: number;
-  level: 'error' | 'warning' | 'pass';
-}) {
-  return (
-    <div className={`checker-count checker-count-${level}`}>
-      <strong>{value}</strong>
-      <span>{label}</span>
-    </div>
   );
 }
 
@@ -597,6 +693,7 @@ function ResourceCard({ resource }: { resource: ResourceStatus }) {
       <div className="checker-resource-top">
         <h3>{resource.label}</h3>
         <span className={`checker-resource-status checker-resource-status-${resource.level}`}>
+          <StatusIcon status={levelToStatus(resource.level)} size={15} />
           {resource.status}
         </span>
       </div>
@@ -621,11 +718,11 @@ function FindingCard({ item }: { item: AuditItem }) {
   return (
     <article className={`checker-finding checker-finding-${item.level}`}>
       <div className="checker-finding-top">
-        <span className={`checker-level checker-level-${item.level}`}>{item.level}</span>
+        <span className={`checker-level checker-level-${item.level}`}><StatusIcon status={levelToStatus(item.level)} size={15} />{statusLabels[levelToStatus(item.level)]}</span>
         <h3>{item.title}</h3>
       </div>
-      <p className="checker-finding-detail">{item.detail}</p>
-      <p className="checker-finding-action">{item.action}</p>
+      <p className="checker-finding-detail"><strong>What happened:</strong> {item.detail}</p>
+      <p className="checker-finding-action"><strong>What to do:</strong> {item.action}</p>
       {item.agentmarkupHelp ? (
         <p className="checker-agentmarkup-help">
           <strong>How agentmarkup helps:</strong> {item.agentmarkupHelp}

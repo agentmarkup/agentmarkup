@@ -5,6 +5,7 @@ import { agentmarkup } from '@agentmarkup/vite'
 
 import { websitePrerender } from './prerender-plugin'
 import { author, blogPosts } from './src/data/editorial'
+import { aiCrawlersFaqs, auditFaqs, checkerFaqs, homeFaqs, jsonLdFaqs, llmsTxtFaqs, securityScanFaqs } from './src/data/page-faqs'
 
 const siteUrl = 'https://agentmarkup.dev'
 const authorSchema = {
@@ -33,6 +34,27 @@ const articlePages = blogPosts.map((post) => ({
 
 const informationalPages = [
   {
+    path: '/learn/',
+    schemas: [
+      {
+        '@type': 'CollectionPage',
+        name: 'Learn how AI sees your website',
+        url: `${siteUrl}/learn/`,
+        description: 'Plain-language guides to help you see whether AI can find, understand, and access your website, plus clear next steps for improving it.',
+        mainEntity: {
+          '@type': 'ItemList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: 'Website checker', url: `${siteUrl}/checker/` },
+            { '@type': 'ListItem', position: 2, name: 'llms.txt guide', url: `${siteUrl}/docs/llms-txt/` },
+            { '@type': 'ListItem', position: 3, name: 'JSON-LD guide', url: `${siteUrl}/docs/json-ld/` },
+            { '@type': 'ListItem', position: 4, name: 'AI crawlers guide', url: `${siteUrl}/docs/ai-crawlers/` },
+            { '@type': 'ListItem', position: 5, name: 'Security scan', url: `${siteUrl}/security-scan/` },
+          ],
+        },
+      },
+    ],
+  },
+  {
     path: '/docs/llms-txt/',
     schemas: [
       {
@@ -41,6 +63,7 @@ const informationalPages = [
         url: `${siteUrl}/docs/llms-txt/`,
         description: 'Learn how to auto-generate a spec-compliant llms.txt file at build time using agentmarkup with Vite, Astro, Next.js, or Nuxt.',
       },
+      { preset: 'faqPage' as const, url: `${siteUrl}/docs/llms-txt/`, questions: llmsTxtFaqs },
     ],
   },
   {
@@ -52,6 +75,7 @@ const informationalPages = [
         url: `${siteUrl}/docs/json-ld/`,
         description: 'Learn how to inject schema.org JSON-LD structured data at build time using agentmarkup for Vite, Astro, Next.js, or Nuxt.',
       },
+      { preset: 'faqPage' as const, url: `${siteUrl}/docs/json-ld/`, questions: jsonLdFaqs },
     ],
   },
   {
@@ -63,6 +87,7 @@ const informationalPages = [
         url: `${siteUrl}/docs/ai-crawlers/`,
         description: 'Allow or block AI crawlers like GPTBot, ClaudeBot, and PerplexityBot in robots.txt without breaking existing rules.',
       },
+      { preset: 'faqPage' as const, url: `${siteUrl}/docs/ai-crawlers/`, questions: aiCrawlersFaqs },
     ],
   },
   {
@@ -74,6 +99,7 @@ const informationalPages = [
         url: `${siteUrl}/docs/audit/`,
         description: 'Use @agentmarkup/audit to fetch any live URL as each major AI crawler, diff against a browser, and report machine-readability findings in CI.',
       },
+      { preset: 'faqPage' as const, url: `${siteUrl}/docs/audit/`, questions: auditFaqs },
     ],
   },
   {
@@ -158,6 +184,7 @@ export default defineConfig({
         'docs-json-ld': resolve(__dirname, 'docs/json-ld/index.html'),
         'docs-ai-crawlers': resolve(__dirname, 'docs/ai-crawlers/index.html'),
         'docs-audit': resolve(__dirname, 'docs/audit/index.html'),
+        learn: resolve(__dirname, 'learn/index.html'),
         'blog-index': resolve(__dirname, 'blog/index.html'),
         'blog-ai-crawler-audit-500-companies': resolve(__dirname, 'blog/ai-crawler-audit-500-companies/index.html'),
         'blog-audit-ai-crawler-access': resolve(__dirname, 'blog/audit-ai-crawler-access/index.html'),
@@ -184,6 +211,7 @@ export default defineConfig({
         'prerender-docs-json-ld': resolve(__dirname, 'src/entries/json-ld.tsx'),
         'prerender-docs-ai-crawlers': resolve(__dirname, 'src/entries/ai-crawlers.tsx'),
         'prerender-docs-audit': resolve(__dirname, 'src/entries/audit.tsx'),
+        'prerender-learn': resolve(__dirname, 'src/entries/learn.tsx'),
         'prerender-blog-index': resolve(__dirname, 'src/entries/blog-index.tsx'),
         'prerender-blog-ai-crawler-audit-500-companies': resolve(__dirname, 'src/entries/blog-post-14.tsx'),
         'prerender-blog-audit-ai-crawler-access': resolve(__dirname, 'src/entries/blog-post-13.tsx'),
@@ -233,6 +261,7 @@ export default defineConfig({
           {
             title: 'Guides',
             entries: [
+              { title: 'Learning center', url: '/learn/', description: 'Plain-language paths for understanding whether AI can find, understand, and access your website' },
               { title: 'Website checker', url: '/checker/', description: 'Check any public site for llms.txt, JSON-LD, robots.txt, sitemap discovery, markdown mirrors, and machine-readable basics' },
               { title: 'Security scan', url: '/security-scan/', description: 'Passive security scan for public sites: HTTPS/HSTS, CSP, clickjacking and sniffing protections, cookies, mixed content, security.txt, and SPF/DMARC/DNSSEC' },
               { title: 'How to audit AI crawler access', url: '/docs/audit/', description: 'Fetch any live URL as each major AI crawler with @agentmarkup/audit, diff against a browser, and gate machine-readability in CI' },
@@ -327,6 +356,7 @@ export default defineConfig({
                 priceCurrency: 'USD',
               },
             },
+            { preset: 'faqPage' as const, url: `${siteUrl}/`, questions: homeFaqs },
           ],
         },
         {
@@ -338,6 +368,7 @@ export default defineConfig({
               url: `${siteUrl}/checker/`,
               description: 'Check any public website for llms.txt, JSON-LD structured data, markdown mirrors, robots.txt AI crawler rules, sitemap discovery, and thin client-rendered HTML.',
             },
+            { preset: 'faqPage' as const, url: `${siteUrl}/checker/`, questions: checkerFaqs },
           ],
         },
         {
@@ -349,6 +380,7 @@ export default defineConfig({
               url: `${siteUrl}/security-scan/`,
               description: 'Passive security scan for public websites: HTTPS and HSTS, Content-Security-Policy, clickjacking and sniffing protections, cookie flags, mixed content, and security.txt.',
             },
+            { preset: 'faqPage' as const, url: `${siteUrl}/security-scan/`, questions: securityScanFaqs },
           ],
         },
         ...informationalPages,

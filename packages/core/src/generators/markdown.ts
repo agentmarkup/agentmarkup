@@ -46,7 +46,7 @@ export function generatePageMarkdown(options: PageMarkdownOptions): string {
   const contentHtml = extractContentHtml(options.html);
   const markdownBody = htmlFragmentToMarkdown(contentHtml);
   const lines: string[] = [];
-  const sourceUrl = resolveSourceUrl(options, metadata);
+  const sourceUrl = resolveMarkdownCanonicalUrl(options, metadata);
 
   if (metadata.title) {
     lines.push(`# ${metadata.title}`);
@@ -79,9 +79,9 @@ export function generateMarkdownAlternateLink(pagePath: string): string {
   )}" title="Markdown version of this page" />`;
 }
 
-function resolveSourceUrl(
+export function resolveMarkdownCanonicalUrl(
   options: PageMarkdownOptions,
-  metadata: HeadMetadata
+  metadata = extractHeadMetadata(options.html)
 ): string | null {
   if (metadata.canonical) {
     return metadata.canonical;
@@ -141,7 +141,7 @@ function extractContentHtml(html: string): string {
     return '';
   }
 
-  const cleanedBody = cleanContentHtml(body);
+  const cleanedBody = cleanContentHtml(body, true);
   if (hasMeaningfulText(cleanedBody)) {
     return cleanedBody;
   }
@@ -154,11 +154,14 @@ function extractContentHtml(html: string): string {
   return noscriptFallback ?? cleanedBody;
 }
 
-function cleanContentHtml(html: string): string {
-  let cleaned = html
-    .replace(TAGS_TO_REMOVE_RE, '')
-    .replace(LAYOUT_TAGS_RE, '')
-    .trim();
+function cleanContentHtml(html: string, stripSiteLayout = false): string {
+  let cleaned = html.replace(TAGS_TO_REMOVE_RE, '');
+
+  if (stripSiteLayout) {
+    cleaned = cleaned.replace(LAYOUT_TAGS_RE, '');
+  }
+
+  cleaned = cleaned.trim();
 
   for (const pattern of UI_CHROME_RE) {
     cleaned = cleaned.replace(pattern, '');
@@ -197,8 +200,8 @@ function htmlFragmentToMarkdown(html: string): string {
   });
 
   working = working
-    .replace(/<(section|article|main|div|figure)\b[^>]*>/gi, '\n\n')
-    .replace(/<\/(section|article|main|div|figure)>/gi, '\n\n')
+    .replace(/<(section|article|main|div|figure|header|nav|aside|footer)\b[^>]*>/gi, '\n\n')
+    .replace(/<\/(section|article|main|div|figure|header|nav|aside|footer)>/gi, '\n\n')
     .replace(/<(h[1-6])\b[^>]*>([\s\S]*?)<\/\1>/gi, (_match, tag, inner) => {
       const level = Number(tag.slice(1));
       return `\n\n${'#'.repeat(level)} ${renderInline(inner)}\n\n`;
@@ -224,7 +227,16 @@ function htmlFragmentToMarkdown(html: string): string {
       return content ? `\n\n${content}\n\n` : '\n\n';
     })
     .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<hr\s*\/?>/gi, '\n\n---\n\n');
+    .replace(/<hr\s*\/?>/gi, '\n\n---\n\n')
+    .replace(/<a\b[^>]*href=(['"])([\s\S]*?)\1[^>]*>([\s\S]*?)<\/a>/gi, (_m, _q, href, inner) => {
+      const label = renderInline(inner)
+        .replace(/^\s*#{1,6}\s+/gm, '')
+        .replace(/\*\*/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      const normalizedHref = decodeHtmlEntities(href.trim());
+      return label && normalizedHref ? `\n\n[${label}](${normalizedHref})\n\n` : label;
+    });
 
   working = stripResidualTagsPreservingMarkdown(working);
 

@@ -1,4 +1,6 @@
 import CodeBlock from '../CodeBlock'
+import { ResponsiveTable } from '../ui/ResponsiveTable'
+import { PlainLanguageSummary } from '../ui/PlainLanguageSummary'
 
 const usageExample = `# Audit any live URL
 npx @agentmarkup/audit https://example.com
@@ -36,6 +38,10 @@ function Audit() {
           <a href="/checker/">website checker</a>, built for local runs and CI.
         </p>
 
+        <PlainLanguageSummary level="Advanced" audience="People who build and maintain websites" readingTime="About 12 minutes" action={{ href: '/blog/website-checker/', label: 'Start with a plain-language overview' }}>
+          <p>This command checks whether several AI crawlers receive the same useful public page that a normal browser receives. It is most useful when a developer wants a repeatable check during a build or before publishing.</p>
+        </PlainLanguageSummary>
+
         <section>
           <h2>Usage</h2>
           <CodeBlock code={usageExample} />
@@ -49,45 +55,45 @@ function Audit() {
 
         <section>
           <h2>What it checks</h2>
-          <table className="doc-table">
+          <ResponsiveTable label="Audit checks">
             <thead>
               <tr><th>Area</th><th>What it does</th></tr>
             </thead>
             <tbody>
               <tr>
-                <td><strong>Crawler access</strong></td>
+                <th scope="row"><strong>Crawler access</strong></th>
                 <td>Fetches as each AI crawler user-agent and diffs against a browser control. Flags challenges, differential blocks, rate limits, origin errors, and when an accessible crawler gets materially less content than a browser (JS-gated or cloaked pages).</td>
               </tr>
               <tr>
-                <td><strong>JS dependence</strong></td>
+                <th scope="row"><strong>JS dependence</strong></th>
                 <td>Measures whether the raw, un-executed HTML actually contains content, or is an empty shell that only fills in after JavaScript runs.</td>
               </tr>
               <tr>
-                <td><strong>robots.txt</strong></td>
+                <th scope="row"><strong>robots.txt</strong></th>
                 <td>Detects whether the crawlers you likely want are shadowed by a wildcard <code>Disallow</code>, and whether a canonical Content-Signal policy is present.</td>
               </tr>
               <tr>
-                <td><strong>llms.txt</strong></td>
+                <th scope="row"><strong>llms.txt</strong></th>
                 <td>Fetches <code>/llms.txt</code> (guarding against HTML soft-404s), validates it, and checks whether the homepage links it for discovery.</td>
               </tr>
               <tr>
-                <td><strong>JSON-LD</strong></td>
+                <th scope="row"><strong>JSON-LD</strong></th>
                 <td>Extracts the JSON-LD blocks and flags only unparseable or type-less ones; parseable structured data, including <code>@graph</code>, passes.</td>
               </tr>
               <tr>
-                <td><strong>Markdown mirror</strong></td>
+                <th scope="row"><strong>Markdown mirror</strong></th>
                 <td>Detects a fetchable markdown mirror or a <code>text/markdown</code> alternate link, the clean low-noise version agents prefer.</td>
               </tr>
               <tr>
-                <td><strong>Sitemap</strong></td>
+                <th scope="row"><strong>Sitemap</strong></th>
                 <td>Checks for <code>/sitemap.xml</code>, a <code>Sitemap:</code> directive in robots.txt, or common non-standard sitemap paths.</td>
               </tr>
               <tr>
-                <td><strong>Page metadata</strong></td>
+                <th scope="row"><strong>Page metadata</strong></th>
                 <td>Checks for a title, meta description, and canonical link that AI systems use to attribute the page.</td>
               </tr>
             </tbody>
-          </table>
+          </ResponsiveTable>
         </section>
 
         <section>

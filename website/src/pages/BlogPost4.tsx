@@ -1,11 +1,12 @@
 import Byline from '../Byline'
 import BlogFooter from '../BlogFooter'
+import { ResponsiveTable } from '../ui/ResponsiveTable'
 
 function AiCrawlers2026() {
   return (
     <main>
       <article className="doc-page blog-post">
-        <Byline date="2026-03-20" readingTime="8 min read" />
+        <Byline date="2026-03-20" readingTime="8 min read" slug="ai-crawlers-2026" />
         <h1>Every AI crawler indexing your website in 2026</h1>
         <p className="doc-intro">
           AI companies use web crawlers to collect training data and power real-time AI search. Here is a complete list of every known AI crawler, what company runs it, what it does, and how to control access through your robots.txt.
@@ -25,102 +26,102 @@ function AiCrawlers2026() {
           <h2>The complete list</h2>
 
           <h3>OpenAI</h3>
-          <table className="doc-table">
+          <ResponsiveTable label="OpenAI crawlers">
             <thead>
               <tr><th>Crawler</th><th>Purpose</th></tr>
             </thead>
             <tbody>
-              <tr><td><code>GPTBot</code></td><td>Collects training data for GPT models. Also powers ChatGPT's browsing feature when searching the web.</td></tr>
-              <tr><td><code>ChatGPT-User</code></td><td>Used when a ChatGPT user explicitly asks the model to visit and read a specific URL. This is browsing on demand, not bulk crawling.</td></tr>
-              <tr><td><code>OAI-SearchBot</code></td><td>Powers ChatGPT Search (formerly SearchGPT). Crawls pages to generate real-time search answers.</td></tr>
+              <tr><th scope="row"><code>GPTBot</code></th><td>Collects training data for GPT models. Also powers ChatGPT's browsing feature when searching the web.</td></tr>
+              <tr><th scope="row"><code>ChatGPT-User</code></th><td>Used when a ChatGPT user explicitly asks the model to visit and read a specific URL. This is browsing on demand, not bulk crawling.</td></tr>
+              <tr><th scope="row"><code>OAI-SearchBot</code></th><td>Powers ChatGPT Search (formerly SearchGPT). Crawls pages to generate real-time search answers.</td></tr>
             </tbody>
-          </table>
+          </ResponsiveTable>
 
           <h3>Anthropic</h3>
-          <table className="doc-table">
+          <ResponsiveTable label="Anthropic crawlers">
             <thead>
               <tr><th>Crawler</th><th>Purpose</th></tr>
             </thead>
             <tbody>
-              <tr><td><code>ClaudeBot</code></td><td>Collects training data for Claude models. Anthropic has committed to respecting robots.txt directives.</td></tr>
-              <tr><td><code>anthropic-ai</code></td><td>Older user-agent string used by Anthropic. Some sites still reference it in robots.txt.</td></tr>
+              <tr><th scope="row"><code>ClaudeBot</code></th><td>Collects training data for Claude models. Anthropic has committed to respecting robots.txt directives.</td></tr>
+              <tr><th scope="row"><code>anthropic-ai</code></th><td>Older user-agent string used by Anthropic. Some sites still reference it in robots.txt.</td></tr>
             </tbody>
-          </table>
+          </ResponsiveTable>
 
           <h3>Google</h3>
-          <table className="doc-table">
+          <ResponsiveTable label="Google crawlers">
             <thead>
               <tr><th>Crawler</th><th>Purpose</th></tr>
             </thead>
             <tbody>
-              <tr><td><code>Google-Extended</code></td><td>Collects data for Gemini and other AI products. Separate from Googlebot, so blocking it does not affect your Google Search rankings.</td></tr>
+              <tr><th scope="row"><code>Google-Extended</code></th><td>Collects data for Gemini and other AI products. Separate from Googlebot, so blocking it does not affect your Google Search rankings.</td></tr>
             </tbody>
-          </table>
+          </ResponsiveTable>
 
           <h3>Perplexity</h3>
-          <table className="doc-table">
+          <ResponsiveTable label="Perplexity crawlers">
             <thead>
               <tr><th>Crawler</th><th>Purpose</th></tr>
             </thead>
             <tbody>
-              <tr><td><code>PerplexityBot</code></td><td>Powers Perplexity's AI search engine. Crawls pages to generate real-time answers with source citations.</td></tr>
+              <tr><th scope="row"><code>PerplexityBot</code></th><td>Powers Perplexity's AI search engine. Crawls pages to generate real-time answers with source citations.</td></tr>
             </tbody>
-          </table>
+          </ResponsiveTable>
 
           <h3>Amazon</h3>
-          <table className="doc-table">
+          <ResponsiveTable label="Amazon crawlers">
             <thead>
               <tr><th>Crawler</th><th>Purpose</th></tr>
             </thead>
             <tbody>
-              <tr><td><code>Amazonbot</code></td><td>Collects data for Alexa and Amazon's AI services. Respects robots.txt.</td></tr>
+              <tr><th scope="row"><code>Amazonbot</code></th><td>Collects data for Alexa and Amazon's AI services. Respects robots.txt.</td></tr>
             </tbody>
-          </table>
+          </ResponsiveTable>
 
           <h3>Common Crawl</h3>
-          <table className="doc-table">
+          <ResponsiveTable label="Common Crawl crawlers">
             <thead>
               <tr><th>Crawler</th><th>Purpose</th></tr>
             </thead>
             <tbody>
-              <tr><td><code>CCBot</code></td><td>Builds the Common Crawl open dataset, which is used as training data by many AI companies including those building open-source models. Blocking CCBot is a broad way to reduce training data exposure.</td></tr>
+              <tr><th scope="row"><code>CCBot</code></th><td>Builds the Common Crawl open dataset, which is used as training data by many AI companies including those building open-source models. Blocking CCBot is a broad way to reduce training data exposure.</td></tr>
             </tbody>
-          </table>
+          </ResponsiveTable>
 
           <h3>Apple</h3>
-          <table className="doc-table">
+          <ResponsiveTable label="Apple crawlers">
             <thead>
               <tr><th>Crawler</th><th>Purpose</th></tr>
             </thead>
             <tbody>
-              <tr><td><code>Applebot-Extended</code></td><td>Collects data for Apple Intelligence features. Separate from the main Applebot used for Siri and Spotlight search.</td></tr>
+              <tr><th scope="row"><code>Applebot-Extended</code></th><td>Collects data for Apple Intelligence features. Separate from the main Applebot used for Siri and Spotlight search.</td></tr>
             </tbody>
-          </table>
+          </ResponsiveTable>
 
           <h3>Meta</h3>
-          <table className="doc-table">
+          <ResponsiveTable label="Meta crawlers">
             <thead>
               <tr><th>Crawler</th><th>Purpose</th></tr>
             </thead>
             <tbody>
-              <tr><td><code>Meta-ExternalAgent</code></td><td>Collects data for Meta AI products. Respects robots.txt since mid-2024.</td></tr>
-              <tr><td><code>FacebookBot</code></td><td>Primarily renders link previews for Facebook and Instagram. Not used for AI training.</td></tr>
+              <tr><th scope="row"><code>Meta-ExternalAgent</code></th><td>Collects data for Meta AI products. Respects robots.txt since mid-2024.</td></tr>
+              <tr><th scope="row"><code>FacebookBot</code></th><td>Primarily renders link previews for Facebook and Instagram. Not used for AI training.</td></tr>
             </tbody>
-          </table>
+          </ResponsiveTable>
 
           <h3>Other notable crawlers</h3>
-          <table className="doc-table">
+          <ResponsiveTable label="Other notable AI crawlers">
             <thead>
               <tr><th>Crawler</th><th>Company</th><th>Purpose</th></tr>
             </thead>
             <tbody>
-              <tr><td><code>Bytespider</code></td><td>ByteDance</td><td>Training data for TikTok and ByteDance AI products</td></tr>
-              <tr><td><code>cohere-ai</code></td><td>Cohere</td><td>Training data for Cohere's enterprise AI models</td></tr>
-              <tr><td><code>Diffbot</code></td><td>Diffbot</td><td>Web data extraction for knowledge graphs</td></tr>
-              <tr><td><code>Timpibot</code></td><td>Timpi</td><td>Decentralized search index</td></tr>
-              <tr><td><code>YouBot</code></td><td>You.com</td><td>AI search engine</td></tr>
+              <tr><th scope="row"><code>Bytespider</code></th><td>ByteDance</td><td>Training data for TikTok and ByteDance AI products</td></tr>
+              <tr><th scope="row"><code>cohere-ai</code></th><td>Cohere</td><td>Training data for Cohere's enterprise AI models</td></tr>
+              <tr><th scope="row"><code>Diffbot</code></th><td>Diffbot</td><td>Web data extraction for knowledge graphs</td></tr>
+              <tr><th scope="row"><code>Timpibot</code></th><td>Timpi</td><td>Decentralized search index</td></tr>
+              <tr><th scope="row"><code>YouBot</code></th><td>You.com</td><td>AI search engine</td></tr>
             </tbody>
-          </table>
+          </ResponsiveTable>
         </section>
 
         <section>

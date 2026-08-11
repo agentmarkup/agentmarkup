@@ -64,6 +64,7 @@ export {
 export {
   generatePageMarkdown,
   generateMarkdownAlternateLink,
+  resolveMarkdownCanonicalUrl,
 } from './generators/markdown.js';
 export {
   generateLlmsTxt,

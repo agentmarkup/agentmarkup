@@ -29,6 +29,8 @@ type MessagePortLike = {
 const SOURCE_ENTRY_SCRIPT_RE =
   /<script\b(?=[^>]*\btype="module\b)(?=[^>]*\bsrc="([^"]+)")[^>]*><\/script>/i
 const EMPTY_ROOT_RE = /<div id="root">\s*<\/div>/i
+const STYLESHEET_LINK_RE = /<link\b(?=[^>]*\brel="stylesheet")[^>]*>/i
+const VIEWPORT_META_RE = /<meta\b(?=[^>]*\bname="viewport")[^>]*>/i
 
 export function websitePrerender(): Plugin {
   let config: ResolvedConfig
@@ -89,10 +91,14 @@ export function websitePrerender(): Plugin {
                   EMPTY_ROOT_RE,
                   `<div id="root">${prerenderedHtml}</div>`,
                 )
-                await writeFile(htmlFile, nextHtml, 'utf8')
               }
             }
           }
+        }
+
+        nextHtml = prioritizeStylesheet(nextHtml)
+        if (nextHtml !== html) {
+          await writeFile(htmlFile, nextHtml, 'utf8')
         }
 
         const relativeHtmlPath = relative(outDir, htmlFile).replace(/\\/g, '/')
@@ -124,6 +130,14 @@ export function websitePrerender(): Plugin {
       closeNewMessagePorts(activeHandlesBeforeWrite)
     },
   }
+}
+
+function prioritizeStylesheet(html: string): string {
+  const stylesheet = html.match(STYLESHEET_LINK_RE)?.[0]
+  const viewport = html.match(VIEWPORT_META_RE)?.[0]
+  if (!stylesheet || !viewport || html.indexOf(stylesheet) < html.indexOf(viewport)) return html
+
+  return html.replace(stylesheet, '').replace(viewport, `${viewport}\n    ${stylesheet}`)
 }
 
 async function findHtmlFiles(dir: string): Promise<string[]> {

@@ -5,7 +5,7 @@ function BrandAwarenessLlm() {
   return (
     <main>
       <article className="doc-page blog-post">
-        <Byline date="2026-03-20" readingTime="7 min read" />
+        <Byline date="2026-03-20" readingTime="7 min read" slug="brand-awareness-ai" />
         <h1>How to make your brand appear in AI conversations</h1>
         <p className="doc-intro">
           When someone asks an AI "what are the best tools for X" or "which company does Y," your brand either appears in the answer or it does not. This is not about gaming an algorithm. It is about making your website understandable enough that AI systems can accurately represent what you do.

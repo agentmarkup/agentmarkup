@@ -1,5 +1,6 @@
 import { author, blogPosts } from '../data/editorial'
 import { formatEditorialDate } from '../formatDate'
+import { EditorialMeta } from '../ui/EditorialMeta'
 
 function AuthorProfile() {
   return (
@@ -31,18 +32,28 @@ function AuthorProfile() {
 
         <section>
           <h2>Articles</h2>
-          <div className="blog-list">
-            {blogPosts.map(post => (
-              <a key={post.slug} href={`/blog/${post.slug}/`} className="blog-card">
-                <h3>{post.title}</h3>
-                <p>{post.description}</p>
-                <span className="blog-date">
-                  {formatEditorialDate(post.date)}
-                  {' '}&middot; {post.readingTime}
-                </span>
-              </a>
-            ))}
-          </div>
+          {([
+            ['Guides', 'plain-language'],
+            ['Research', 'research'],
+            ['Implementation', 'technical'],
+          ] as const).map(([label, audience]) => (
+            <div className="author-article-group" key={label}>
+              <h3>{label}</h3>
+              <div className="blog-list">
+                {blogPosts.map(post => post.audience === audience ? (
+                  <a key={post.slug} href={`/blog/${post.slug}/`} className="blog-card">
+                    <h4>{post.title}</h4>
+                    <p>{post.description}</p>
+                    <EditorialMeta post={post} compact />
+                    <span className="blog-date">
+                      {formatEditorialDate(post.date)}
+                      {' '}&middot; {post.readingTime}
+                    </span>
+                  </a>
+                ) : null)}
+              </div>
+            </div>
+          ))}
         </section>
       </div>
     </main>

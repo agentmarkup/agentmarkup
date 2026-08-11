@@ -1,12 +1,13 @@
 import CodeBlock from '../CodeBlock'
 import Byline from '../Byline'
 import BlogFooter from '../BlogFooter'
+import { ResponsiveTable } from '../ui/ResponsiveTable'
 
 function MarkdownPages() {
   return (
     <main>
       <article className="doc-page blog-post">
-        <Byline date="2026-03-20" readingTime="7 min read" />
+        <Byline date="2026-03-20" readingTime="7 min read" slug="markdown-mirrors" />
         <h1>Build-time markdown mirrors for agent readability: how they compare to Cloudflare&apos;s approach</h1>
         <p className="doc-intro">
           When an AI agent visits your website, it gets HTML. On some sites
@@ -114,21 +115,21 @@ const agentmarkupConfig = {
 
         <section>
           <h2>Build-time vs runtime: why it matters</h2>
-          <table className="doc-table">
+          <ResponsiveTable label="Build-time and runtime comparison">
             <thead>
-              <tr><th></th><th>agentmarkup (build-time)</th><th>Cloudflare (runtime)</th></tr>
+              <tr><th scope="col">Aspect</th><th scope="col">agentmarkup (build-time)</th><th scope="col">Cloudflare (runtime)</th></tr>
             </thead>
             <tbody>
-              <tr><td>When it runs</td><td>Once, during build</td><td>Every request</td></tr>
-              <tr><td>Output control</td><td>You see the .md files in your build output</td><td>Opaque, algorithm decides</td></tr>
-              <tr><td>Consistency</td><td>Deterministic, same output every build</td><td>May vary with algorithm updates</td></tr>
-              <tr><td>Performance cost</td><td>Zero runtime cost</td><td>Added latency per request</td></tr>
-              <tr><td>Works with SPAs</td><td>Yes, uses noscript fallback or pre-rendered HTML</td><td>Depends on SSR availability</td></tr>
-              <tr><td>Discovery</td><td>Link tag in HTML head + static .md URL</td><td>Special URL parameter or header</td></tr>
-              <tr><td>Vendor lock-in</td><td>None, output is static files</td><td>Requires Cloudflare</td></tr>
-              <tr><td>Customization</td><td>Choose which pages, preserve existing .md files</td><td>All or nothing</td></tr>
+              <tr><th scope="row">When it runs</th><td>Once, during build</td><td>Every request</td></tr>
+              <tr><th scope="row">Output control</th><td>You see the .md files in your build output</td><td>Opaque, algorithm decides</td></tr>
+              <tr><th scope="row">Consistency</th><td>Deterministic, same output every build</td><td>May vary with algorithm updates</td></tr>
+              <tr><th scope="row">Performance cost</th><td>Zero runtime cost</td><td>Added latency per request</td></tr>
+              <tr><th scope="row">Works with SPAs</th><td>Yes, uses noscript fallback or pre-rendered HTML</td><td>Depends on SSR availability</td></tr>
+              <tr><th scope="row">Discovery</th><td>Link tag in HTML head + static .md URL</td><td>Special URL parameter or header</td></tr>
+              <tr><th scope="row">Vendor lock-in</th><td>None, output is static files</td><td>Requires Cloudflare</td></tr>
+              <tr><th scope="row">Customization</th><td>Choose which pages, preserve existing .md files</td><td>All or nothing</td></tr>
             </tbody>
-          </table>
+          </ResponsiveTable>
         </section>
 
         <section>

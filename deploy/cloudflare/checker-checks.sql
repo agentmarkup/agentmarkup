@@ -1,5 +1,7 @@
 CREATE TABLE IF NOT EXISTS checker_checks (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  -- Legacy column name: the Worker writes the normalized site URL here too;
+  -- raw user input, paths, query strings, and fragments are never persisted.
   requested_input TEXT NOT NULL,
   normalized_url TEXT NOT NULL,
   origin TEXT NOT NULL,
@@ -16,6 +18,11 @@ CREATE INDEX IF NOT EXISTS idx_checker_checks_checked_at
 
 CREATE INDEX IF NOT EXISTS idx_checker_checks_normalized_url
   ON checker_checks (normalized_url);
+
+-- Redact any legacy rows written before requested_input became normalized-only.
+UPDATE checker_checks
+SET requested_input = normalized_url
+WHERE requested_input <> normalized_url;
 
 CREATE TABLE IF NOT EXISTS checker_request_events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      (function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.style.backgroundColor=t==='light'?'#fffefc':'#10121a';document.documentElement.style.colorScheme=t})()
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Learn how AI finds and understands websites | agentmarkup</title>
+    <meta name="description" content="Plain-language guides to help you see whether AI can find, understand, and access your website, plus clear next steps for improving it." />
+    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
+    <link rel="preload" href="/fonts/manrope-latin-variable.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/source-serif-4-latin-variable.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="canonical" href="https://agentmarkup.dev/learn/" />
+    <meta property="og:title" content="Learn how AI finds and understands websites | agentmarkup" />
+    <meta property="og:description" content="Plain-language guides to help you see whether AI can find, understand, and access your website, plus clear next steps for improving it." />
+    <meta property="og:url" content="https://agentmarkup.dev/learn/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="agentmarkup" />
+    <meta property="og:image" content="https://agentmarkup.dev/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM-readable site summary" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/entries/learn.tsx"></script>
+  </body>
+</html>

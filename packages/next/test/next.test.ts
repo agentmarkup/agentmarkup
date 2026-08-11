@@ -189,7 +189,7 @@ describe('@agentmarkup/next', () => {
   it('uses output metadata to handle export builds with a basePath', async () => {
     const root = await createFixture({
       'out/index.html': '<html><head><title>Home</title></head><body><main><h1>Home</h1><p>Welcome.</p></main></body></html>',
-      'out/faq.html': '<html><head><title>FAQ</title></head><body><main><h1>FAQ</h1><p>Answers live here.</p></main></body></html>',
+      'out/faq.html': '<html><head><title>FAQ</title><link rel="canonical" href="https://example.com/docs/faq/" /></head><body><main><h1>FAQ</h1><p>Answers live here.</p></main></body></html>',
     });
 
     await processNextBuildOutput(
@@ -260,6 +260,7 @@ describe('@agentmarkup/next', () => {
     expect(headers).toContain('/docs/faq.md');
     expect(headers).toContain('/docs/*');
     expect(headers).toContain('Link: <https://example.com/docs/>; rel="canonical"');
+    expect(headers).toContain('Link: <https://example.com/docs/faq/>; rel="canonical"');
   });
 
   it('does not duplicate discovery links already present under a basePath, regardless of attribute order', async () => {

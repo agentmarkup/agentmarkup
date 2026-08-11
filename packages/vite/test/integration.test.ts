@@ -100,6 +100,7 @@ describe('agentmarkup integration', () => {
         '  <head>',
         '    <meta charset="UTF-8" />',
         '    <title>FAQ</title>',
+        '    <link rel="canonical" href="https://example.com/faq/" />',
         '  </head>',
         '  <body>',
         '    <script type="module" src="/src/main.js"></script>',
@@ -217,7 +218,7 @@ describe('agentmarkup integration', () => {
     expect(headers).toContain('/index.md');
     expect(headers).toContain('Link: <https://example.com/>; rel="canonical"');
     expect(headers).toContain('/faq.md');
-    expect(headers).toContain('Link: <https://example.com/faq>; rel="canonical"');
+    expect(headers).toContain('Link: <https://example.com/faq/>; rel="canonical"');
   });
 
   it('reports validation warnings during a real Vite build', async () => {

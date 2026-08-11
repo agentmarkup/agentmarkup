@@ -12,6 +12,7 @@ import {
   generateLlmsTxtDiscoveryLink,
   generateMarkdownAlternateLink,
   generatePageMarkdown,
+  resolveMarkdownCanonicalUrl,
   generateJsonLdTags,
   generateLlmsTxt,
   hasLlmsTxtDiscoveryLink,
@@ -180,6 +181,9 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
               pagePath,
               siteUrl: config.site,
             });
+            const canonicalUrl =
+              resolveMarkdownCanonicalUrl({ html, pagePath, siteUrl: config.site }) ??
+              buildCanonicalUrl(config.site, pagePath);
 
             if (!markdown) {
               continue;
@@ -198,7 +202,7 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
               availableMarkdownUrls.add(markdownAbsoluteUrl);
               markdownCanonicalEntries.push({
                 markdownPath: `/${markdownFileName}`,
-                canonicalUrl: buildCanonicalUrl(config.site, pagePath),
+                canonicalUrl,
               });
 
               if (!config.validation?.disabled) {
@@ -218,7 +222,7 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
             availableMarkdownUrls.add(markdownAbsoluteUrl);
             markdownCanonicalEntries.push({
               markdownPath: `/${markdownFileName}`,
-              canonicalUrl: buildCanonicalUrl(config.site, pagePath),
+              canonicalUrl,
             });
             if (!config.validation?.disabled) {
               validationResults.push(...validateMarkdownContent(markdown, pagePath));

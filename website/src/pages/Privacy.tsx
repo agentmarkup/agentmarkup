@@ -1,4 +1,4 @@
-const lastUpdated = 'August 8, 2026';
+const lastUpdated = 'August 11, 2026';
 
 function Privacy() {
   return (
@@ -41,22 +41,26 @@ function Privacy() {
               responses from the target and a public DNS resolver. Basis:
               legitimate interests (Article 6(1)(f)) in providing the Service you
               requested. Retention: results may be held in a short-term server
-              cache for about three minutes; the address you typed is not stored
-              in that cache.
+              cache for about three minutes. The exact text you entered, including
+              its submitted path, query string, and fragment, is not retained;
+              cached scan results may still include the public resource URLs and
+              content discovered while checking the normalized site.
             </li>
             <li>
               <strong>Rate limiting and abuse prevention.</strong> The edge worker
-              stores a one-way SHA-256 hash of your IP address together with a
-              timestamp so it can enforce a per-IP limit and detect abuse. We do
-              not store your raw IP address. Basis: legitimate interests (Article
-              6(1)(f)) in securing the Service. Retention: up to 24 hours.
+              stores a one-way SHA-256 hash of your IP address together with the
+              normalized target address and a timestamp so it can enforce a per-IP
+              limit and detect abuse. We do not store your raw IP address or the
+              exact text entered. Basis: legitimate interests (Article 6(1)(f)) in
+              securing the Service. Retention: up to 24 hours.
             </li>
             <li>
               <strong>Checker history.</strong> The website checker stores a
-              minimal record (the hashed IP, the normalized URL, and status
-              codes) to operate and improve the checker. The passive security
-              scan stores no scan history. Basis: legitimate interests (Article
-              6(1)(f)). Retention: up to 30 days.
+              minimal record (the normalized site address and status codes) to
+              operate and improve the checker. It does not contain the IP hash,
+              paths, query strings, fragments, or exact input. The passive
+              security scan stores no scan history. Basis: legitimate interests
+              (Article 6(1)(f)). Retention: up to 30 days.
             </li>
             <li>
               <strong>Verification (Cloudflare Turnstile).</strong> After repeated

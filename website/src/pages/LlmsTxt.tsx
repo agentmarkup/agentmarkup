@@ -1,4 +1,5 @@
 import CodeBlock from '../CodeBlock'
+import { PlainLanguageSummary } from '../ui/PlainLanguageSummary'
 
 const configExample = `// shared agentmarkup config
 const agentmarkupConfig = {
@@ -102,6 +103,10 @@ function LlmsTxt() {
         <p className="doc-intro">
           llms.txt is a proposed standard from <a href="https://llmstxt.org" target="_blank" rel="noopener noreferrer">llmstxt.org</a> that gives LLMs and AI agents a structured overview of your website. It is a plain text file served at <code>/llms.txt</code> that describes your site name, purpose, and pages in a format optimized for language models.
         </p>
+
+        <PlainLanguageSummary level="Beginner" audience="Website owners and people who build websites" readingTime="About 8 minutes" action={{ href: '/checker/', label: 'Check whether your site has llms.txt' }}>
+          <p>Think of llms.txt as a short contents page written for AI. It can help an AI system quickly find the public pages you consider most useful, while your normal website stays unchanged for visitors.</p>
+        </PlainLanguageSummary>
 
         <section>
           <h2>What is llms.txt?</h2>

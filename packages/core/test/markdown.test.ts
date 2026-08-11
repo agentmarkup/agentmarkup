@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   generateMarkdownAlternateLink,
   generatePageMarkdown,
+  resolveMarkdownCanonicalUrl,
 } from '../src/generators/markdown.js';
 
 describe('generatePageMarkdown', () => {
@@ -154,6 +155,51 @@ describe('generatePageMarkdown', () => {
     expect(markdown).toContain('&#99999999;');
     expect(markdown).toContain('&#55296;');
   });
+
+  it('keeps semantic headers, navigation, and asides inside main content', () => {
+    const markdown = generatePageMarkdown({
+      html: [
+        '<html><head><title>Learning center</title></head><body>',
+        '<header><nav><a href="/">Site navigation</a></nav></header>',
+        '<main>',
+        '<header><h1>Learn how AI sees your website</h1><p>Choose a useful path.</p></header>',
+        '<nav aria-label="Learning paths"><a href="/docs/">Read the docs</a></nav>',
+        '<aside><p>Recommended next reading</p><a href="/next/">Continue reading</a></aside>',
+        '</main>',
+        '<footer>Site footer</footer>',
+        '</body></html>',
+      ].join(''),
+      pagePath: '/learn/',
+      siteUrl: 'https://example.com',
+    });
+
+    expect(markdown).toContain('# Learn how AI sees your website');
+    expect(markdown).toContain('Choose a useful path.');
+    expect(markdown).toContain('[Read the docs](/docs/)');
+    expect(markdown).toContain('Recommended next reading');
+    expect(markdown).toContain('[Continue reading](/next/)');
+    expect(markdown).not.toContain('Site navigation');
+    expect(markdown).not.toContain('Site footer');
+  });
+
+  it('preserves standalone card links with their text and destination', () => {
+    const markdown = generatePageMarkdown({
+      html: [
+        '<html><head><title>Paths</title></head><body><main>',
+        '<a class="card" href="/checker/">',
+        '<span><strong>Check my website</strong>',
+        '<small>Run a free check and get clear next steps.</small></span>',
+        '</a>',
+        '</main></body></html>',
+      ].join(''),
+      pagePath: '/paths/',
+      siteUrl: 'https://example.com',
+    });
+
+    expect(markdown).toContain(
+      '[Check my website Run a free check and get clear next steps.](/checker/)'
+    );
+  });
 });
 
 describe('generateMarkdownAlternateLink', () => {
@@ -169,5 +215,27 @@ describe('generateMarkdownAlternateLink', () => {
     expect(link).toContain('&lt;');
     expect(link).toContain('&gt;');
     expect(link).toContain('&amp;');
+  });
+});
+
+describe('resolveMarkdownCanonicalUrl', () => {
+  it('uses the authored HTML canonical, including its trailing slash', () => {
+    expect(
+      resolveMarkdownCanonicalUrl({
+        html: '<html><head><link rel="canonical" href="https://example.com/docs/" /></head></html>',
+        pagePath: '/docs',
+        siteUrl: 'https://example.com',
+      })
+    ).toBe('https://example.com/docs/');
+  });
+
+  it('falls back to the configured site and page path when no canonical is authored', () => {
+    expect(
+      resolveMarkdownCanonicalUrl({
+        html: '<html><head><title>Docs</title></head></html>',
+        pagePath: '/docs',
+        siteUrl: 'https://example.com/',
+      })
+    ).toBe('https://example.com/docs');
   });
 });

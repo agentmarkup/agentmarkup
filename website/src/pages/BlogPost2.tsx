@@ -5,7 +5,7 @@ function WhatIsGeo() {
   return (
     <main>
       <article className="doc-page blog-post">
-        <Byline date="2026-03-20" readingTime="7 min read" />
+        <Byline date="2026-03-20" readingTime="7 min read" slug="what-is-geo" />
         <h1>What is GEO? Generative Engine Optimization explained for developers</h1>
         <p className="doc-intro">
           GEO, or Generative Engine Optimization, is the practice of making your website more likely to be cited, summarized, or recommended by AI systems. It is the AI-era counterpart to SEO, and it matters whether or not you believe the hype.

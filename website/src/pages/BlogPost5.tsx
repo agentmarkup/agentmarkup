@@ -6,7 +6,7 @@ function EcommerceLlmOptimization() {
   return (
     <main>
       <article className="doc-page blog-post">
-        <Byline date="2026-03-20" readingTime="8 min read" />
+        <Byline date="2026-03-20" readingTime="8 min read" slug="ecommerce-llm-optimization" />
         <h1>Why LLM-optimized e-commerce websites sell more</h1>
         <p className="doc-intro">
           When a shopper asks ChatGPT "what is the best leather wallet under $100" or Perplexity "where can I buy organic coffee beans," the AI pulls its answer from the web. If your product pages have structured data, your store gets cited. If they do not, you are invisible. Here is how to fix that.
