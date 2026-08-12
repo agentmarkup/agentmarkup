@@ -85,6 +85,8 @@ describe('homepage FAQ', () => {
     const source = readFileSync(`${websiteRoot}/src/App.tsx`, 'utf8')
 
     expect(source).toContain('<form className="hero-checker-form product-check-form" action="/checker/" method="get"')
+    expect(source).toContain('<div className="hero-primary-actions">')
+    expect(source).toContain('<section className="product-check hero-action" id="product-check"')
     expect(source).toContain('normalizeWebsiteInput(checkerUrl)')
     expect(source).toContain('start the scan automatically')
     expect(source).toContain("{ name: '@agentmarkup/next'")

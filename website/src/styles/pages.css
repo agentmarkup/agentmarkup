@@ -13,11 +13,11 @@
   min-height: auto;
   padding-block: clamp(var(--space-12), 6vh, var(--space-20)) clamp(var(--space-16), 8vh, var(--space-24));
   padding-inline: max(var(--page-gutter), calc((100vw - var(--page-max)) / 2 + var(--page-gutter)));
-  gap: clamp(var(--space-12), 7vw, var(--space-20));
+  gap: clamp(var(--space-8), 5vw, var(--space-16));
   overflow: hidden;
   background: transparent;
 }
-.hero-copy { position: relative; z-index: 2; display: grid; align-content: center; justify-items: center; min-height: clamp(17rem, 30svh, 22rem); max-width: 68rem; margin-inline: auto; text-align: center; }
+.hero-copy { position: relative; z-index: 2; display: grid; align-content: center; justify-items: center; min-height: clamp(14rem, 25svh, 19rem); max-width: 68rem; margin-inline: auto; text-align: center; }
 .hero-copy h1 { max-width: 14ch; margin-bottom: var(--space-6); font-size: clamp(3rem, 5.4vw, 5.8rem); line-height: 0.98; }
 .tagline { max-width: 52rem; margin: 0; color: var(--text-secondary); font-size: clamp(1.05rem, 1.25vw, 1.18rem); line-height: 1.65; }
 .hero-checker-form { width: min(100%, 43rem); margin-top: var(--space-8); padding: var(--space-4); border: 1px solid var(--border-default); border-radius: var(--radius-lg); background: var(--surface-primary); box-shadow: var(--shadow-soft); text-align: left; }
@@ -141,11 +141,17 @@
 .developer-route:hover,
 .developer-route:focus-visible { color: var(--brand-hover); background: var(--surface-secondary); }
 
-/* Framework install */
-.quick-install { display: grid; grid-template-columns: minmax(16rem, 0.7fr) minmax(28rem, 1.3fr); align-items: center; width: min(100%, 80rem); margin: clamp(var(--space-12), 7vh, var(--space-20)) auto 0; gap: clamp(var(--space-8), 6vw, var(--space-16)); }
+/* Primary npm and checker actions */
+.hero-primary-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; width: min(100%, 88rem); margin-inline: auto; overflow: hidden; border: 1px solid var(--border-default); border-radius: var(--radius-xl); background: var(--surface-primary); box-shadow: var(--shadow-soft); }
+.hero-action { display: grid; align-content: start; min-width: 0; padding: clamp(var(--space-5), 3vw, var(--space-8)); gap: var(--space-6); }
+.hero-action + .hero-action { border-left: 1px solid var(--border-default); }
+.hero-action-copy { min-height: 10rem; }
+.hero-action-copy h2 { margin: 0 0 var(--space-3); font-size: clamp(2rem, 3vw, 3rem); }
+.hero-action-copy > p:last-child { max-width: 35rem; margin: 0; color: var(--text-secondary); }
+.quick-install { width: auto; margin: 0; }
 .quick-install-copy h2 { margin: 0 0 var(--space-4); }
 .quick-install-copy p { max-width: 34rem; margin: 0; color: var(--text-secondary); }
-.quick-install-tool { overflow: hidden; border: 1px solid var(--border-default); border-radius: var(--radius-lg); background: var(--surface-primary); box-shadow: var(--shadow-soft); }
+.quick-install-tool { overflow: hidden; border: 1px solid var(--border-default); border-radius: var(--radius-lg); background: var(--surface-secondary); }
 .framework-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--border-default); }
 .framework-tabs button { min-height: 3.25rem; padding: var(--space-3); border: 0; border-right: 1px solid var(--border-default); color: var(--text-secondary); background: transparent; font: inherit; font-weight: 650; cursor: pointer; }
 .framework-tabs button:last-child { border-right: 0; }
@@ -159,10 +165,9 @@
 .quick-install-tool > a { display: inline-block; margin: 0 var(--space-4) var(--space-4); font-size: 0.84rem; font-weight: 680; }
 
 /* Direct checker entry */
-.product-check { display: grid; grid-template-columns: minmax(18rem, 0.75fr) minmax(30rem, 1.25fr); align-items: center; gap: clamp(var(--space-8), 6vw, var(--space-16)); }
-.product-check-copy h2 { max-width: 13ch; margin-bottom: var(--space-5); }
-.product-check-copy > p:last-child { max-width: 34rem; margin: 0; color: var(--text-secondary); }
-.product-check-form { width: 100%; margin: 0; padding: var(--space-6); }
+.product-check { grid-template-columns: 1fr; }
+.product-check-copy h2 { max-width: 13ch; }
+.product-check-form { width: 100%; margin: 0; padding: var(--space-5); box-shadow: none; }
 .product-check-form > label { display: block; margin-bottom: var(--space-3); color: var(--text-primary); font-size: 0.88rem; font-weight: 700; }
 
 /* Crawlable technical coverage */
@@ -556,12 +561,15 @@
 .f500-cmd { max-width: 100%; overflow-x: auto; }
 
 @media (max-width: 74rem) {
-  .home-hero { grid-template-columns: minmax(24rem, 0.9fr) minmax(29rem, 1.1fr); gap: var(--space-12); }
+  .home-hero { gap: var(--space-12); }
 }
 
 @media (max-width: 61.99rem) {
   .home-hero { grid-template-columns: 1fr; min-height: auto; padding-top: var(--space-20); gap: var(--space-16); }
   .hero-copy { max-width: 48rem; }
+  .hero-primary-actions { grid-template-columns: 1fr; }
+  .hero-action-copy { min-height: auto; }
+  .hero-action + .hero-action { border-top: 1px solid var(--border-default); border-left: 0; }
   .result-preview { width: min(100%, 52rem); margin-inline: 0; }
   .result-preview-stage { grid-template-columns: 1fr; margin-top: var(--space-16); }
   .result-preview-intro { max-width: 42rem; }
@@ -595,9 +603,13 @@
 
 @media (max-width: 47.99rem) {
   .web-threads canvas { display: none; }
-  .home-hero { min-height: auto; padding-block: var(--space-12) var(--space-16); gap: var(--space-16); }
-  .hero-copy { min-height: min(22rem, calc(100svh - var(--nav-height) - var(--space-12))); }
+  .home-hero { min-height: auto; padding-block: var(--space-10) var(--space-16); gap: var(--space-10); }
+  .hero-copy { min-height: auto; }
   .hero-copy h1 { font-size: clamp(2.8rem, 13vw, 3.8rem); }
+  .hero-primary-actions .product-check { order: -1; }
+  .hero-primary-actions .product-check + .quick-install,
+  .hero-primary-actions .quick-install { border-top: 1px solid var(--border-default); }
+  .hero-primary-actions .product-check { border-top: 0; }
   .package-grid,
   .checker-answer-grid,
   .checker-scope-grid,

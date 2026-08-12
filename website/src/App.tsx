@@ -55,41 +55,71 @@ function Home() {
           <p className="tagline">Generate llms.txt, JSON-LD, markdown mirrors, crawler rules, and validation at build time for Next.js, Vite, Astro, Nuxt, or any static site.</p>
         </div>
 
-        <section className="quick-install" aria-labelledby="quick-install-title">
-          <div className="quick-install-copy">
-            <p className="section-kicker">Start at build time</p>
-            <h2 id="quick-install-title">Install the package for your stack.</h2>
-            <p>AgentMarkup works inside your existing build. It adds machine-readable output without adding runtime JavaScript.</p>
-          </div>
-          <div className="quick-install-tool">
-            <div className="framework-tabs" aria-label="Choose your framework">
-              {frameworks.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  aria-pressed={framework === item.id}
-                  className={framework === item.id ? 'is-active' : undefined}
-                  onClick={() => {
-                    setFramework(item.id)
-                    setInstallCopied(false)
-                  }}
-                >
-                  {item.label}
+        <div className="hero-primary-actions">
+          <section className="quick-install hero-action" aria-labelledby="quick-install-title">
+            <div className="hero-action-copy quick-install-copy">
+              <p className="section-kicker">Build with AgentMarkup</p>
+              <h2 id="quick-install-title">Install your npm package.</h2>
+              <p>Add machine-readable output at build time, without runtime JavaScript.</p>
+            </div>
+            <div className="quick-install-tool">
+              <div className="framework-tabs" aria-label="Choose your framework">
+                {frameworks.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    aria-pressed={framework === item.id}
+                    className={framework === item.id ? 'is-active' : undefined}
+                    onClick={() => {
+                      setFramework(item.id)
+                      setInstallCopied(false)
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              <div className="install-command-row">
+                <pre aria-live="polite"><code>{installCommand}</code></pre>
+                <button type="button" onClick={copyInstallCommand}>
+                  {installCopied ? 'Copied' : 'Copy'}
                 </button>
-              ))}
+              </div>
+              <a href={`https://www.npmjs.com/package/${packageName}`} target="_blank" rel="noopener noreferrer">
+                View {packageName} on npm
+              </a>
             </div>
-            <div className="install-command-row">
-              <pre aria-live="polite"><code>{installCommand}</code></pre>
-              <button type="button" onClick={copyInstallCommand}>
-                {installCopied ? 'Copied' : 'Copy'}
-              </button>
-            </div>
-            <a href={`https://www.npmjs.com/package/${packageName}`} target="_blank" rel="noopener noreferrer">
-              View {packageName} on npm
-            </a>
-          </div>
-        </section>
+          </section>
 
+          <section className="product-check hero-action" id="product-check" aria-labelledby="product-check-title">
+            <div className="hero-action-copy product-check-copy">
+              <p className="section-kicker">Check your website</p>
+              <h2 id="product-check-title">Scan what AI can access.</h2>
+              <p>Enter any public page. We open the checker and start the scan automatically.</p>
+            </div>
+            <form className="hero-checker-form product-check-form" action="/checker/" method="get" onSubmit={handleCheckerSubmit}>
+              <label htmlFor="home-checker-url">Website address</label>
+              <div className="checker-form-row">
+                <input
+                  id="home-checker-url"
+                  className="checker-input"
+                  type="text"
+                  name="url"
+                  value={checkerUrl}
+                  onChange={(event) => setCheckerUrl(event.target.value)}
+                  onBlur={() => setCheckerUrl((value) => normalizeWebsiteInput(value))}
+                  placeholder="yourwebsite.com"
+                  inputMode="url"
+                  autoComplete="url"
+                  spellCheck={false}
+                  required
+                />
+                <button className="checker-submit" type="submit">Scan website</button>
+              </div>
+              <p>Free, no account required. <a href="/checker/">Open the checker without a URL</a>, or <a href="/security-scan/">run a security scan</a>.</p>
+            </form>
+          </section>
+        </div>
       </header>
 
       <section className="package-ecosystem" aria-labelledby="package-ecosystem-title">
@@ -115,35 +145,6 @@ function Home() {
             <span className="developer-route-copy"><span className="developer-route-label">Open source</span><strong>Read the source, examples, and package documentation</strong></span>
           </a>
         </div>
-      </section>
-
-      <section className="product-check" id="product-check" aria-labelledby="product-check-title">
-        <div className="product-check-copy">
-          <p className="section-kicker">Check the output</p>
-          <h2 id="product-check-title">See what your website already gives AI.</h2>
-          <p>Enter any public page. We normalize it to the website root, open the Website Checker, and start the scan automatically.</p>
-        </div>
-        <form className="hero-checker-form product-check-form" action="/checker/" method="get" onSubmit={handleCheckerSubmit}>
-          <label htmlFor="home-checker-url">Website address</label>
-          <div className="checker-form-row">
-            <input
-              id="home-checker-url"
-              className="checker-input"
-              type="text"
-              name="url"
-              value={checkerUrl}
-              onChange={(event) => setCheckerUrl(event.target.value)}
-              onBlur={() => setCheckerUrl((value) => normalizeWebsiteInput(value))}
-              placeholder="yourwebsite.com"
-              inputMode="url"
-              autoComplete="url"
-              spellCheck={false}
-              required
-            />
-            <button className="checker-submit" type="submit">Scan website</button>
-          </div>
-          <p>Free, no account required. <a href="/checker/">Open Website Checker without a URL</a>, or use <a href="/security-scan/">Security Scan</a> for a passive public security review.</p>
-        </form>
       </section>
 
       <section className="technical-coverage" aria-labelledby="technical-coverage-title">
