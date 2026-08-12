@@ -217,6 +217,7 @@ function Checker() {
   const urlInputRef = useRef<HTMLInputElement | null>(null);
   const resultsHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const justResetRef = useRef(false);
+  const initialCheckStartedRef = useRef(false);
 
   const showResults = Boolean(analysis && result);
   const verdict = analysis ? getOverallVerdict(analysis.counts) : null;
@@ -304,10 +305,16 @@ function Checker() {
   });
 
   useEffect(() => {
+    if (initialCheckStartedRef.current) {
+      return;
+    }
+
     const initialUrl = getInitialUrl();
     if (!initialUrl) {
       return;
     }
+
+    initialCheckStartedRef.current = true;
 
     let cancelled = false;
 

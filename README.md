@@ -138,14 +138,6 @@ pnpm typecheck
 pnpm build
 ```
 
-Run the website with Docker:
-
-```bash
-docker compose up --build
-```
-
-Then open [http://localhost:8080](http://localhost:8080).
-
 Package details live in [packages/vite/README.md](./packages/vite/README.md), [packages/astro/README.md](./packages/astro/README.md), [packages/next/README.md](./packages/next/README.md), [packages/cli/README.md](./packages/cli/README.md), [packages/nuxt/README.md](./packages/nuxt/README.md), and [packages/core/README.md](./packages/core/README.md).
 Contribution guidelines live in [CONTRIBUTING.md](./CONTRIBUTING.md).
 

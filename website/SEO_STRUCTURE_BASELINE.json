@@ -6,17 +6,18 @@
     "canonical": "https://agentmarkup.dev/",
     "robots": "index,follow,max-image-preview:large,max-snippet:-1",
     "h1": [
-      "Help AI understand your website."
+      "Build websites AI can understand."
     ],
     "h2": [
-      "Install AgentMarkup.",
-      "Start with your website.",
+      "Install the package for your stack.",
+      "Choose only the package you need.",
+      "See what your website already gives AI.",
       "The signals AI systems actually use.",
       "Useful whether you sell, publish, or build a brand.",
       "Frequently Asked Questions"
     ],
     "sectionIds": [
-      "product-options"
+      "product-check"
     ],
     "schemaTypes": [
       "Answer",
@@ -31,7 +32,13 @@
       "/blog/brand-awareness-ai/",
       "/blog/ecommerce-llm-optimization/",
       "/blog/json-ld-structured-data-guide/",
+      "/blog/markdown-mirrors/",
       "/checker/",
+      "/docs/ai-crawlers/",
+      "/docs/audit/",
+      "/docs/json-ld/",
+      "/docs/llms-txt/",
+      "/learn/",
       "/security-scan/"
     ],
     "prerendered": true

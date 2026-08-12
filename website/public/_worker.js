@@ -1,9 +1,45 @@
 const CHECKER_USER_AGENT = 'agentmarkup-checker/0.3.2 (+https://agentmarkup.dev)';
+const CHECKS_SCHEMA_STATEMENTS = [
+  `CREATE TABLE IF NOT EXISTS checker_checks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    requested_input TEXT NOT NULL,
+    normalized_url TEXT NOT NULL,
+    origin TEXT NOT NULL,
+    checked_at TEXT NOT NULL,
+    homepage_status INTEGER NOT NULL,
+    llms_status INTEGER NOT NULL,
+    robots_status INTEGER NOT NULL,
+    sitemap_status INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_checker_checks_checked_at
+    ON checker_checks (checked_at DESC)`,
+  `CREATE INDEX IF NOT EXISTS idx_checker_checks_normalized_url
+    ON checker_checks (normalized_url)`,
+  `CREATE TABLE IF NOT EXISTS checker_request_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ip_hash TEXT NOT NULL,
+    normalized_url TEXT NOT NULL,
+    requested_at TEXT NOT NULL,
+    challenge_passed INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_checker_request_events_ip_requested_at
+    ON checker_request_events (ip_hash, requested_at DESC)`,
+  `CREATE INDEX IF NOT EXISTS idx_checker_request_events_normalized_requested_at
+    ON checker_request_events (normalized_url, requested_at DESC)`,
+  `CREATE TABLE IF NOT EXISTS checker_cache (
+    normalized_url TEXT PRIMARY KEY,
+    response_json TEXT NOT NULL,
+    cached_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_checker_cache_expires_at
+    ON checker_cache (expires_at)`,
+];
+
 const FETCH_TIMEOUT_MS = 10_000;
 const MAX_RESPONSE_BYTES = 5 * 1024 * 1024;
-const MAX_REQUEST_BODY_BYTES = 16 * 1024;
-const MAX_TURNSTILE_TOKEN_BYTES = 2048;
-const TURNSTILE_TIMEOUT_MS = 8000;
 const MAX_REDIRECTS = 5;
 const IP_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const IP_RATE_LIMIT_MAX = 10;
@@ -48,94 +84,48 @@ const SECURITY_HEADERS = {
   'cross-origin-opener-policy': 'same-origin',
 };
 
-const TOTAL_TIMEOUT_MS = 25000;
-const KNOWN_HTML_ROUTES = new Set([
-  '/',
-  '/checker/',
-  '/security-scan/',
-  '/learn/',
-  '/docs/llms-txt/',
-  '/docs/json-ld/',
-  '/docs/ai-crawlers/',
-  '/docs/audit/',
-  '/blog/',
-  '/blog/why-llms-txt-matters/',
-  '/blog/what-is-geo/',
-  '/blog/json-ld-structured-data-guide/',
-  '/blog/ai-crawlers-2026/',
-  '/blog/ecommerce-llm-optimization/',
-  '/blog/brand-awareness-ai/',
-  '/blog/markdown-mirrors/',
-  '/blog/website-checker/',
-  '/blog/when-markdown-mirrors-help/',
-  '/blog/nextjs-llms-txt-json-ld/',
-  '/blog/nuxt-llms-txt-json-ld/',
-  '/blog/agentmarkup-cli-any-static-site/',
-  '/blog/audit-ai-crawler-access/',
-  '/blog/ai-crawler-audit-500-companies/',
-  '/authors/sebastian-cochinescu/',
-  '/license/',
-  '/terms/',
-  '/privacy/',
-]);
+let checksSchemaReadyPromise;
+let checksSchemaUnavailable = false;
 
-class PublicError extends Error {
-  constructor(message, status = 400) {
-    super(message);
-    this.name = 'PublicError';
-    this.status = status;
-  }
-}
+const TOTAL_TIMEOUT_MS = 25000;
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    if (
-      url.pathname === '/api/check' ||
-      url.pathname === '/api/security-scan'
-    ) {
-      if (request.method !== 'POST') {
-        return json({ error: 'Method not allowed. Use POST.' }, 405, {
-          allow: 'POST',
-        });
+    if (url.pathname === '/api/check') {
+      if (!['GET', 'POST'].includes(request.method)) {
+        return json({ error: 'Method not allowed.' }, 405);
       }
-      if (isCrossSiteRequest(request, url)) {
+
+      return handleCheckRequest(request, url, env, Date.now());
+    }
+
+    if (url.pathname === '/api/security-scan') {
+      // POST-only: a scan mutates rate-limit state and runs on the caller's
+      // behalf, so it must not be triggerable by a cross-site GET (e.g. an
+      // <img> or link) that would bypass the on-page authorization gate.
+      if (request.method !== 'POST') {
+        return json({ error: 'Method not allowed. Use POST.' }, 405);
+      }
+      // Reject cross-site browser requests to prevent CSRF-style scans that
+      // consume a visitor's shared rate-limit budget. Non-browser clients omit
+      // Sec-Fetch-Site and are not a CSRF vector.
+      const fetchSite = request.headers.get('sec-fetch-site');
+      if (fetchSite === 'cross-site' || fetchSite === 'same-site') {
         return json({ error: 'Cross-site requests are not allowed.' }, 403);
       }
 
-      return url.pathname === '/api/check'
-        ? handleCheckRequest(request, env, Date.now())
-        : handleSecurityScanRequest(request, env, Date.now());
-    }
-
-    if (url.pathname.startsWith('/api/')) {
-      return json({ error: 'Not found.' }, 404);
+      return handleSecurityScanRequest(request, url, env, Date.now());
     }
 
     return serveAssetWithSecurityHeaders(request, env);
   },
 };
 
-function isCrossSiteRequest(request, requestUrl) {
-  const fetchSite = request.headers.get('sec-fetch-site');
-  if (fetchSite === 'cross-site' || fetchSite === 'same-site') {
-    return true;
-  }
-
-  const origin = request.headers.get('origin');
-  if (!origin) return false;
-
+async function handleCheckRequest(request, url, env, checkStartTime) {
   try {
-    return new URL(origin).origin !== requestUrl.origin;
-  } catch {
-    return true;
-  }
-}
-
-async function handleCheckRequest(request, env, checkStartTime) {
-  try {
-    const { input, turnstileToken } = await readCheckRequest(request);
+    const { input, turnstileToken } = await readCheckRequest(request, url);
     const normalized = normalizePublicUrl(input);
     const checkedAt = new Date().toISOString();
     const protection = await applyCheckerProtection(
@@ -155,13 +145,7 @@ async function handleCheckRequest(request, env, checkStartTime) {
       protection.metadata
     );
     if (cachedResponse) {
-      return json(
-        {
-          ...cachedResponse,
-          normalizedFrom: getNormalizedFrom(input, cachedResponse.targetUrl),
-        },
-        200
-      );
+      return json(cachedResponse, 200);
     }
 
     const homepage = await fetchText(normalized, checkStartTime);
@@ -239,6 +223,7 @@ async function handleCheckRequest(request, env, checkStartTime) {
     };
 
     const storage = await persistCheckedUrl(env, {
+      input,
       normalized: targetUrl,
       origin: new URL(targetUrl).origin,
       checkedAt,
@@ -260,26 +245,32 @@ async function handleCheckRequest(request, env, checkStartTime) {
       storage,
     };
 
-    const cacheBody = { ...responseBody };
-    delete cacheBody.normalizedFrom;
     await cacheCheckResponse(
       env,
       normalized,
       targetUrl,
-      cacheBody,
+      responseBody,
       checkedAt,
       cacheExpiresAt
     );
 
     return json(responseBody, 200);
   } catch (error) {
-    return handleApiError(error, '/api/check');
+    return json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Enter a public http:// or https:// website URL.',
+      },
+      400
+    );
   }
 }
 
-async function handleSecurityScanRequest(request, env, checkStartTime) {
+async function handleSecurityScanRequest(request, url, env, checkStartTime) {
   try {
-    const { input, turnstileToken } = await readCheckRequest(request);
+    const { input, turnstileToken } = await readCheckRequest(request, url);
     const normalizedUrl = new URL(normalizePublicUrl(input));
     normalizedUrl.protocol = 'https:';
     const normalized = normalizedUrl.toString();
@@ -422,23 +413,16 @@ async function handleSecurityScanRequest(request, env, checkStartTime) {
 
     return json(responseBody, 200);
   } catch (error) {
-    return handleApiError(error, '/api/security-scan');
+    return json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Enter a public http:// or https:// website URL.',
+      },
+      400
+    );
   }
-}
-
-function handleApiError(error, route) {
-  if (error instanceof PublicError) {
-    return json({ error: error.message }, error.status);
-  }
-
-  console.error(
-    JSON.stringify({
-      message: 'API request failed',
-      route,
-      error: error instanceof Error ? error.name : 'UnknownError',
-    })
-  );
-  return json({ error: 'The service is temporarily unavailable.' }, 503);
 }
 
 function getNormalizedFrom(input, targetUrl) {
@@ -489,77 +473,41 @@ function shouldFetchLegacySecurityTxt(resource) {
   );
 }
 
-async function readCheckRequest(request) {
+async function readCheckRequest(request, url) {
+  if (request.method === 'GET') {
+    return {
+      input: url.searchParams.get('url') ?? '',
+      turnstileToken: url.searchParams.get('turnstileToken') ?? '',
+    };
+  }
+
   const contentType = request.headers.get('content-type')?.toLowerCase() ?? '';
-  const bodyText = await readBoundedRequestText(request);
 
   try {
     if (contentType.includes('application/json')) {
-      const body = JSON.parse(bodyText);
-      return validateCheckRequestFields(body?.url, body?.turnstileToken);
+      const body = await request.json();
+      return {
+        input: typeof body?.url === 'string' ? body.url : '',
+        turnstileToken:
+          typeof body?.turnstileToken === 'string' ? body.turnstileToken : '',
+      };
     }
 
-    if (contentType.includes('application/x-www-form-urlencoded')) {
-      const form = new URLSearchParams(bodyText);
-      return validateCheckRequestFields(
-        form.get('url') ?? '',
-        form.get('turnstileToken') ?? ''
-      );
+    if (
+      contentType.includes('application/x-www-form-urlencoded') ||
+      contentType.includes('multipart/form-data')
+    ) {
+      const form = await request.formData();
+      return {
+        input: String(form.get('url') ?? ''),
+        turnstileToken: String(form.get('turnstileToken') ?? ''),
+      };
     }
-
-    throw new PublicError('Content-Type must be application/json.', 415);
-  } catch (error) {
-    if (error instanceof PublicError) throw error;
-    throw new PublicError('Enter a public http:// or https:// website URL.');
-  }
-}
-
-function validateCheckRequestFields(input, turnstileToken) {
-  const normalizedInput = typeof input === 'string' ? input : '';
-  const normalizedToken = typeof turnstileToken === 'string' ? turnstileToken : '';
-
-  if (
-    new TextEncoder().encode(normalizedToken).byteLength >
-    MAX_TURNSTILE_TOKEN_BYTES
-  ) {
-    throw new PublicError('Verification token is too long.');
+  } catch {
+    throw new Error('Enter a public http:// or https:// website URL.');
   }
 
-  return { input: normalizedInput, turnstileToken: normalizedToken };
-}
-
-async function readBoundedRequestText(request) {
-  const contentLength = Number.parseInt(
-    request.headers.get('content-length') ?? '',
-    10
-  );
-  if (Number.isFinite(contentLength) && contentLength > MAX_REQUEST_BODY_BYTES) {
-    throw new PublicError('Request body is too large.', 413);
-  }
-
-  if (!request.body) {
-    return '';
-  }
-
-  const reader = request.body.getReader();
-  const decoder = new TextDecoder();
-  let totalBytes = 0;
-  let text = '';
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (!value) continue;
-
-    totalBytes += value.byteLength;
-    if (totalBytes > MAX_REQUEST_BODY_BYTES) {
-      await reader.cancel();
-      throw new PublicError('Request body is too large.', 413);
-    }
-    text += decoder.decode(value, { stream: true });
-  }
-
-  return text + decoder.decode();
+  throw new Error('Enter a public http:// or https:// website URL.');
 }
 
 async function applyCheckerProtection(
@@ -578,33 +526,57 @@ async function applyCheckerProtection(
   };
 
   if (!env?.CHECKS_DB) {
-    throw new PublicError('The service is temporarily unavailable.', 503);
+    return {
+      metadata,
+      response: null,
+    };
+  }
+
+  const schemaReady = await ensureChecksSchema(env);
+  if (!schemaReady) {
+    return {
+      metadata,
+      response: null,
+    };
   }
 
   await cleanupCheckerStorage(env, checkedAt);
 
   const ipHash = await hashClientIp(readClientIp(request));
   const recentState = await getRecentIpState(env, ipHash, checkedAt);
-  const turnstileConfig = getTurnstileConfig(env, request);
+  const turnstileConfig = getTurnstileConfig(env);
 
-  metadata.turnstileThreshold = turnstileConfig.threshold;
+  metadata.turnstileThreshold = turnstileConfig.enabled
+    ? turnstileConfig.threshold
+    : null;
 
   if (recentState.count >= IP_RATE_LIMIT_MAX) {
+    const retryAfterSeconds = getRetryAfterSeconds(
+      recentState.oldestRequestedAt,
+      IP_RATE_LIMIT_WINDOW_MS
+    );
+
     return {
       metadata: {
         ...metadata,
         remainingChecks: 0,
       },
-      response: createRateLimitResponse(recentState),
+      response: json(
+        {
+          error:
+            'Too many checker or security scan requests came from this IP recently.',
+          retryAfterSeconds,
+        },
+        429,
+        {
+          'retry-after': String(retryAfterSeconds),
+        }
+      ),
     };
   }
 
-  if (recentState.count >= turnstileConfig.threshold) {
-    const verified = await verifyTurnstileToken(
-      request,
-      turnstileToken,
-      turnstileConfig
-    );
+  if (turnstileConfig.enabled && recentState.count >= turnstileConfig.threshold) {
+    const verified = await verifyTurnstileToken(env, request, turnstileToken);
 
     if (!verified.ok) {
       return {
@@ -626,48 +598,23 @@ async function applyCheckerProtection(
     metadata.turnstileVerified = true;
   }
 
-  const inserted = await logCheckerRequestEventIfBelowLimit(env, {
+  await logCheckerRequestEvent(env, {
     ipHash,
     normalized,
     requestedAt: checkedAt,
     challengePassed: metadata.turnstileVerified,
   });
-  if (!inserted) {
-    const cappedState = await getRecentIpState(env, ipHash, checkedAt);
-    return {
-      metadata: { ...metadata, remainingChecks: 0 },
-      response: createRateLimitResponse(cappedState),
-    };
-  }
-
-  const currentState = await getRecentIpState(env, ipHash, checkedAt);
 
   return {
     metadata: {
       ...metadata,
-      remainingChecks: Math.max(IP_RATE_LIMIT_MAX - currentState.count, 0),
+      remainingChecks: Math.max(IP_RATE_LIMIT_MAX - (recentState.count + 1), 0),
     },
     response: null,
   };
 }
 
-function createRateLimitResponse(recentState) {
-  const retryAfterSeconds = getRetryAfterSeconds(
-    recentState.oldestRequestedAt,
-    IP_RATE_LIMIT_WINDOW_MS
-  );
-  return json(
-    {
-      error:
-        'Too many checker or security scan requests came from this IP recently.',
-      retryAfterSeconds,
-    },
-    429,
-    { 'retry-after': String(retryAfterSeconds) }
-  );
-}
-
-function getTurnstileConfig(env, request) {
+function getTurnstileConfig(env) {
   const siteKey = String(env?.CHECKER_TURNSTILE_SITE_KEY ?? '').trim();
   const secretKey = String(env?.CHECKER_TURNSTILE_SECRET_KEY ?? '').trim();
   const threshold = clampInteger(
@@ -676,29 +623,23 @@ function getTurnstileConfig(env, request) {
     IP_RATE_LIMIT_MAX - 1,
     5
   );
-  const expectedHostname = String(
-    env?.CHECKER_TURNSTILE_EXPECTED_HOSTNAME ?? new URL(request.url).hostname
-  )
-    .trim()
-    .toLowerCase();
-  const expectedAction = String(
-    env?.CHECKER_TURNSTILE_EXPECTED_ACTION ?? ''
-  ).trim();
-
-  if (!siteKey || !secretKey || !expectedHostname || !expectedAction) {
-    throw new PublicError('The service is temporarily unavailable.', 503);
-  }
 
   return {
+    enabled: Boolean(siteKey && secretKey),
     siteKey,
     secretKey,
     threshold,
-    expectedHostname,
-    expectedAction,
   };
 }
 
-async function verifyTurnstileToken(request, token, turnstileConfig) {
+async function verifyTurnstileToken(env, request, token) {
+  const turnstileConfig = getTurnstileConfig(env);
+  if (!turnstileConfig.enabled) {
+    return {
+      ok: true,
+    };
+  }
+
   if (!token?.trim()) {
     return {
       ok: false,
@@ -707,7 +648,6 @@ async function verifyTurnstileToken(request, token, turnstileConfig) {
     };
   }
 
-  const { signal, cancel } = createTimeoutSignal(TURNSTILE_TIMEOUT_MS);
   try {
     const body = new URLSearchParams();
     body.set('secret', turnstileConfig.secretKey);
@@ -721,18 +661,10 @@ async function verifyTurnstileToken(request, token, turnstileConfig) {
     const response = await fetch(TURNSTILE_VERIFY_URL, {
       method: 'POST',
       body,
-      signal,
     });
-    const payload = JSON.parse(
-      await readBoundedText(response, MAX_DNS_RESPONSE_BYTES)
-    );
+    const payload = await response.json();
 
-    if (
-      payload?.success === true &&
-      String(payload.hostname ?? '').toLowerCase() ===
-        turnstileConfig.expectedHostname &&
-      payload.action === turnstileConfig.expectedAction
-    ) {
+    if (payload?.success === true) {
       return {
         ok: true,
       };
@@ -743,8 +675,6 @@ async function verifyTurnstileToken(request, token, turnstileConfig) {
       error:
         'Verification could not be completed right now. Please try again in a moment.',
     };
-  } finally {
-    cancel();
   }
 
   return {
@@ -779,11 +709,8 @@ async function getRecentIpState(env, ipHash, checkedAt) {
   };
 }
 
-async function logCheckerRequestEventIfBelowLimit(env, payload) {
-  const windowStart = new Date(
-    Date.parse(payload.requestedAt) - IP_RATE_LIMIT_WINDOW_MS
-  ).toISOString();
-  const result = await env.CHECKS_DB.prepare(
+async function logCheckerRequestEvent(env, payload) {
+  await env.CHECKS_DB.prepare(
     `
       INSERT INTO checker_request_events (
         ip_hash,
@@ -791,27 +718,16 @@ async function logCheckerRequestEventIfBelowLimit(env, payload) {
         requested_at,
         challenge_passed
       )
-      SELECT ?, ?, ?, ?
-      WHERE (
-        SELECT COUNT(*)
-        FROM checker_request_events
-        WHERE ip_hash = ?
-          AND requested_at >= ?
-      ) < ?
+      VALUES (?, ?, ?, ?)
     `
   )
     .bind(
       payload.ipHash,
       payload.normalized,
       payload.requestedAt,
-      payload.challengePassed ? 1 : 0,
-      payload.ipHash,
-      windowStart,
-      IP_RATE_LIMIT_MAX
+      payload.challengePassed ? 1 : 0
     )
     .run();
-
-  return Number(result?.meta?.changes ?? 0) === 1;
 }
 
 async function cleanupCheckerStorage(env, checkedAt) {
@@ -836,6 +752,14 @@ async function cleanupCheckerStorage(env, checkedAt) {
 }
 
 async function readCachedResponse(env, normalized, protectionMetadata) {
+  if (!env?.CHECKS_DB) {
+    return null;
+  }
+
+  if (!(await ensureChecksSchema(env))) {
+    return null;
+  }
+
   const now = new Date().toISOString();
   const row = await env.CHECKS_DB.prepare(
     `
@@ -886,6 +810,14 @@ async function cacheCheckResponse(
   checkedAt,
   expiresAt
 ) {
+  if (!env?.CHECKS_DB) {
+    return;
+  }
+
+  if (!(await ensureChecksSchema(env))) {
+    return;
+  }
+
   const responseJson = JSON.stringify(payload);
 
   // Large targets (big homepages, sitemaps, llms-full.txt) can serialize past
@@ -916,17 +848,26 @@ async function cacheCheckResponse(
       )
     );
   } catch (error) {
-    console.error(
-      JSON.stringify({
-        message: 'Checker cache write failed',
-        error: error instanceof Error ? error.name : 'UnknownError',
-      })
-    );
+    console.error('checker cache write failed', error);
   }
 }
 
 async function persistCheckedUrl(env, payload) {
+  if (!env?.CHECKS_DB) {
+    return {
+      persisted: false,
+      reason: 'binding-not-configured',
+    };
+  }
+
   try {
+    if (!(await ensureChecksSchema(env))) {
+      return {
+        persisted: false,
+        reason: 'schema-unavailable',
+      };
+    }
+
     await env.CHECKS_DB.prepare(
       `
         INSERT INTO checker_checks (
@@ -943,7 +884,7 @@ async function persistCheckedUrl(env, payload) {
       `
     )
       .bind(
-        payload.normalized,
+        payload.input.trim(),
         payload.normalized,
         payload.origin,
         payload.checkedAt,
@@ -959,23 +900,38 @@ async function persistCheckedUrl(env, payload) {
       binding: 'CHECKS_DB',
     };
   } catch (error) {
-    console.error(
-      JSON.stringify({
-        message: 'Checker history write failed',
-        error: error instanceof Error ? error.name : 'UnknownError',
-      })
-    );
     return {
       persisted: false,
-      reason: 'database-write-failed',
+      reason: error instanceof Error ? error.message : 'database-write-failed',
     };
   }
+}
+
+async function ensureChecksSchema(env) {
+  if (!env?.CHECKS_DB || checksSchemaUnavailable) {
+    return false;
+  }
+
+  if (!checksSchemaReadyPromise) {
+    checksSchemaReadyPromise = env.CHECKS_DB.batch(
+      CHECKS_SCHEMA_STATEMENTS.map((statement) =>
+        env.CHECKS_DB.prepare(statement)
+      )
+    ).catch((error) => {
+      checksSchemaUnavailable = true;
+      checksSchemaReadyPromise = null;
+      console.error('checker schema initialization failed', error);
+      return null;
+    });
+  }
+
+  return (await checksSchemaReadyPromise) !== null;
 }
 
 function normalizePublicUrl(value) {
   const trimmed = value.trim();
   if (!trimmed) {
-    throw new PublicError('Enter a public http:// or https:// website URL.');
+    throw new Error('Enter a public http:// or https:// website URL.');
   }
 
   try {
@@ -1010,7 +966,7 @@ function normalizePublicUrl(value) {
 
     return parsed.toString();
   } catch {
-    throw new PublicError('Enter a public http:// or https:// website URL.');
+    throw new Error('Enter a public http:// or https:// website URL.');
   }
 }
 
@@ -1838,59 +1794,20 @@ function clampInteger(value, min, max, fallback) {
 }
 
 function json(body, status, extraHeaders = {}) {
-  return withSecurityHeaders(
-    new Response(JSON.stringify(body), {
-      status,
-      headers: {
-        'content-type': 'application/json; charset=utf-8',
-        'cache-control': 'no-store',
-        'x-content-type-options': 'nosniff',
-        ...extraHeaders,
-      },
-    })
-  );
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store',
+      'x-content-type-options': 'nosniff',
+      ...extraHeaders,
+    },
+  });
 }
 
 async function serveAssetWithSecurityHeaders(request, env) {
   const asset = await env.ASSETS.fetch(request);
-  const contentType = asset.headers.get('content-type')?.toLowerCase() ?? '';
-  if (
-    asset.status === 200 &&
-    contentType.includes('text/html') &&
-    !isKnownHtmlRoute(new URL(request.url).pathname)
-  ) {
-    const body =
-      request.method === 'HEAD'
-        ? null
-        : '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Page not found | agentmarkup</title></head><body><main><h1>Page not found</h1><p>The page you requested does not exist.</p><p><a href="/">Return to agentmarkup</a></p></main></body></html>';
-    return withSecurityHeaders(
-      new Response(body, {
-        status: 404,
-        headers: {
-          'content-type': 'text/html; charset=utf-8',
-          'cache-control': 'no-store',
-          'x-robots-tag': 'noindex',
-        },
-      })
-    );
-  }
-
-  return withSecurityHeaders(asset);
-}
-
-function isKnownHtmlRoute(pathname) {
-  if (pathname === '/index.html') return true;
-
-  const route = pathname.endsWith('/index.html')
-    ? `${pathname.slice(0, -'index.html'.length)}`
-    : pathname.endsWith('/')
-      ? pathname
-      : `${pathname}/`;
-  return KNOWN_HTML_ROUTES.has(route);
-}
-
-function withSecurityHeaders(response) {
-  const headers = new Headers(response.headers);
+  const headers = new Headers(asset.headers);
 
   for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
     if (!headers.has(name)) {
@@ -1898,9 +1815,9 @@ function withSecurityHeaders(response) {
     }
   }
 
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
+  return new Response(asset.body, {
+    status: asset.status,
+    statusText: asset.statusText,
     headers,
   });
 }

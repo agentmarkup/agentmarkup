@@ -1,5 +1,5 @@
 [
-  { "route": "/", "source": "src/App.tsx", "heading": "Help AI understand your website." },
+  { "route": "/", "source": "src/App.tsx", "heading": "Build websites AI can understand." },
   { "route": "/checker/", "source": "src/pages/Checker.tsx", "heading": "Check your website before AI crawlers and search engines do" },
   { "route": "/security-scan/", "source": "src/pages/SecurityScan.tsx", "heading": "Passive security scan for public websites" },
   { "route": "/learn/", "source": "src/pages/Learn.tsx", "heading": "Learn how AI sees your website" },

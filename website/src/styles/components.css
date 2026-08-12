@@ -541,7 +541,7 @@ body:has(.f500-report) .site-header-glass.glass-surface-fallback {
 .spotlight-card-neutral { --spotlight-color: var(--status-neutral); }
 
 /* React Bits Border Glow, reduced to one restrained cobalt affordance for clickable card-like links. */
-:where(.blog-card, .blog-featured, .path-card, .developer-paths a, .product-option-card, .developer-route) {
+:where(.blog-card, .blog-featured, .path-card, .developer-paths a, .package-card, .developer-route) {
   --border-glow-x: 50%;
   --border-glow-y: 50%;
   --edge-proximity: 0;
@@ -551,7 +551,7 @@ body:has(.f500-report) .site-header-glass.glass-surface-fallback {
   transition: border-color 180ms ease-out, box-shadow 240ms ease-out, transform 180ms ease-out;
 }
 
-:where(.blog-card, .blog-featured, .path-card, .developer-paths a, .product-option-card, .developer-route)::after {
+:where(.blog-card, .blog-featured, .path-card, .developer-paths a, .package-card, .developer-route)::after {
   position: absolute;
   z-index: 5;
   inset: -2px;
@@ -571,14 +571,14 @@ body:has(.f500-report) .site-header-glass.glass-surface-fallback {
   transition: opacity 180ms ease-out;
 }
 
-:where(.blog-card, .blog-featured, .path-card, .developer-paths a, .product-option-card, .developer-route):hover,
-:where(.blog-card, .blog-featured, .path-card, .developer-paths a, .product-option-card, .developer-route):focus-visible {
+:where(.blog-card, .blog-featured, .path-card, .developer-paths a, .package-card, .developer-route):hover,
+:where(.blog-card, .blog-featured, .path-card, .developer-paths a, .package-card, .developer-route):focus-visible {
   border-color: var(--brand-primary);
   box-shadow: 0 12px 32px color-mix(in srgb, var(--action-fill-start) 14%, transparent), inset 0 1px 0 color-mix(in srgb, var(--text-primary) 10%, transparent);
 }
 
-:where(.blog-card, .blog-featured, .path-card, .developer-paths a, .product-option-card, .developer-route):hover::after,
-:where(.blog-card, .blog-featured, .path-card, .developer-paths a, .product-option-card, .developer-route):focus-visible::after { opacity: clamp(0.72, calc(0.72 + var(--edge-proximity) / 520), 0.9); }
+:where(.blog-card, .blog-featured, .path-card, .developer-paths a, .package-card, .developer-route):hover::after,
+:where(.blog-card, .blog-featured, .path-card, .developer-paths a, .package-card, .developer-route):focus-visible::after { opacity: clamp(0.72, calc(0.72 + var(--edge-proximity) / 520), 0.9); }
 
 /* Code */
 .code-block { position: relative; overflow: hidden; margin: var(--space-6) 0; border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--code-background); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text-primary) 5%, transparent); }
@@ -697,11 +697,11 @@ body:has(.f500-report) .site-header-glass.glass-surface-fallback {
 
 @media (pointer: coarse) {
   .spotlight-card::before { display: none; }
-  :where(.blog-card, .blog-featured, .path-card, .developer-paths a, .product-option-card, .developer-route)::after { display: none; }
+  :where(.blog-card, .blog-featured, .path-card, .developer-paths a, .package-card, .developer-route)::after { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :where(.blog-card, .blog-featured, .path-card, .developer-paths a, .product-option-card, .developer-route)::after { display: none; }
+  :where(.blog-card, .blog-featured, .path-card, .developer-paths a, .package-card, .developer-route)::after { display: none; }
 }
 
 @supports not (backdrop-filter: blur(10px)) {
@@ -711,7 +711,7 @@ body:has(.f500-report) .site-header-glass.glass-surface-fallback {
 @media (forced-colors: active) {
   .glass-surface,
   .site-header-glass { border: 1px solid CanvasText; background: Canvas; box-shadow: none; backdrop-filter: none; }
-  :where(.blog-card, .blog-featured, .path-card, .developer-paths a, .product-option-card, .developer-route)::after,
+  :where(.blog-card, .blog-featured, .path-card, .developer-paths a, .package-card, .developer-route)::after,
   :where(.button-primary, .checker-submit, .checker-cta-link, .blog-cta-link, .cookie-accept)::before { display: none; }
   .semantic-status,
   .checker-level,

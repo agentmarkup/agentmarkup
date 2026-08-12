@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { homeFaqs } from './data/page-faqs'
 import { normalizeWebsiteInput } from './normalizeWebsiteInput'
 import { GitHubIcon } from './ui/GitHubIcon'
-import { ResultPreview } from './ui/ResultPreview'
 
 type Framework = 'next' | 'vite' | 'astro' | 'nuxt'
 
@@ -11,6 +10,15 @@ const frameworks: Array<{ id: Framework; label: string }> = [
   { id: 'vite', label: 'Vite' },
   { id: 'astro', label: 'Astro' },
   { id: 'nuxt', label: 'Nuxt' },
+]
+
+const packages = [
+  { name: '@agentmarkup/next', label: 'Next.js', detail: 'Build-time integration for static Next.js output.' },
+  { name: '@agentmarkup/vite', label: 'Vite', detail: 'Plugin for Vite applications and static sites.' },
+  { name: '@agentmarkup/astro', label: 'Astro', detail: 'Native integration for Astro builds.' },
+  { name: '@agentmarkup/nuxt', label: 'Nuxt', detail: 'Module for prerendered Nuxt output.' },
+  { name: '@agentmarkup/cli', label: 'Any static site', detail: 'Run AgentMarkup after any framework finishes building.' },
+  { name: '@agentmarkup/audit', label: 'Live audit', detail: 'Test a deployed URL through real AI crawler identities.' },
 ]
 
 function Home() {
@@ -42,36 +50,16 @@ function Home() {
     <main className="home-page">
       <header className="home-hero">
         <div className="hero-copy">
-          <p className="hero-overline">A clearer web for people and AI</p>
-          <h1>Help AI understand your website.</h1>
-          <p className="tagline">Get a clear answer and simple next steps in seconds.</p>
-          <form className="hero-checker-form" action="/checker/" method="get" onSubmit={handleCheckerSubmit}>
-            <label className="sr-only" htmlFor="home-checker-url">Website address</label>
-            <div className="checker-form-row">
-              <input
-                id="home-checker-url"
-                className="checker-input"
-                type="text"
-                name="url"
-                value={checkerUrl}
-                onChange={(event) => setCheckerUrl(event.target.value)}
-                onBlur={() => setCheckerUrl((value) => normalizeWebsiteInput(value))}
-                placeholder="yourwebsite.com"
-                inputMode="url"
-                autoComplete="url"
-                spellCheck={false}
-                required
-              />
-              <button className="checker-submit" type="submit">Check my website</button>
-            </div>
-            <p>Free check of any public site. We normalize the address to its website root.</p>
-          </form>
+          <p className="hero-overline">Open-source npm packages</p>
+          <h1>Build websites AI can understand.</h1>
+          <p className="tagline">Generate llms.txt, JSON-LD, markdown mirrors, crawler rules, and validation at build time for Next.js, Vite, Astro, Nuxt, or any static site.</p>
         </div>
 
         <section className="quick-install" aria-labelledby="quick-install-title">
           <div className="quick-install-copy">
-            <h2 id="quick-install-title">Install AgentMarkup.</h2>
-            <p>Choose the framework that builds your website, then add its AgentMarkup package.</p>
+            <p className="section-kicker">Start at build time</p>
+            <h2 id="quick-install-title">Install the package for your stack.</h2>
+            <p>AgentMarkup works inside your existing build. It adds machine-readable output without adding runtime JavaScript.</p>
           </div>
           <div className="quick-install-tool">
             <div className="framework-tabs" aria-label="Choose your framework">
@@ -102,42 +90,60 @@ function Home() {
           </div>
         </section>
 
-        <div className="result-preview-stage">
-          <div className="result-preview-intro">
-            <p className="section-kicker">A result you can understand</p>
-            <h3>See what matters, then read why.</h3>
-            <p>The overall answer tells you where to start. Open any finding for a plain-language explanation and a practical next step.</p>
-          </div>
-          <ResultPreview />
-        </div>
       </header>
 
-      <section className="product-options" id="product-options" aria-labelledby="product-options-title">
-        <div className="home-section-heading product-options-heading">
-          <p className="section-kicker">Choose a check</p>
-          <h2 id="product-options-title">Start with your website.</h2>
-          <p>Pick the result you need. Each check gives you a clear answer and practical next steps.</p>
+      <section className="package-ecosystem" aria-labelledby="package-ecosystem-title">
+        <div className="home-section-heading">
+          <p className="section-kicker">One toolkit, every build</p>
+          <h2 id="package-ecosystem-title">Choose only the package you need.</h2>
+          <p>The framework integrations share the same configuration and output. The CLI covers any static build, while Audit checks what AI crawlers receive after deployment.</p>
         </div>
-
-        <div className="product-option-grid">
-          <a className="product-option-card" href="/checker/">
-            <span className="product-option-label">AI visibility</span>
-            <h3>Website Checker</h3>
-            <p>See what AI can find and understand, including whether your access rules are clear.</p>
-            <strong>Open website checker</strong>
-          </a>
-          <a className="product-option-card" href="/security-scan/">
-            <span className="product-option-label">Public security</span>
-            <h3>Security Scan</h3>
-            <p>See what your website exposes publicly, from HTTPS and security headers to cookie settings.</p>
-            <strong>Open security scan</strong>
+        <div className="package-grid">
+          {packages.map((item) => (
+            <a key={item.name} className="package-card" href={`https://www.npmjs.com/package/${item.name}`} target="_blank" rel="noopener noreferrer">
+              <span>{item.label}</span>
+              <h3><code>{item.name}</code></h3>
+              <p>{item.detail}</p>
+              <strong>View on npm</strong>
+            </a>
+          ))}
+        </div>
+        <div className="package-routes">
+          <a href="https://www.npmjs.com/package/@agentmarkup/core" target="_blank" rel="noopener noreferrer">Using a custom integration? View <code>@agentmarkup/core</code>.</a>
+          <a className="developer-route" href="https://github.com/agentmarkup/agentmarkup" target="_blank" rel="noopener noreferrer">
+            <span className="developer-route-icon"><GitHubIcon /></span>
+            <span className="developer-route-copy"><span className="developer-route-label">Open source</span><strong>Read the source, examples, and package documentation</strong></span>
           </a>
         </div>
+      </section>
 
-        <a className="developer-route" href="https://github.com/agentmarkup/agentmarkup" target="_blank" rel="noopener noreferrer">
-          <span className="developer-route-icon"><GitHubIcon /></span>
-          <span className="developer-route-copy"><span className="developer-route-label">For developers</span><strong>Setup guides, packages, and implementation details</strong></span>
-        </a>
+      <section className="product-check" id="product-check" aria-labelledby="product-check-title">
+        <div className="product-check-copy">
+          <p className="section-kicker">Check the output</p>
+          <h2 id="product-check-title">See what your website already gives AI.</h2>
+          <p>Enter any public page. We normalize it to the website root, open the Website Checker, and start the scan automatically.</p>
+        </div>
+        <form className="hero-checker-form product-check-form" action="/checker/" method="get" onSubmit={handleCheckerSubmit}>
+          <label htmlFor="home-checker-url">Website address</label>
+          <div className="checker-form-row">
+            <input
+              id="home-checker-url"
+              className="checker-input"
+              type="text"
+              name="url"
+              value={checkerUrl}
+              onChange={(event) => setCheckerUrl(event.target.value)}
+              onBlur={() => setCheckerUrl((value) => normalizeWebsiteInput(value))}
+              placeholder="yourwebsite.com"
+              inputMode="url"
+              autoComplete="url"
+              spellCheck={false}
+              required
+            />
+            <button className="checker-submit" type="submit">Scan website</button>
+          </div>
+          <p>Free, no account required. <a href="/checker/">Open Website Checker without a URL</a>, or use <a href="/security-scan/">Security Scan</a> for a passive public security review.</p>
+        </form>
       </section>
 
       <section className="technical-coverage" aria-labelledby="technical-coverage-title">

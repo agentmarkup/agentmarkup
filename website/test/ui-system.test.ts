@@ -81,17 +81,33 @@ describe('editorial learning metadata', () => {
 })
 
 describe('homepage FAQ', () => {
-  it('keeps the homepage checker and technical coverage crawlable', () => {
+  it('keeps the npm package family and direct checker entry crawlable', () => {
     const source = readFileSync(`${websiteRoot}/src/App.tsx`, 'utf8')
 
-    expect(source).toContain('<form className="hero-checker-form" action="/checker/" method="get"')
+    expect(source).toContain('<form className="hero-checker-form product-check-form" action="/checker/" method="get"')
     expect(source).toContain('normalizeWebsiteInput(checkerUrl)')
+    expect(source).toContain('start the scan automatically')
+    expect(source).toContain("{ name: '@agentmarkup/next'")
+    expect(source).toContain("{ name: '@agentmarkup/vite'")
+    expect(source).toContain("{ name: '@agentmarkup/astro'")
+    expect(source).toContain("{ name: '@agentmarkup/nuxt'")
+    expect(source).toContain("{ name: '@agentmarkup/cli'")
+    expect(source).toContain("{ name: '@agentmarkup/audit'")
+    expect(source).toContain('https://www.npmjs.com/package/@agentmarkup/core')
     expect(source).toContain('<section className="technical-coverage" aria-labelledby="technical-coverage-title">')
     expect(source.match(/<article><h3>/g)).toHaveLength(6)
     expect(source).toContain('/docs/llms-txt/')
     expect(source).toContain('/docs/json-ld/')
     expect(source).toContain('/docs/ai-crawlers/')
     expect(source).toContain('/docs/audit/')
+  })
+
+  it('starts a deep-linked website check once under React Strict Mode', () => {
+    const source = readFileSync(`${websiteRoot}/src/pages/Checker.tsx`, 'utf8')
+
+    expect(source).toContain('const initialCheckStartedRef = useRef(false)')
+    expect(source).toContain('if (initialCheckStartedRef.current)')
+    expect(source).toContain('initialCheckStartedRef.current = true')
   })
 
   it('keeps every answer inline and crawlable without a modal', () => {

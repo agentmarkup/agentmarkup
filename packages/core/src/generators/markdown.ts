@@ -114,7 +114,10 @@ function extractCanonicalLink(html: string): string | null {
       continue;
     }
 
-    return extractAttributeValue(match[0], 'href');
+    const href = extractAttributeValue(match[0], 'href');
+    if (href) {
+      return href;
+    }
   }
 
   return null;

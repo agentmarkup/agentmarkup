@@ -1,7 +1,5 @@
 CREATE TABLE IF NOT EXISTS checker_checks (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  -- Legacy column name: the Worker writes the normalized site URL here too;
-  -- raw user input, paths, query strings, and fragments are never persisted.
   requested_input TEXT NOT NULL,
   normalized_url TEXT NOT NULL,
   origin TEXT NOT NULL,
