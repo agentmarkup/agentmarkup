@@ -14,13 +14,5 @@
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r --workspace-concurrency=1 typecheck",
     "smoke:website": "pnpm -C website smoke"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ],
-    "overrides": {
-      "next": ">=16.2.6"
-    }
   }
 }
