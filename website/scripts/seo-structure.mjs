@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
+import { dirname, extname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Window } from 'happy-dom'
 
@@ -76,6 +76,7 @@ function routeExists(href) {
   const path = href.split(/[?#]/, 1)[0]
   if (!path || path === '/') return existsSync(resolve(distRoot, 'index.html'))
   if (path.endsWith('/')) return existsSync(resolve(distRoot, path.replace(/^\//, ''), 'index.html'))
+  if (!extname(path)) return existsSync(resolve(distRoot, path.replace(/^\//, ''), 'index.html'))
   return existsSync(resolve(distRoot, path.replace(/^\//, '')))
 }
 

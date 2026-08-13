@@ -18,7 +18,7 @@ const packages = [
   { name: '@agentmarkup/astro', label: 'Astro', detail: 'Native integration for Astro builds.' },
   { name: '@agentmarkup/nuxt', label: 'Nuxt', detail: 'Module for prerendered Nuxt output.' },
   { name: '@agentmarkup/cli', label: 'Any static site', detail: 'Run AgentMarkup after any framework finishes building.' },
-  { name: '@agentmarkup/audit', label: 'Live audit', detail: 'Test a deployed URL through real AI crawler identities.' },
+  { name: '@agentmarkup/audit', label: 'Live audit', detail: 'Test a deployed URL using the user-agents of real AI crawlers.' },
 ]
 
 function Home() {
@@ -95,7 +95,7 @@ function Home() {
             <div className="hero-action-copy product-check-copy">
               <p className="section-kicker">Check your website</p>
               <h2 id="product-check-title">Scan what AI can access.</h2>
-              <p>Enter any public page. We open the checker and start the scan automatically.</p>
+              <p>Whatever page you enter, we normalize it to the site root and start the scan there.</p>
             </div>
             <form className="hero-checker-form product-check-form" action="/checker/" method="get" onSubmit={handleCheckerSubmit}>
               <label htmlFor="home-checker-url">Website address</label>

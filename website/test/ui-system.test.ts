@@ -88,13 +88,15 @@ describe('homepage FAQ', () => {
     expect(source).toContain('<div className="hero-primary-actions">')
     expect(source).toContain('<section className="product-check hero-action" id="product-check"')
     expect(source).toContain('normalizeWebsiteInput(checkerUrl)')
-    expect(source).toContain('start the scan automatically')
+    expect(source).toContain('normalize it to the site root and start the scan there')
     expect(source).toContain("{ name: '@agentmarkup/next'")
     expect(source).toContain("{ name: '@agentmarkup/vite'")
     expect(source).toContain("{ name: '@agentmarkup/astro'")
     expect(source).toContain("{ name: '@agentmarkup/nuxt'")
     expect(source).toContain("{ name: '@agentmarkup/cli'")
     expect(source).toContain("{ name: '@agentmarkup/audit'")
+    expect(source).toContain('using the user-agents of real AI crawlers')
+    expect(source).not.toContain('through real AI crawler identities')
     expect(source).toContain('https://www.npmjs.com/package/@agentmarkup/core')
     expect(source).toContain('<section className="technical-coverage" aria-labelledby="technical-coverage-title">')
     expect(source.match(/<article><h3>/g)).toHaveLength(6)
@@ -102,6 +104,19 @@ describe('homepage FAQ', () => {
     expect(source).toContain('/docs/json-ld/')
     expect(source).toContain('/docs/ai-crawlers/')
     expect(source).toContain('/docs/audit/')
+  })
+
+  it('links the Learning Center from shared navigation and footer', () => {
+    const layout = readFileSync(`${websiteRoot}/src/Layout.tsx`, 'utf8')
+
+    expect(layout).toContain("{ href: '/learn/', label: 'Learning Center' }")
+    expect(layout).toContain('<a href="/learn/">Learning Center</a>')
+  })
+
+  it('requires index.html for extensionless directory routes in the SEO verifier', () => {
+    const verifier = readFileSync(`${websiteRoot}/scripts/seo-structure.mjs`, 'utf8')
+
+    expect(verifier).toContain("if (!extname(path)) return existsSync(resolve(distRoot, path.replace(/^\\//, ''), 'index.html'))")
   })
 
   it('starts a deep-linked website check once under React Strict Mode', () => {
