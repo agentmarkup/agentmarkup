@@ -3,6 +3,11 @@ import type { FormEvent } from 'react';
 
 import { normalizeWebsiteInput } from '../normalizeWebsiteInput';
 import { analyzeSecurityScan } from '../security-scan/analyze';
+import { StatusIcon } from '../ui/Status';
+import { getOverallVerdict, levelToStatus, statusLabels } from '../ui/status-model';
+import { FindingFilter, OverallVerdictPanel, ResultCount } from '../ui/ToolResults';
+import { ContextualFaq } from '../ui/ContextualFaq';
+import { securityScanFaqs } from '../data/page-faqs';
 import type {
   SecurityAuditItem,
   SecurityResourceStatus,
@@ -16,6 +21,7 @@ interface TurnstileApi {
     container: HTMLElement,
     options: {
       sitekey: string;
+      action?: string;
       theme?: 'auto' | 'light' | 'dark';
       callback: (token: string) => void;
       'error-callback'?: () => void;
@@ -267,17 +273,24 @@ function SecurityScan() {
   const [needsConsent, setNeedsConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldError, setFieldError] = useState<string | null>(null);
   const [result, setResult] = useState<SecurityScanResponse | null>(null);
   const [analysis, setAnalysis] = useState<SecurityScanAnalysis | null>(null);
   const [turnstileChallenge, setTurnstileChallenge] =
     useState<TurnstileChallengeState | null>(null);
+  const [findingFilter, setFindingFilter] = useState<'all' | 'error' | 'warning' | 'pass'>('all');
   const turnstileContainerRef = useRef<HTMLDivElement | null>(null);
   const turnstileWidgetIdRef = useRef<string | null>(null);
   const urlInputRef = useRef<HTMLInputElement | null>(null);
+  const consentInputRef = useRef<HTMLInputElement | null>(null);
   const resultsHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const justResetRef = useRef(false);
 
   const showResults = Boolean(analysis && result);
+  const verdict = analysis ? getOverallVerdict(analysis.counts) : null;
+  const visibleItems = analysis
+    ? analysis.items.filter((item) => findingFilter === 'all' || item.level === findingFilter)
+    : [];
 
   // Move focus when the view switches so keyboard and screen-reader users are
   // not left on a control that just unmounted: to the results heading when
@@ -294,7 +307,8 @@ function SecurityScan() {
   async function performScan(rawUrl: string, turnstileToken?: string) {
     const trimmedUrl = normalizeWebsiteInput(rawUrl);
     if (!trimmedUrl) {
-      setError('Enter a public website URL to run the security scan.');
+      setFieldError('Enter a public website URL to run the security scan.');
+      setError(null);
       setResult(null);
       setAnalysis(null);
       setTurnstileChallenge(null);
@@ -302,6 +316,7 @@ function SecurityScan() {
     }
 
     setLoading(true);
+    setFieldError(null);
     setError(null);
     if (!turnstileToken) setTurnstileChallenge(null);
 
@@ -377,6 +392,7 @@ function SecurityScan() {
         if (cancelled) return;
         turnstileWidgetIdRef.current = turnstile.render(container, {
           sitekey: challenge.siteKey,
+          action: 'public-scan',
           theme: 'auto',
           callback: (token) => handleTurnstileToken(token),
           'expired-callback': () => {
@@ -413,9 +429,8 @@ function SecurityScan() {
     event.preventDefault();
     if (!authorized) {
       setNeedsConsent(true);
-      setError(
-        'Confirm that you own or are authorized to assess this website before running the scan.'
-      );
+      setError(null);
+      requestAnimationFrame(() => consentInputRef.current?.focus());
       return;
     }
     void performScan(targetUrl);
@@ -451,33 +466,36 @@ function SecurityScan() {
     setResult(null);
     setAnalysis(null);
     setError(null);
+    setFieldError(null);
     setNeedsConsent(false);
     setAuthorized(false);
     setTargetUrl('');
     setTurnstileChallenge(null);
+    setFindingFilter('all');
     window.scrollTo({ top: 0 });
   }
 
   return (
     <main>
-      <article className="doc-page checker-page">
-        <h1>Passive security scan for public websites</h1>
+      <article className="doc-page checker-page security-scan-page">
         {!showResults ? (
           <>
-        <p className="doc-intro checker-intro">
-          Inspect the public HTTPS response, defensive headers, cookies,
-          embedded resources, security.txt, and basic email authentication.
-          Findings are deterministic pass, warning, or error results with no
-          score. Slow targets can produce partial results instead of blocking
-          the whole report.
-        </p>
+        <section className="checker-start">
+          <header className="checker-heading">
+            <p className="section-kicker">Free security check</p>
+            <h1>Passive security scan for public websites</h1>
+            <p className="doc-intro checker-intro">
+              Check the public safety signals a website shares with every visitor.
+              You get clear findings and next steps, never an invented score.
+            </p>
+          </header>
 
-        <section className="checker-panel">
-          <form className="checker-form" onSubmit={handleSubmit}>
+        <div className="checker-panel">
+          <form className="checker-form" onSubmit={handleSubmit} aria-busy={loading} noValidate>
             <label className="checker-label" htmlFor="security-scan-url">
               Website URL
             </label>
-            <p className="checker-field-note">
+            <p className="checker-field-note" id="security-url-help">
               Enter any public page URL. The scan normalizes it to the site root
               and always assesses the HTTPS site, even if you enter http://.
             </p>
@@ -489,13 +507,18 @@ function SecurityScan() {
                 type="text"
                 placeholder="https://example.com"
                 value={targetUrl}
-                onChange={(event) => setTargetUrl(event.target.value)}
+                onChange={(event) => {
+                  setTargetUrl(event.target.value);
+                  if (fieldError) setFieldError(null);
+                }}
                 onBlur={() =>
                   setTargetUrl((currentUrl) => normalizeWebsiteInput(currentUrl))
                 }
                 inputMode="url"
                 autoComplete="url"
                 spellCheck={false}
+                aria-describedby={`security-url-help${fieldError ? ' security-url-error' : ''}`}
+                aria-invalid={Boolean(fieldError)}
                 required
               />
               <button
@@ -514,15 +537,18 @@ function SecurityScan() {
                 )}
               </button>
             </div>
+            {fieldError ? <p className="field-error" id="security-url-error" role="alert"><StatusIcon status="action" />{fieldError}</p> : null}
             <label
               className={`checker-consent${
                 needsConsent ? ' checker-consent-required' : ''
               }`}
             >
               <input
+                ref={consentInputRef}
                 type="checkbox"
                 checked={authorized}
                 aria-invalid={needsConsent}
+                aria-describedby={needsConsent ? 'security-consent-error' : undefined}
                 onChange={(event) => {
                   setAuthorized(event.target.checked);
                   if (event.target.checked) setNeedsConsent(false);
@@ -534,17 +560,21 @@ function SecurityScan() {
                 <a href="/privacy/">Privacy Policy</a>.
               </span>
             </label>
+            {needsConsent ? <p className="field-error" id="security-consent-error" role="alert"><StatusIcon status="action" />Confirm that you own or are authorized to assess this website before running the scan.</p> : null}
           </form>
           <p className="checker-note">
             This scan and the <a href="/checker/">website checker</a> share the
             same per-IP limit of 10 requests per 10 minutes. One complete scan
             counts as one request against that shared budget, not one request
-            per internal fetch.
+            per internal fetch. Need a general introduction first? Read the{' '}
+            <a href="/blog/website-checker/">plain-language website guide</a>.
           </p>
+        </div>
         </section>
 
+        <details className="tool-details">
+          <summary>What this scan checks and authorized-use details</summary>
         <section className="checker-overview">
-          <h2>What this scan checks</h2>
           <p className="checker-note">
             An overview of the areas the scan looks at. All of it is read from
             public responses and public DNS records.
@@ -571,7 +601,7 @@ function SecurityScan() {
           </ul>
         </section>
 
-        <section className="checker-findings">
+        <section className="checker-findings security-scan-notice">
           <h2>Passive and authorized use only</h2>
           <div className="checker-finding-list">
             <article className="checker-finding checker-finding-pass">
@@ -600,11 +630,13 @@ function SecurityScan() {
             </article>
           </div>
         </section>
+        </details>
+        <ContextualFaq items={securityScanFaqs} />
           </>
         ) : null}
 
         {turnstileChallenge ? (
-          <section className="checker-state checker-state-challenge">
+          <section className="checker-state checker-state-challenge" role="status" aria-live="polite">
             <h2>Verification required</h2>
             <p>{turnstileChallenge.message}</p>
             {formatRetryAfter(turnstileChallenge.retryAfterSeconds) ? (
@@ -621,14 +653,14 @@ function SecurityScan() {
         ) : null}
 
         {error ? (
-          <section className="checker-state checker-state-error">
+          <section className="checker-state checker-state-error" id="security-error-message" role="alert">
             <h2>Security scan failed</h2>
             <p>{error}</p>
           </section>
         ) : null}
 
         {loading ? (
-          <section className="checker-state">
+          <section className="checker-state" role="status" aria-live="polite">
             <h2>Reading public responses</h2>
             <p>
               The scanner is fetching the HTTPS homepage, checking the first
@@ -654,6 +686,7 @@ function SecurityScan() {
                 <h2 ref={resultsHeadingRef} tabIndex={-1}>
                   Results for {analysis.normalizedUrl}
                 </h2>
+                {verdict ? <OverallVerdictPanel status={verdict} /> : null}
                 <p className="checker-summary-text">
                   Scanned at {new Date(result.fetchedAt).toLocaleString()}.
                   {analysis.normalizedFrom ? (
@@ -682,9 +715,9 @@ function SecurityScan() {
                 </p>
               </div>
               <div className="checker-counts" aria-label="Result counts">
-                <ResultCount label="Errors" value={analysis.counts.error} level="error" />
-                <ResultCount label="Warnings" value={analysis.counts.warning} level="warning" />
-                <ResultCount label="Passes" value={analysis.counts.pass} level="pass" />
+                <ResultCount label="Action required" value={analysis.counts.error} level="error" />
+                <ResultCount label="Needs attention" value={analysis.counts.warning} level="warning" />
+                <ResultCount label="Looks good" value={analysis.counts.pass} level="pass" />
               </div>
             </section>
 
@@ -735,23 +768,33 @@ function SecurityScan() {
               </p>
             </section>
 
-            <section className="checker-resources">
-              {analysis.resources.map((resource) => (
-                <ResourceCard key={resource.key} resource={resource} />
-              ))}
-            </section>
-
             <section className="checker-findings">
               <h2>Findings</h2>
+              <div className="finding-filters" aria-label="Filter findings">
+                <FindingFilter active={findingFilter === 'all'} count={analysis.items.length} label="All" onClick={() => setFindingFilter('all')} />
+                <FindingFilter active={findingFilter === 'error'} count={analysis.counts.error} label="Action required" onClick={() => setFindingFilter('error')} />
+                <FindingFilter active={findingFilter === 'warning'} count={analysis.counts.warning} label="Needs attention" onClick={() => setFindingFilter('warning')} />
+                <FindingFilter active={findingFilter === 'pass'} count={analysis.counts.pass} label="Looks good" onClick={() => setFindingFilter('pass')} />
+              </div>
+              <p className="sr-only" role="status" aria-live="polite">{visibleItems.length} finding{visibleItems.length === 1 ? '' : 's'} shown.</p>
               <div className="checker-finding-list">
-                {analysis.items.map((item, index) => (
+                {visibleItems.length ? visibleItems.map((item, index) => (
                   <FindingCard
                     key={`${item.level}-${item.title}-${index}`}
                     item={item}
                   />
-                ))}
+                )) : <p className="finding-empty">No findings in this category.</p>}
               </div>
             </section>
+
+            <details className="checker-technical-details">
+              <summary>Technical details and resources</summary>
+              <section className="checker-resources">
+                {analysis.resources.map((resource) => (
+                  <ResourceCard key={resource.key} resource={resource} />
+                ))}
+              </section>
+            </details>
 
             <section className="security-report-print" aria-hidden="true">
               <h1>agentmarkup passive security scan report</h1>
@@ -792,31 +835,14 @@ function SecurityScan() {
               </ul>
 
               <h2>Disclaimer</h2>
-              {REPORT_DISCLAIMER_LINES.map((line, index) => (
-                <p key={`disclaimer-${index}`}>{line}</p>
+              {REPORT_DISCLAIMER_LINES.map((line) => (
+                <p key={line}>{line}</p>
               ))}
             </section>
           </>
         ) : null}
       </article>
     </main>
-  );
-}
-
-function ResultCount({
-  label,
-  value,
-  level,
-}: {
-  label: string;
-  value: number;
-  level: 'error' | 'warning' | 'pass';
-}) {
-  return (
-    <div className={`checker-count checker-count-${level}`}>
-      <strong>{value}</strong>
-      <span>{label}</span>
-    </div>
   );
 }
 
@@ -828,6 +854,7 @@ function ResourceCard({ resource }: { resource: SecurityResourceStatus }) {
         <span
           className={`checker-resource-status checker-resource-status-${resource.level}`}
         >
+          <StatusIcon status={levelToStatus(resource.level)} size={15} />
           {resource.status}
         </span>
       </div>
@@ -853,11 +880,12 @@ function FindingCard({ item }: { item: SecurityAuditItem }) {
     <article className={`checker-finding checker-finding-${item.level}`}>
       <div className="checker-finding-top">
         <span className={`checker-level checker-level-${item.level}`}>
-          {item.level}
+          <StatusIcon status={levelToStatus(item.level)} size={15} />
+          {statusLabels[levelToStatus(item.level)]}
         </span>
         <h3>{item.title}</h3>
       </div>
-      <p className="checker-finding-detail">{item.detail}</p>
+      <p className="checker-finding-detail"><strong>What happened:</strong> {item.detail}</p>
       <p className="checker-agentmarkup-help">
         <strong>What this means:</strong> {item.explainer}
       </p>

@@ -11,6 +11,7 @@ import {
   generateLlmsTxtDiscoveryLink,
   generateMarkdownAlternateLink,
   generatePageMarkdown,
+  resolveMarkdownCanonicalUrl,
   generateLlmsTxt,
   generateJsonLdTags,
   hasLlmsTxtDiscoveryLink,
@@ -418,6 +419,9 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
             pagePath,
             siteUrl: config.site,
           });
+          const canonicalUrl =
+            resolveMarkdownCanonicalUrl({ html, pagePath, siteUrl: config.site }) ??
+            buildCanonicalUrl(config.site, pagePath);
 
           if (!markdown) {
             continue;
@@ -442,7 +446,7 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
             availableMarkdownUrls.add(markdownAbsoluteUrl);
             markdownCanonicalEntries.push({
               markdownPath: `/${markdownFileName}`,
-              canonicalUrl: buildCanonicalUrl(config.site, pagePath),
+              canonicalUrl,
             });
             if (!config.validation?.disabled && !writesBuildOutput) {
               validationResults.push(
@@ -472,7 +476,7 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
           availableMarkdownUrls.add(markdownAbsoluteUrl);
           markdownCanonicalEntries.push({
             markdownPath: `/${markdownFileName}`,
-            canonicalUrl: buildCanonicalUrl(config.site, pagePath),
+            canonicalUrl,
           });
           if (!config.validation?.disabled && !writesBuildOutput) {
             validationResults.push(...validateMarkdownContent(markdown, pagePath));

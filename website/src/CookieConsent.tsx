@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef, useSyncExternalStore } from 'react'
+import { useEffect, useCallback, useRef, useState, useSyncExternalStore } from 'react'
 
 const STORAGE_KEY = 'agentmarkup-cookie-consent'
 const STORAGE_TS_KEY = 'agentmarkup-cookie-consent-ts'
@@ -162,7 +162,10 @@ function subscribeConsent(onStoreChange: () => void) {
 
 function CookieConsent() {
   const consent = useSyncExternalStore(subscribeConsent, getConsent, () => null)
+  const [preferencesOpen, setPreferencesOpen] = useState(false)
   const lastTrackedPageRef = useRef<string | null>(null)
+  const preferencesHeadingRef = useRef<HTMLHeadingElement>(null)
+  const preferencesOpenerRef = useRef<HTMLElement | null>(null)
 
   const reset = useCallback(() => {
     if (typeof window === 'undefined') return
@@ -211,10 +214,30 @@ function CookieConsent() {
     }
   }, [consent, reset])
 
+  useEffect(() => {
+    const openPreferences = () => {
+      preferencesOpenerRef.current = document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null
+      setPreferencesOpen(true)
+      requestAnimationFrame(() => preferencesHeadingRef.current?.focus())
+    }
+    window.addEventListener('agentmarkup:cookie-settings-open', openPreferences)
+    return () => window.removeEventListener('agentmarkup:cookie-settings-open', openPreferences)
+  }, [])
+
+  const closePreferences = () => {
+    setPreferencesOpen(false)
+    const opener = preferencesOpenerRef.current
+    preferencesOpenerRef.current = null
+    requestAnimationFrame(() => opener?.focus())
+  }
+
   const accept = () => {
     localStorage.setItem(STORAGE_KEY, 'accepted')
     localStorage.setItem(STORAGE_TS_KEY, String(Date.now()))
     syncConsentDocumentState('accepted')
+    closePreferences()
     window.dispatchEvent(new Event(CONSENT_CHANGE_EVENT))
   }
 
@@ -222,20 +245,26 @@ function CookieConsent() {
     localStorage.setItem(STORAGE_KEY, 'declined')
     localStorage.setItem(STORAGE_TS_KEY, String(Date.now()))
     syncConsentDocumentState('declined')
+    closePreferences()
     ;(window as unknown as Record<string, unknown>)[`ga-disable-${GA_ID}`] = true
     window.dispatchEvent(new Event(CONSENT_CHANGE_EVENT))
   }
 
-  if (consent !== null) return null
+  if (consent !== null && !preferencesOpen) return null
 
   return (
-    <div className="cookie-banner">
-      <p>This site uses cookies for anonymous analytics (Google Analytics) only if you accept. See our <a href="/privacy/">Privacy Policy</a>.</p>
+    <aside className="cookie-banner" aria-labelledby="cookie-settings-title">
+      <div>
+        <h2 id="cookie-settings-title" ref={preferencesHeadingRef} tabIndex={-1}>Cookie settings</h2>
+        <p>This site uses cookies for anonymous analytics (Google Analytics) only if you accept. See our <a href="/privacy/">Privacy Policy</a>.</p>
+        {consent ? <p className="cookie-current-choice">Current choice: <strong>{consent}</strong>.</p> : null}
+      </div>
       <div className="cookie-actions">
         <button className="cookie-btn cookie-decline" onClick={decline}>Decline</button>
         <button className="cookie-btn cookie-accept" onClick={accept}>Accept</button>
+        {consent ? <button className="cookie-btn cookie-close" onClick={closePreferences}>Keep current choice</button> : null}
       </div>
-    </div>
+    </aside>
   )
 }
 

@@ -5,7 +5,7 @@ function WebsiteCheckerGuide() {
   return (
     <main>
       <article className="doc-page blog-post">
-        <Byline date="2026-03-20" readingTime="8 min read" />
+        <Byline date="2026-03-20" readingTime="8 min read" slug="website-checker" />
         <h1>Is your website ready for AI? Use the free agentmarkup checker to find out</h1>
         <p className="doc-intro">
           Most websites are invisible to AI systems. Not because the content is bad, but because the metadata is missing, broken, or incomplete. The <a href="/checker/">agentmarkup checker</a> audits your website in seconds and tells you exactly what to fix.

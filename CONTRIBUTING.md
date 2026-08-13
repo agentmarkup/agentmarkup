@@ -29,6 +29,7 @@ pnpm build
 - Add or update tests for behavior changes.
 - Prefer build-time, deterministic behavior over runtime heuristics.
 - Keep root workspace checks green before opening a commit or PR.
+- Pull requests run the same clean install, test, typecheck, lint, build, SEO, and dependency-audit gates in GitHub Actions.
 
 ## Public vs Internal Docs
 

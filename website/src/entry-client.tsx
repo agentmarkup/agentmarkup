@@ -1,5 +1,5 @@
 import { StrictMode, type ComponentType } from 'react'
-import { hydrateRoot } from 'react-dom/client'
+import { createRoot, hydrateRoot } from 'react-dom/client'
 
 import Layout from './Layout'
 
@@ -19,5 +19,15 @@ export function mountPage(Page: ComponentType) {
     throw new Error('Missing #root element for website entry.')
   }
 
-  hydrateRoot(root, renderPageElement(Page))
+  const page = renderPageElement(Page)
+  if (!root.hasChildNodes()) {
+    if (!import.meta.env.DEV) {
+      throw new Error('Expected prerendered content in #root.')
+    }
+
+    createRoot(root).render(page)
+    return
+  }
+
+  hydrateRoot(root, page)
 }

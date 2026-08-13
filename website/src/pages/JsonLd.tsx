@@ -1,4 +1,6 @@
 import CodeBlock from '../CodeBlock'
+import { ResponsiveTable } from '../ui/ResponsiveTable'
+import { PlainLanguageSummary } from '../ui/PlainLanguageSummary'
 
 const presetsExample = `const agentmarkupConfig = {
   site: 'https://myshop.com',
@@ -88,6 +90,10 @@ function JsonLd() {
           JSON-LD (JavaScript Object Notation for Linked Data) is the format Google, Bing, and other search engines use to understand your page content. agentmarkup injects schema.org JSON-LD into your HTML pages at build time for Vite, Astro, Next.js, and Nuxt (and via the CLI for any other static build) with XSS-safe serialization and type-safe presets.
         </p>
 
+        <PlainLanguageSummary level="Beginner to intermediate" audience="Website owners and people who build websites" readingTime="About 10 minutes" action={{ href: '/checker/', label: 'Check your structured information' }}>
+          <p>Structured data is a clear label attached to a page: this is a product, an article, a company, or a frequently asked question. It helps search and AI systems interpret the page without guessing.</p>
+        </PlainLanguageSummary>
+
         <section>
           <h2>What is JSON-LD structured data?</h2>
           <p>
@@ -103,19 +109,19 @@ function JsonLd() {
           <p>
             agentmarkup includes 6 type-safe presets for common structured data types. Each preset validates required fields at build time and generates spec-compliant JSON-LD.
           </p>
-          <table className="doc-table">
+          <ResponsiveTable label="Schema.org presets">
             <thead>
               <tr><th>Preset</th><th>Schema type</th><th>Use case</th></tr>
             </thead>
             <tbody>
-              <tr><td><code>webSite</code></td><td>WebSite</td><td>Site-level schema with optional search action</td></tr>
-              <tr><td><code>organization</code></td><td>Organization</td><td>Company or brand identity</td></tr>
-              <tr><td><code>article</code></td><td>Article</td><td>Blog posts, news, content pages</td></tr>
-              <tr><td><code>faqPage</code></td><td>FAQPage</td><td>Question and answer pages</td></tr>
-              <tr><td><code>product</code></td><td>Product</td><td>E-commerce product pages</td></tr>
-              <tr><td><code>offer</code></td><td>Offer</td><td>Pricing and availability</td></tr>
+              <tr><th scope="row"><code>webSite</code></th><td>WebSite</td><td>Site-level schema with optional search action</td></tr>
+              <tr><th scope="row"><code>organization</code></th><td>Organization</td><td>Company or brand identity</td></tr>
+              <tr><th scope="row"><code>article</code></th><td>Article</td><td>Blog posts, news, content pages</td></tr>
+              <tr><th scope="row"><code>faqPage</code></th><td>FAQPage</td><td>Question and answer pages</td></tr>
+              <tr><th scope="row"><code>product</code></th><td>Product</td><td>E-commerce product pages</td></tr>
+              <tr><th scope="row"><code>offer</code></th><td>Offer</td><td>Pricing and availability</td></tr>
             </tbody>
-          </table>
+          </ResponsiveTable>
         </section>
 
         <section>

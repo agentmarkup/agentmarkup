@@ -2,3 +2,12 @@ packages:
   - 'packages/*'
   - 'examples/*'
   - 'website'
+overrides:
+  next: '>=16.2.11'
+  nanoid@3: '>=3.3.18'
+  postcss: '>=8.5.26'
+  sharp: '>=0.35.3'
+allowBuilds:
+  esbuild: true
+  sharp: false
+  workerd: false

@@ -5,7 +5,7 @@ function WhenMarkdownMirrorsHelp() {
   return (
     <main>
       <article className="doc-page blog-post">
-        <Byline date="2026-03-20" readingTime="7 min read" />
+        <Byline date="2026-03-20" readingTime="7 min read" slug="when-markdown-mirrors-help" />
         <h1>When markdown mirrors help, and when they do not</h1>
         <p className="doc-intro">
           Generated markdown mirrors are useful for some sites and unnecessary

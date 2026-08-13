@@ -60,7 +60,7 @@ function NuxtGuide() {
   return (
     <main>
       <article className="doc-page blog-post">
-        <Byline date="2026-06-21" readingTime="7 min read" />
+        <Byline date="2026-06-21" readingTime="7 min read" slug="nuxt-llms-txt-json-ld" />
         <h1>How to add llms.txt, JSON-LD, and AI crawler controls to Nuxt</h1>
         <p className="doc-intro">
           Nuxt sites need the same machine-readable surface as any other modern website:{' '}

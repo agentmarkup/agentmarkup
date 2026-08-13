@@ -9,15 +9,18 @@
     "prebuild": "pnpm -C ../packages/vite build",
     "build": "tsc -b && vite build",
     "smoke": "pnpm build",
+    "pretest": "pnpm -C ../packages/vite build",
     "test": "vitest run",
+    "verify:seo": "node scripts/seo-structure.mjs verify",
     "lint": "eslint .",
+    "pretypecheck": "pnpm -C ../packages/vite build",
     "typecheck": "tsc -b",
     "preview": "vite preview"
   },
   "dependencies": {
+    "ogl": "^1.0.11",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "react-router-dom": "^7.13.1"
+    "react-dom": "^19.2.4"
   },
   "devDependencies": {
     "@agentmarkup/core": "workspace:*",

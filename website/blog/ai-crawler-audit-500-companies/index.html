@@ -2,13 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <script>(function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t);document.documentElement.style.backgroundColor=t==='light'?'#fafafa':'#0a0a0a';document.documentElement.style.colorScheme=t})()</script>
+    <script>
+      (function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.style.backgroundColor=t==='light'?'#fffefc':'#10121a';document.documentElement.style.colorScheme=t})()
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>We ran 500 of America's biggest companies through an AI-crawler audit - agentmarkup</title>
     <meta name="description" content="We fetched 500 corporate homepages the way ChatGPT, Claude, and Perplexity do. Most serve readable HTML, but 46% have no usable structured data, 86% have no llms.txt, and seven serve crawlers a blank page. Built for Google, not yet for AI agents." />
     <meta name="keywords" content="ai readiness audit, ai crawler audit, llms.txt, json-ld, content-signal, geo, gptbot, claudebot, perplexitybot, machine readable, agentmarkup" />
     <meta name="author" content="Sebastian Cochinescu" />
     <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
+    <link rel="preload" href="/fonts/manrope-latin-variable.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/source-serif-4-latin-variable.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="canonical" href="https://agentmarkup.dev/blog/ai-crawler-audit-500-companies/" />
     <meta property="og:title" content="We ran 500 of America's biggest companies through an AI-crawler audit" />
     <meta property="og:description" content="Most of America's biggest companies serve readable HTML, but 46% have no usable structured data, 86% have no llms.txt, and seven serve crawlers a blank page. Built for Google, not yet for AI agents." />

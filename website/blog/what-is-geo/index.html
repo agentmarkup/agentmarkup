@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <script>
-      (function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t);document.documentElement.style.backgroundColor=t==='light'?'#fafafa':'#0a0a0a';document.documentElement.style.colorScheme=t})()
+      (function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.style.backgroundColor=t==='light'?'#fffefc':'#10121a';document.documentElement.style.colorScheme=t})()
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>What is GEO? Generative Engine Optimization explained for developers - agentmarkup</title>
@@ -11,6 +11,8 @@
     <meta name="keywords" content="geo, generative engine optimization, ai seo, ai discoverability, chatgpt, perplexity, claude, llm, structured data, json-ld, llms.txt" />
     <meta name="author" content="Sebastian Cochinescu" />
     <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
+    <link rel="preload" href="/fonts/manrope-latin-variable.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/source-serif-4-latin-variable.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="canonical" href="https://agentmarkup.dev/blog/what-is-geo/" />
     <meta property="og:title" content="What is GEO? Generative Engine Optimization explained for developers" />
     <meta property="og:description" content="GEO is the practice of making your website citeable by AI systems. Here is what is real, what is hype, and what you can do today." />

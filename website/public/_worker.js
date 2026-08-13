@@ -74,7 +74,7 @@ const SECURITY_HEADER_NAMES = [
 ];
 const SECURITY_HEADERS = {
   'content-security-policy':
-    "default-src 'self'; script-src 'self' 'sha256-9H65k0Vudv1nXe8hMDYfPeuUwx7Ayw6wutA2u1iUze8=' 'sha256-MiBCOgMISGpfezwPQfq/58mseJfrfIQBTtTlwnMm/xE=' https://www.googletagmanager.com https://challenges.cloudflare.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.doubleclick.net https://challenges.cloudflare.com; img-src 'self' data: https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.doubleclick.net; style-src 'self' 'unsafe-inline'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src https://challenges.cloudflare.com; frame-ancestors 'none'",
+    "default-src 'self'; script-src 'self' 'sha256-Jt+ZWGsmr8mhtb9g3A71b0bSDV7csRp6tr51UeVq3ss=' 'sha256-MiBCOgMISGpfezwPQfq/58mseJfrfIQBTtTlwnMm/xE=' https://www.googletagmanager.com https://challenges.cloudflare.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.doubleclick.net https://challenges.cloudflare.com; img-src 'self' data: https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.doubleclick.net; style-src 'self' 'unsafe-inline'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src https://challenges.cloudflare.com; frame-ancestors 'none'",
   'x-content-type-options': 'nosniff',
   'x-frame-options': 'DENY',
   'referrer-policy': 'strict-origin-when-cross-origin',

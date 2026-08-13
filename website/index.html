@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <script>
-      (function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t);document.documentElement.style.backgroundColor=t==='light'?'#fafafa':'#0a0a0a';document.documentElement.style.colorScheme=t})()
+      (function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.style.backgroundColor=t==='light'?'#fffefc':'#10121a';document.documentElement.style.colorScheme=t})()
     </script>
     <script>
       (function(){var d=document.documentElement,k='agentmarkup-cookie-consent',tk='agentmarkup-cookie-consent-ts',max=180*24*60*60*1000,s='pending';try{var c=localStorage.getItem(k),ts=localStorage.getItem(tk),now=Date.now();if(c&&ts&&now-Number(ts)<=max&&(c==='accepted'||c==='declined'))s=c}catch(_){}d.setAttribute('data-cookie-consent',s);d.setAttribute('data-cookie-consent-ready','true')})()
@@ -18,6 +18,8 @@
     <meta name="keywords" content="vite plugin, astro integration, nextjs plugin, next.js, nuxt module, nuxt, agentmarkup cli, agentmarkup audit, ai crawler audit, llms.txt, llms-full.txt, a2a, agent card, json-ld, structured data, schema.org, robots.txt, markdown mirrors, content-signal, ai crawler, machine-readable, seo, geo, build-time validation, ai agents, llm, website checker" />
     <meta name="author" content="Sebastian Cochinescu" />
     <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
+    <link rel="preload" href="/fonts/manrope-latin-variable.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/source-serif-4-latin-variable.woff2" as="font" type="font/woff2" crossorigin />
 
     <link rel="canonical" href="https://agentmarkup.dev/" />
     <link rel="alternate" hreflang="en" href="https://agentmarkup.dev/" />
@@ -56,8 +58,8 @@
 
     <noscript>
       <div style="max-width:800px;margin:0 auto;padding:4rem 2rem;font-family:system-ui,sans-serif;color:#ededed;background:#0a0a0a;">
-        <h1>agentmarkup - machine-readable websites for Next.js, Vite, Astro, and Nuxt</h1>
-        <p>Generate llms.txt and optional llms-full.txt, emit an optional A2A Agent Card for existing agent services, inject schema.org JSON-LD, create markdown mirrors from final HTML, manage AI crawler robots.txt rules, patch Content-Signal headers, and validate everything at build time. Zero runtime cost.</p>
+        <p style="font-size:2rem;font-weight:700;line-height:1.15;">Build websites AI can understand.</p>
+        <p>Open-source npm packages generate llms.txt, JSON-LD, markdown mirrors, crawler rules, and validation at build time for Next.js, Vite, Astro, Nuxt, or any static site.</p>
         <p><strong>Install:</strong> <code>pnpm add -D @agentmarkup/next</code>, <code>@agentmarkup/vite</code>, <code>@agentmarkup/astro</code>, <code>@agentmarkup/nuxt</code>, or <code>@agentmarkup/cli</code></p>
         <h2>Features</h2>
         <ul>

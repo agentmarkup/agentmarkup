@@ -2,13 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <script>(function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t);document.documentElement.style.backgroundColor=t==='light'?'#fafafa':'#0a0a0a';document.documentElement.style.colorScheme=t})()</script>
+    <script>
+      (function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.style.backgroundColor=t==='light'?'#fffefc':'#10121a';document.documentElement.style.colorScheme=t})()
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Why LLM-optimized e-commerce websites sell more - agentmarkup</title>
     <meta name="description" content="AI is changing how shoppers discover products. Learn how Product JSON-LD, llms.txt, and AI crawler access make your e-commerce site visible in ChatGPT and Perplexity product recommendations." />
     <meta name="keywords" content="ecommerce seo, ai product discovery, product structured data, json-ld ecommerce, llm optimization, chatgpt shopping, perplexity product search, product schema" />
     <meta name="author" content="Sebastian Cochinescu" />
     <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
+    <link rel="preload" href="/fonts/manrope-latin-variable.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/source-serif-4-latin-variable.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="canonical" href="https://agentmarkup.dev/blog/ecommerce-llm-optimization/" />
     <meta property="og:title" content="Why LLM-optimized e-commerce websites sell more" />
     <meta property="og:description" content="How Product JSON-LD, llms.txt, and AI crawler access make your store visible in AI product recommendations." />

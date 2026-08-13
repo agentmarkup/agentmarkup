@@ -6,7 +6,7 @@ function JsonLdGuide() {
   return (
     <main>
       <article className="doc-page blog-post">
-        <Byline date="2026-03-20" readingTime="10 min read" />
+        <Byline date="2026-03-20" readingTime="10 min read" slug="json-ld-structured-data-guide" />
         <h1>JSON-LD structured data: the complete guide for web developers</h1>
         <p className="doc-intro">
           JSON-LD is the format Google, Bing, and AI systems use to understand your pages. This guide covers what it is, why it matters, which schema types to use, and how to add it to your site without shipping broken markup.

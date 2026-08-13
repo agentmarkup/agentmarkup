@@ -51,7 +51,7 @@ describe('@agentmarkup/astro', () => {
   it('injects JSON-LD and writes llms.txt and robots.txt at build:done', async () => {
     const root = await createFixture({
       'dist/index.html': '<html><head><title>Home</title></head><body></body></html>',
-      'dist/faq/index.html': '<html><head><title>FAQ</title></head><body></body></html>',
+      'dist/faq/index.html': '<html><head><title>FAQ</title><link rel="canonical" href="https://example.com/faq/" /></head><body></body></html>',
       'public/robots.txt': 'User-agent: *\nAllow: /\n\nSitemap: https://example.com/sitemap.xml\n',
     });
 
@@ -172,7 +172,7 @@ describe('@agentmarkup/astro', () => {
     expect(headers).toContain('/index.md');
     expect(headers).toContain('Link: <https://example.com/>; rel="canonical"');
     expect(headers).toContain('/faq.md');
-    expect(headers).toContain('Link: <https://example.com/faq>; rel="canonical"');
+    expect(headers).toContain('Link: <https://example.com/faq/>; rel="canonical"');
 
     expect(robotsTxt).toContain('Sitemap: https://example.com/sitemap.xml');
     expect(robotsTxt).toContain('# BEGIN agentmarkup AI crawlers');

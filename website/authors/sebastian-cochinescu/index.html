@@ -2,12 +2,16 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <script>(function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t);document.documentElement.style.backgroundColor=t==='light'?'#fafafa':'#0a0a0a';document.documentElement.style.colorScheme=t})()</script>
+    <script>
+      (function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.style.backgroundColor=t==='light'?'#fffefc':'#10121a';document.documentElement.style.colorScheme=t})()
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sebastian Cochinescu - Developer of agentmarkup</title>
     <meta name="description" content="Sebastian Cochinescu is the developer of agentmarkup, an open-source toolkit for making websites machine-readable. Also founder of Anima Felix." />
     <meta name="author" content="Sebastian Cochinescu" />
     <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
+    <link rel="preload" href="/fonts/manrope-latin-variable.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/source-serif-4-latin-variable.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="canonical" href="https://agentmarkup.dev/authors/sebastian-cochinescu/" />
     <meta property="og:title" content="Sebastian Cochinescu - Developer of agentmarkup" />
     <meta property="og:description" content="Developer of agentmarkup. Builder of tools for machine-readable websites. Founder of Anima Felix." />

@@ -11,6 +11,7 @@ import {
   generateLlmsTxtDiscoveryLink,
   generateMarkdownAlternateLink,
   generatePageMarkdown,
+  resolveMarkdownCanonicalUrl,
   generateJsonLdTags,
   hasExistingJsonLdScripts,
   hasLlmsTxtDiscoveryLink,
@@ -249,6 +250,9 @@ async function runGenerate(
         pagePath,
         siteUrl: config.site,
       });
+      const canonicalUrl =
+        resolveMarkdownCanonicalUrl({ html, pagePath, siteUrl: config.site }) ??
+        buildCanonicalUrl(config.site, pagePath);
 
       if (!markdown) {
         continue;
@@ -262,7 +266,7 @@ async function runGenerate(
         availableMarkdownUrls.add(markdownAbsoluteUrl);
         markdownCanonicalEntries.push({
           markdownPath: `/${markdownFileName}`,
-          canonicalUrl: buildCanonicalUrl(config.site, pagePath),
+          canonicalUrl,
         });
 
         if (!config.validation?.disabled) {
@@ -280,7 +284,7 @@ async function runGenerate(
       availableMarkdownUrls.add(markdownAbsoluteUrl);
       markdownCanonicalEntries.push({
         markdownPath: `/${markdownFileName}`,
-        canonicalUrl: buildCanonicalUrl(config.site, pagePath),
+        canonicalUrl,
       });
 
       if (!config.validation?.disabled) {

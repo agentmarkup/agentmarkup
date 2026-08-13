@@ -6,7 +6,7 @@ function WhyLlmsTxtMatters() {
   return (
     <main>
       <article className="doc-page blog-post">
-        <Byline date="2026-03-20" readingTime="6 min read" />
+        <Byline date="2026-03-20" readingTime="6 min read" slug="why-llms-txt-matters" />
         <h1>Why llms.txt matters: making your website discoverable by AI</h1>
         <p className="doc-intro">
           Search is changing. LLMs like ChatGPT, Claude, and Perplexity now answer questions by synthesizing information from the web. If your website is not structured for these systems to understand, you are invisible to a growing share of how people find information.

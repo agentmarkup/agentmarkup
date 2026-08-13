@@ -9,6 +9,7 @@ import {
   generateLlmsFullTxt,
   generateLlmsTxt,
   generatePageMarkdown,
+  resolveMarkdownCanonicalUrl,
   generateJsonLdTags,
   hasExistingJsonLdScripts,
   injectHeadContent,
@@ -199,6 +200,12 @@ export async function processNextBuildOutput(
         pagePath: htmlFile.pagePath,
         siteUrl: config.site,
       });
+      const canonicalUrl =
+        resolveMarkdownCanonicalUrl({
+          html,
+          pagePath: htmlFile.pagePath,
+          siteUrl: config.site,
+        }) ?? buildCanonicalUrl(config.site, htmlFile.pagePath);
 
       if (!markdown) {
         continue;
@@ -235,7 +242,7 @@ export async function processNextBuildOutput(
             htmlFile.pagePath,
             htmlFile.publicPagePath
           ),
-          canonicalUrl: buildCanonicalUrl(config.site, htmlFile.pagePath),
+          canonicalUrl,
         });
 
         if (!config.validation?.disabled) {
@@ -258,7 +265,7 @@ export async function processNextBuildOutput(
           htmlFile.pagePath,
           htmlFile.publicPagePath
         ),
-        canonicalUrl: buildCanonicalUrl(config.site, htmlFile.pagePath),
+        canonicalUrl,
       });
 
       if (!config.validation?.disabled) {

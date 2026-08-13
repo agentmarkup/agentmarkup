@@ -1,4 +1,6 @@
 import CodeBlock from '../CodeBlock'
+import { ResponsiveTable } from '../ui/ResponsiveTable'
+import { PlainLanguageSummary } from '../ui/PlainLanguageSummary'
 
 const configExample = `agentmarkup({
   site: 'https://example.com',
@@ -44,31 +46,35 @@ function AiCrawlers() {
           AI companies use web crawlers to collect training data and power AI-generated answers. Your robots.txt file controls which AI bots can access your site. agentmarkup generates or patches your robots.txt with AI-specific directives at build time.
         </p>
 
+        <PlainLanguageSummary level="Intermediate" audience="Website owners and people who manage hosting" readingTime="About 9 minutes" action={{ href: '/security-scan/', label: 'Check your website access rules' }}>
+          <p>AI services use automated visitors called crawlers. Your robots.txt file can tell those visitors which public areas they may use, but it does not replace login controls or real security.</p>
+        </PlainLanguageSummary>
+
         <section>
           <h2>Which AI crawlers exist?</h2>
           <p>
             Major AI companies identify their crawlers with specific user-agent strings, grouped here by intent. Because robots.txt rules are per user-agent, you can block training crawlers while keeping search and retrieval crawlers allowed, so your site stays eligible for citation in AI answers. agentmarkup recognizes the following crawlers out of the box:
           </p>
-          <table className="doc-table">
+          <ResponsiveTable label="AI crawler directory">
             <thead>
               <tr><th>Crawler</th><th>Company</th><th>Intent</th></tr>
             </thead>
             <tbody>
-              <tr><td><code>GPTBot</code></td><td>OpenAI</td><td>Model training</td></tr>
-              <tr><td><code>ClaudeBot</code></td><td>Anthropic</td><td>Model training</td></tr>
-              <tr><td><code>Google-Extended</code></td><td>Google</td><td>Model training (separate from Google Search)</td></tr>
-              <tr><td><code>CCBot</code></td><td>Common Crawl</td><td>Model training (open web dataset)</td></tr>
-              <tr><td><code>Applebot-Extended</code></td><td>Apple</td><td>Model training</td></tr>
-              <tr><td><code>Amazonbot</code></td><td>Amazon</td><td>Model training and search</td></tr>
-              <tr><td><code>OAI-SearchBot</code></td><td>OpenAI</td><td>AI search / retrieval</td></tr>
-              <tr><td><code>PerplexityBot</code></td><td>Perplexity</td><td>AI search / retrieval</td></tr>
-              <tr><td><code>Claude-SearchBot</code></td><td>Anthropic</td><td>AI search / retrieval</td></tr>
-              <tr><td><code>DuckAssistBot</code></td><td>DuckDuckGo</td><td>AI search / retrieval</td></tr>
-              <tr><td><code>ChatGPT-User</code></td><td>OpenAI</td><td>User-triggered fetch</td></tr>
-              <tr><td><code>Claude-User</code></td><td>Anthropic</td><td>User-triggered fetch</td></tr>
-              <tr><td><code>Perplexity-User</code></td><td>Perplexity</td><td>User-triggered fetch</td></tr>
+              <tr><th scope="row"><code>GPTBot</code></th><td>OpenAI</td><td>Model training</td></tr>
+              <tr><th scope="row"><code>ClaudeBot</code></th><td>Anthropic</td><td>Model training</td></tr>
+              <tr><th scope="row"><code>Google-Extended</code></th><td>Google</td><td>Model training (separate from Google Search)</td></tr>
+              <tr><th scope="row"><code>CCBot</code></th><td>Common Crawl</td><td>Model training (open web dataset)</td></tr>
+              <tr><th scope="row"><code>Applebot-Extended</code></th><td>Apple</td><td>Model training</td></tr>
+              <tr><th scope="row"><code>Amazonbot</code></th><td>Amazon</td><td>Model training and search</td></tr>
+              <tr><th scope="row"><code>OAI-SearchBot</code></th><td>OpenAI</td><td>AI search / retrieval</td></tr>
+              <tr><th scope="row"><code>PerplexityBot</code></th><td>Perplexity</td><td>AI search / retrieval</td></tr>
+              <tr><th scope="row"><code>Claude-SearchBot</code></th><td>Anthropic</td><td>AI search / retrieval</td></tr>
+              <tr><th scope="row"><code>DuckAssistBot</code></th><td>DuckDuckGo</td><td>AI search / retrieval</td></tr>
+              <tr><th scope="row"><code>ChatGPT-User</code></th><td>OpenAI</td><td>User-triggered fetch</td></tr>
+              <tr><th scope="row"><code>Claude-User</code></th><td>Anthropic</td><td>User-triggered fetch</td></tr>
+              <tr><th scope="row"><code>Perplexity-User</code></th><td>Perplexity</td><td>User-triggered fetch</td></tr>
             </tbody>
-          </table>
+          </ResponsiveTable>
           <p>
             You can also add custom crawler names for any bot not in the built-in list. Note that some crawlers, such as Bytespider and xAI/Grok agents, comply poorly with robots.txt, so directives are not a guarantee.
           </p>

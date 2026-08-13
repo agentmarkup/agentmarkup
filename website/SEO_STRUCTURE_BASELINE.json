@@ -1,0 +1,1024 @@
+[
+  {
+    "route": "/",
+    "title": "agentmarkup - machine-readable websites for Next.js, Vite, Astro, and Nuxt",
+    "description": "Build-time llms.txt, optional llms-full.txt, optional A2A Agent Cards, JSON-LD, markdown mirrors, AI crawler controls, Content-Signal headers, validation, and a free website checker for Next.js, Vite, Astro, and Nuxt, plus a framework-agnostic CLI.",
+    "canonical": "https://agentmarkup.dev/",
+    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+    "h1": [
+      "Build websites AI can understand."
+    ],
+    "h2": [
+      "Install your npm package.",
+      "Scan what AI can access.",
+      "Choose only the package you need.",
+      "The signals AI systems actually use.",
+      "Useful whether you sell, publish, or build a brand.",
+      "Frequently Asked Questions"
+    ],
+    "sectionIds": [
+      "product-check"
+    ],
+    "schemaTypes": [
+      "Answer",
+      "FAQPage",
+      "Offer",
+      "Organization",
+      "Question",
+      "SoftwareApplication",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/blog/brand-awareness-ai/",
+      "/blog/ecommerce-llm-optimization/",
+      "/blog/json-ld-structured-data-guide/",
+      "/blog/markdown-mirrors/",
+      "/checker/",
+      "/docs/ai-crawlers/",
+      "/docs/audit/",
+      "/docs/json-ld/",
+      "/docs/llms-txt/",
+      "/learn/",
+      "/security-scan/"
+    ],
+    "prerendered": true
+  },
+  {
+    "route": "/checker/",
+    "title": "Website checker for llms.txt, JSON-LD, and AI crawler readiness - agentmarkup",
+    "description": "Check any public website for llms.txt, JSON-LD structured data, robots.txt AI crawler rules, sitemap discovery, canonical tags, and homepage metadata.",
+    "canonical": "https://agentmarkup.dev/checker/",
+    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+    "h1": [
+      "Check your website before AI crawlers and search engines do"
+    ],
+    "h2": [
+      "Can AI find your site?",
+      "Can AI understand your pages?",
+      "Are your access rules clear?",
+      "What this website checker checks",
+      "Frequently asked questions"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "Answer",
+      "FAQPage",
+      "Organization",
+      "Question",
+      "WebPage",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/blog/website-checker/",
+      "/security-scan/"
+    ],
+    "prerendered": true
+  },
+  {
+    "route": "/security-scan/",
+    "title": "Passive website security scan - agentmarkup",
+    "description": "Passive security scan for public websites: HTTPS and HSTS, Content-Security-Policy, clickjacking and sniffing protections, cookie flags, mixed content, and security.txt.",
+    "canonical": "https://agentmarkup.dev/security-scan/",
+    "robots": "index,follow",
+    "h1": [
+      "Passive security scan for public websites"
+    ],
+    "h2": [
+      "Passive and authorized use only",
+      "Frequently asked questions"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "Answer",
+      "FAQPage",
+      "Organization",
+      "Question",
+      "WebPage",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/blog/website-checker/",
+      "/checker/",
+      "/privacy/",
+      "/terms/"
+    ],
+    "prerendered": true
+  },
+  {
+    "route": "/learn/",
+    "title": "Learn how AI finds and understands websites | agentmarkup",
+    "description": "Plain-language guides to help you see whether AI can find, understand, and access your website, plus clear next steps for improving it.",
+    "canonical": "https://agentmarkup.dev/learn/",
+    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+    "h1": [
+      "Learn how AI sees your website"
+    ],
+    "h2": [
+      "Start with what you need",
+      "The three things AI needs",
+      "Choose your type of website",
+      "For people who build websites",
+      "Research and evidence",
+      "Get a clear answer for your website"
+    ],
+    "sectionIds": [
+      "basics"
+    ],
+    "schemaTypes": [
+      "CollectionPage",
+      "ItemList",
+      "ListItem",
+      "Organization",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/blog/agentmarkup-cli-any-static-site/",
+      "/blog/ai-crawler-audit-500-companies/",
+      "/blog/ai-crawlers-2026/",
+      "/blog/brand-awareness-ai/",
+      "/blog/ecommerce-llm-optimization/",
+      "/blog/json-ld-structured-data-guide/",
+      "/blog/nextjs-llms-txt-json-ld/",
+      "/blog/nuxt-llms-txt-json-ld/",
+      "/blog/website-checker/",
+      "/blog/why-llms-txt-matters/",
+      "/checker/",
+      "/docs/ai-crawlers/",
+      "/docs/audit/",
+      "/docs/json-ld/",
+      "/docs/llms-txt/",
+      "/security-scan/"
+    ],
+    "prerendered": true
+  },
+  {
+    "route": "/docs/llms-txt/",
+    "title": "How to generate llms.txt for your website - agentmarkup",
+    "description": "Learn how to auto-generate a spec-compliant llms.txt file at build time using agentmarkup with Vite, Astro, or Next.js. Follow the llmstxt.org standard to make your site discoverable by LLMs and AI agents.",
+    "canonical": "https://agentmarkup.dev/docs/llms-txt/",
+    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+    "h1": [
+      "How to generate llms.txt for your website"
+    ],
+    "h2": [
+      "What is llms.txt?",
+      "Why generate llms.txt at build time?",
+      "Configuration",
+      "Framework wrappers",
+      "Generated output",
+      "Optional llms-full.txt",
+      "Validation",
+      "LLM discovery",
+      "Frequently asked questions"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "Answer",
+      "FAQPage",
+      "Organization",
+      "Question",
+      "WebPage",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/checker/",
+      "/docs/ai-crawlers/"
+    ],
+    "prerendered": true
+  },
+  {
+    "route": "/docs/json-ld/",
+    "title": "How to add JSON-LD structured data to your website - agentmarkup",
+    "description": "Inject schema.org JSON-LD structured data into your Vite, Astro, or Next.js website at build time. Use type-safe presets for WebSite, Organization, Article, FAQ, Product, and Offer schemas.",
+    "canonical": "https://agentmarkup.dev/docs/json-ld/",
+    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+    "h1": [
+      "How to add JSON-LD structured data to your website"
+    ],
+    "h2": [
+      "What is JSON-LD structured data?",
+      "Built-in schema.org presets",
+      "Using presets",
+      "Framework wrappers",
+      "Custom schemas",
+      "XSS-safe output",
+      "Build-time validation",
+      "Frequently asked questions"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "Answer",
+      "FAQPage",
+      "Organization",
+      "Question",
+      "WebPage",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/blog/markdown-mirrors/",
+      "/checker/",
+      "/docs/ai-crawlers/",
+      "/docs/llms-txt/"
+    ],
+    "prerendered": true
+  },
+  {
+    "route": "/docs/ai-crawlers/",
+    "title": "How to manage AI crawlers in your robots.txt - agentmarkup",
+    "description": "Allow or block AI crawlers like GPTBot, ClaudeBot, PerplexityBot, and Google-Extended in your robots.txt. agentmarkup patches your robots.txt at build time without breaking existing rules.",
+    "canonical": "https://agentmarkup.dev/docs/ai-crawlers/",
+    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+    "h1": [
+      "How to manage AI crawlers in your robots.txt"
+    ],
+    "h2": [
+      "Which AI crawlers exist?",
+      "Configuration",
+      "How it works",
+      "Conflict detection",
+      "Should you allow or block AI crawlers?",
+      "Frequently asked questions"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "Answer",
+      "FAQPage",
+      "Organization",
+      "Question",
+      "WebPage",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/blog/markdown-mirrors/",
+      "/docs/json-ld/",
+      "/docs/llms-txt/",
+      "/security-scan/"
+    ],
+    "prerendered": true
+  },
+  {
+    "route": "/docs/audit/",
+    "title": "How to audit your site the way AI crawlers see it - agentmarkup",
+    "description": "Use @agentmarkup/audit to fetch any live URL as GPTBot, ClaudeBot, PerplexityBot, and other AI crawlers, diff each response against a browser, and catch machine-readability issues in CI.",
+    "canonical": "https://agentmarkup.dev/docs/audit/",
+    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+    "h1": [
+      "Audit your site the way AI crawlers see it"
+    ],
+    "h2": [
+      "Usage",
+      "What it checks",
+      "An honest note on \"blocked\" crawlers",
+      "Use it as a CI gate",
+      "Programmatic use",
+      "How it relates to the rest of agentmarkup",
+      "Frequently asked questions"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "Answer",
+      "FAQPage",
+      "Organization",
+      "Question",
+      "WebPage",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/blog/website-checker/",
+      "/checker/",
+      "/docs/ai-crawlers/",
+      "/docs/json-ld/",
+      "/docs/llms-txt/"
+    ],
+    "prerendered": true
+  },
+  {
+    "route": "/blog/",
+    "title": "Blog - agentmarkup",
+    "description": "Technical writing about machine-readable websites, AI discoverability, structured data, llms.txt, and generative engine optimization.",
+    "canonical": "https://agentmarkup.dev/blog/",
+    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+    "h1": [
+      "Blog"
+    ],
+    "h2": [
+      "We ran 500 of America's biggest companies through an AI-crawler audit",
+      "AI visibility and research",
+      "Implementation guides",
+      "Machine-readable foundations"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "CollectionPage",
+      "Organization",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/authors/sebastian-cochinescu/",
+      "/blog/agentmarkup-cli-any-static-site/",
+      "/blog/ai-crawler-audit-500-companies/",
+      "/blog/ai-crawlers-2026/",
+      "/blog/audit-ai-crawler-access/",
+      "/blog/brand-awareness-ai/",
+      "/blog/ecommerce-llm-optimization/",
+      "/blog/json-ld-structured-data-guide/",
+      "/blog/markdown-mirrors/",
+      "/blog/nextjs-llms-txt-json-ld/",
+      "/blog/nuxt-llms-txt-json-ld/",
+      "/blog/website-checker/",
+      "/blog/what-is-geo/",
+      "/blog/when-markdown-mirrors-help/",
+      "/blog/why-llms-txt-matters/"
+    ],
+    "prerendered": true
+  },
+  {
+    "route": "/blog/why-llms-txt-matters/",
+    "title": "Why llms.txt matters: making your website discoverable by AI - agentmarkup",
+    "description": "Search is changing. LLMs now answer questions by synthesizing web content. llms.txt gives them a structured overview of your site. Learn why it matters and how to add it.",
+    "canonical": "https://agentmarkup.dev/blog/why-llms-txt-matters/",
+    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+    "h1": [
+      "Why llms.txt matters: making your website discoverable by AI"
+    ],
+    "h2": [
+      "The shift from search engines to AI answers",
+      "What is llms.txt?",
+      "Why not just let AI read your HTML?",
+      "Is llms.txt actually used today?",
+      "The three layers of machine readability",
+      "How to add llms.txt to your site",
+      "The bottom line",
+      "More from the blog"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "Article",
+      "Organization",
+      "Person",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/authors/sebastian-cochinescu/",
+      "/blog/",
+      "/blog/brand-awareness-ai/",
+      "/blog/website-checker/",
+      "/blog/what-is-geo/",
+      "/blog/when-markdown-mirrors-help/",
+      "/docs/llms-txt/"
+    ],
+    "prerendered": true
+  },
+  {
+    "route": "/blog/what-is-geo/",
+    "title": "What is GEO? Generative Engine Optimization explained for developers - agentmarkup",
+    "description": "GEO (Generative Engine Optimization) is the practice of making your website citeable by AI systems like ChatGPT and Perplexity. Learn what is real, what is hype, and what developers can do today.",
+    "canonical": "https://agentmarkup.dev/blog/what-is-geo/",
+    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+    "h1": [
+      "What is GEO? Generative Engine Optimization explained for developers"
+    ],
+    "h2": [
+      "SEO vs GEO: what changed",
+      "What GEO actually involves",
+      "The honest truth about GEO",
+      "Why developers should care",
+      "Practical GEO for your website",
+      "Automating GEO with agentmarkup",
+      "The bottom line",
+      "More from the blog"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "Article",
+      "Organization",
+      "Person",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/authors/sebastian-cochinescu/",
+      "/blog/",
+      "/blog/brand-awareness-ai/",
+      "/blog/json-ld-structured-data-guide/",
+      "/blog/website-checker/",
+      "/blog/when-markdown-mirrors-help/",
+      "/blog/why-llms-txt-matters/",
+      "/docs/llms-txt/"
+    ],
+    "prerendered": true
+  },
+  {
+    "route": "/blog/json-ld-structured-data-guide/",
+    "title": "JSON-LD structured data: the complete guide for web developers - agentmarkup",
+    "description": "The complete guide to JSON-LD structured data for web developers. Learn which schema.org types to use, common mistakes to avoid, and how to validate your markup at build time.",
+    "canonical": "https://agentmarkup.dev/blog/json-ld-structured-data-guide/",
+    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+    "h1": [
+      "JSON-LD structured data: the complete guide for web developers"
+    ],
+    "h2": [
+      "What is JSON-LD?",
+      "Why JSON-LD matters",
+      "JSON-LD vs microdata vs RDFa",
+      "The most important schema types",
+      "Common mistakes",
+      "Validating your structured data",
+      "Adding JSON-LD with agentmarkup",
+      "The bottom line",
+      "More from the blog"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "Article",
+      "Organization",
+      "Person",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/authors/sebastian-cochinescu/",
+      "/blog/",
+      "/blog/agentmarkup-cli-any-static-site/",
+      "/blog/ai-crawlers-2026/",
+      "/blog/nextjs-llms-txt-json-ld/",
+      "/blog/nuxt-llms-txt-json-ld/",
+      "/blog/website-checker/",
+      "/blog/what-is-geo/",
+      "/docs/json-ld/"
+    ],
+    "prerendered": true
+  },
+  {
+    "route": "/blog/ai-crawlers-2026/",
+    "title": "Every AI crawler indexing your website in 2026 - agentmarkup",
+    "description": "Complete list of AI crawlers in 2026: GPTBot, ClaudeBot, PerplexityBot, Google-Extended, CCBot, and more. What each does, who runs it, and how to control access via robots.txt.",
+    "canonical": "https://agentmarkup.dev/blog/ai-crawlers-2026/",
+    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+    "h1": [
+      "Every AI crawler indexing your website in 2026"
+    ],
+    "h2": [
+      "What are AI crawlers?",
+      "The complete list",
+      "How to control AI crawler access",
+      "Do AI crawlers respect robots.txt?",
+      "Training data vs real-time search",
+      "The bottom line",
+      "More from the blog"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "Article",
+      "Organization",
+      "Person",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/authors/sebastian-cochinescu/",
+      "/blog/",
+      "/blog/ai-crawler-audit-500-companies/",
+      "/blog/audit-ai-crawler-access/",
+      "/blog/ecommerce-llm-optimization/",
+      "/blog/json-ld-structured-data-guide/",
+      "/blog/nuxt-llms-txt-json-ld/",
+      "/blog/website-checker/",
+      "/docs/ai-crawlers/",
+      "/docs/json-ld/",
+      "/docs/llms-txt/"
+    ],
+    "prerendered": true
+  },
+  {
+    "route": "/blog/ecommerce-llm-optimization/",
+    "title": "Why LLM-optimized e-commerce websites sell more - agentmarkup",
+    "description": "AI is changing how shoppers discover products. Learn how Product JSON-LD, llms.txt, and AI crawler access make your e-commerce site visible in ChatGPT and Perplexity product recommendations.",
+    "canonical": "https://agentmarkup.dev/blog/ecommerce-llm-optimization/",
+    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+    "h1": [
+      "Why LLM-optimized e-commerce websites sell more"
+    ],
+    "h2": [
+      "How AI is changing product discovery",
+      "What makes an e-commerce site LLM-ready",
+      "The structured data that matters for e-commerce",
+      "Real example: what AI sees vs what it misses",
+      "llms.txt for product catalogs",
+      "Common e-commerce mistakes",
+      "Automating it with agentmarkup",
+      "The bottom line",
+      "More from the blog"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "Article",
+      "Organization",
+      "Person",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/authors/sebastian-cochinescu/",
+      "/blog/",
+      "/blog/ai-crawler-audit-500-companies/",
+      "/blog/ai-crawlers-2026/",
+      "/blog/brand-awareness-ai/",
+      "/blog/website-checker/",
+      "/blog/what-is-geo/",
+      "/blog/why-llms-txt-matters/"
+    ],
+    "prerendered": true
+  },
+  {
+    "route": "/blog/brand-awareness-ai/",
+    "title": "How to make your brand appear in AI conversations - agentmarkup",
+    "description": "When people ask AI for recommendations, does your brand show up? Learn how Organization schema, llms.txt, FAQ markup, and clear content structure make your brand visible in ChatGPT, Claude, and Perplexity answers.",
+    "canonical": "https://agentmarkup.dev/blog/brand-awareness-ai/",
+    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+    "h1": [
+      "How to make your brand appear in AI conversations"
+    ],
+    "h2": [
+      "AI is becoming the new word of mouth",
+      "What AI systems use to understand your brand",
+      "Organization schema: your brand's machine-readable identity",
+      "llms.txt for brand positioning",
+      "Content structure matters more than content volume",
+      "The FAQ strategy",
+      "What does not work",
+      "Getting started",
+      "The bottom line",
+      "More from the blog"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "Article",
+      "Organization",
+      "Person",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/authors/sebastian-cochinescu/",
+      "/blog/",
+      "/blog/ai-crawler-audit-500-companies/",
+      "/blog/ecommerce-llm-optimization/",
+      "/blog/markdown-mirrors/",
+      "/blog/website-checker/",
+      "/blog/what-is-geo/",
+      "/blog/why-llms-txt-matters/"
+    ],
+    "prerendered": true
+  },
+  {
+    "route": "/blog/markdown-mirrors/",
+    "title": "Build-time markdown mirrors for agent readability: how they compare to Cloudflare's approach - agentmarkup",
+    "description": "Build-time markdown generation for AI readability, including where it helps, where it is optional, and how it compares to Cloudflare runtime extraction.",
+    "canonical": "https://agentmarkup.dev/blog/markdown-mirrors/",
+    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+    "h1": [
+      "Build-time markdown mirrors for agent readability: how they compare to Cloudflare's approach"
+    ],
+    "h2": [
+      "Not every site needs a markdown mirror",
+      "The problem: some HTML is a bad fetch target",
+      "What are markdown mirrors?",
+      "How agentmarkup generates markdown mirrors",
+      "Cloudflare's approach: runtime readability extraction",
+      "Build-time vs runtime: why it matters",
+      "Why build-time can be a good fit for your own content",
+      "How agentmarkup reduces the downside",
+      "What the output looks like",
+      "Getting started",
+      "Verify the protective headers in production",
+      "More from the blog"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "Article",
+      "Organization",
+      "Person",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/authors/sebastian-cochinescu/",
+      "/blog/",
+      "/blog/agentmarkup-cli-any-static-site/",
+      "/blog/brand-awareness-ai/",
+      "/blog/nextjs-llms-txt-json-ld/",
+      "/blog/nuxt-llms-txt-json-ld/",
+      "/blog/website-checker/",
+      "/docs/llms-txt/"
+    ],
+    "prerendered": true
+  },
+  {
+    "route": "/blog/website-checker/",
+    "title": "Is your website ready for AI? Free LLM discoverability checker - agentmarkup",
+    "description": "Check if your website has llms.txt, JSON-LD structured data, AI crawler robots.txt rules, markdown mirrors, and sitemap. Free audit tool for AI discoverability - works for e-commerce and brand websites.",
+    "canonical": "https://agentmarkup.dev/blog/website-checker/",
+    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+    "h1": [
+      "Is your website ready for AI? Use the free agentmarkup checker to find out"
+    ],
+    "h2": [
+      "Why you need to check your website",
+      "What the checker audits",
+      "How to read the results",
+      "For e-commerce websites",
+      "For brand and content websites",
+      "What makes this different from SEO auditors",
+      "Try it now",
+      "More from the blog"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "Article",
+      "Organization",
+      "Person",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/authors/sebastian-cochinescu/",
+      "/blog/",
+      "/blog/brand-awareness-ai/",
+      "/blog/markdown-mirrors/",
+      "/blog/what-is-geo/",
+      "/blog/when-markdown-mirrors-help/",
+      "/blog/why-llms-txt-matters/",
+      "/checker/",
+      "/docs/llms-txt/"
+    ],
+    "prerendered": true
+  },
+  {
+    "route": "/blog/when-markdown-mirrors-help/",
+    "title": "When markdown mirrors help, and when they do not - agentmarkup",
+    "description": "A practical guide to when generated markdown mirrors add signal, when HTML is already enough, and how to avoid unnecessary downsides.",
+    "canonical": "https://agentmarkup.dev/blog/when-markdown-mirrors-help/",
+    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+    "h1": [
+      "When markdown mirrors help, and when they do not"
+    ],
+    "h2": [
+      "The problem mirrors are trying to solve",
+      "Where markdown mirrors help",
+      "Where markdown mirrors do not add much",
+      "The real tradeoffs",
+      "How agentmarkup tries to keep the feature disciplined",
+      "The more durable product surface",
+      "The bottom line",
+      "More from the blog"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "Article",
+      "Organization",
+      "Person",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/authors/sebastian-cochinescu/",
+      "/blog/",
+      "/blog/nextjs-llms-txt-json-ld/",
+      "/blog/nuxt-llms-txt-json-ld/",
+      "/blog/website-checker/",
+      "/blog/what-is-geo/",
+      "/blog/why-llms-txt-matters/"
+    ],
+    "prerendered": true
+  },
+  {
+    "route": "/blog/nextjs-llms-txt-json-ld/",
+    "title": "How to add llms.txt, JSON-LD, and AI crawler controls to Next.js - agentmarkup",
+    "description": "Use @agentmarkup/next to generate llms.txt, inject JSON-LD, manage AI crawler rules, and understand the fully dynamic SSR boundary in Next.js.",
+    "canonical": "https://agentmarkup.dev/blog/nextjs-llms-txt-json-ld/",
+    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+    "h1": [
+      "How to add llms.txt, JSON-LD, and AI crawler controls to Next.js"
+    ],
+    "h2": [
+      "Why Next.js is slightly different",
+      "What the Next.js adapter gives you",
+      "Basic setup",
+      "Where it works best",
+      "The one caveat that matters",
+      "Should you enable markdown mirrors?",
+      "Why this is useful for the Next.js community",
+      "The bottom line",
+      "More from the blog"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "Article",
+      "Organization",
+      "Person",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/authors/sebastian-cochinescu/",
+      "/blog/",
+      "/blog/agentmarkup-cli-any-static-site/",
+      "/blog/ai-crawlers-2026/",
+      "/blog/markdown-mirrors/",
+      "/blog/nuxt-llms-txt-json-ld/",
+      "/blog/website-checker/",
+      "/blog/when-markdown-mirrors-help/",
+      "/docs/ai-crawlers/",
+      "/docs/json-ld/",
+      "/docs/llms-txt/"
+    ],
+    "prerendered": true
+  },
+  {
+    "route": "/blog/nuxt-llms-txt-json-ld/",
+    "title": "How to add llms.txt, JSON-LD, and AI crawler controls to Nuxt - agentmarkup",
+    "description": "Use @agentmarkup/nuxt to generate llms.txt, inject JSON-LD, create markdown mirrors, and manage AI crawler rules from prerendered Nuxt output.",
+    "canonical": "https://agentmarkup.dev/blog/nuxt-llms-txt-json-ld/",
+    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+    "h1": [
+      "How to add llms.txt, JSON-LD, and AI crawler controls to Nuxt"
+    ],
+    "h2": [
+      "Where the Nuxt adapter runs",
+      "What the Nuxt adapter gives you",
+      "Basic setup",
+      "Where it works best",
+      "The one caveat that matters",
+      "Should you enable markdown mirrors?",
+      "The bottom line",
+      "More from the blog"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "Article",
+      "Organization",
+      "Person",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/authors/sebastian-cochinescu/",
+      "/blog/",
+      "/blog/agentmarkup-cli-any-static-site/",
+      "/blog/audit-ai-crawler-access/",
+      "/blog/markdown-mirrors/",
+      "/blog/nextjs-llms-txt-json-ld/",
+      "/blog/website-checker/",
+      "/blog/when-markdown-mirrors-help/",
+      "/docs/ai-crawlers/",
+      "/docs/json-ld/",
+      "/docs/llms-txt/"
+    ],
+    "prerendered": true
+  },
+  {
+    "route": "/blog/agentmarkup-cli-any-static-site/",
+    "title": "Run agentmarkup on any static site with the CLI - agentmarkup",
+    "description": "Use @agentmarkup/cli to run llms.txt, JSON-LD, markdown mirrors, and AI crawler controls over any built static output, with a CI check command.",
+    "canonical": "https://agentmarkup.dev/blog/agentmarkup-cli-any-static-site/",
+    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+    "h1": [
+      "Run agentmarkup on any static site with the CLI"
+    ],
+    "h2": [
+      "Why a CLI",
+      "Setup",
+      "Three modes",
+      "A real CI gate",
+      "Coexistence by default",
+      "The bottom line",
+      "More from the blog"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "Article",
+      "Organization",
+      "Person",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/authors/sebastian-cochinescu/",
+      "/blog/",
+      "/blog/ai-crawlers-2026/",
+      "/blog/markdown-mirrors/",
+      "/blog/nextjs-llms-txt-json-ld/",
+      "/blog/nuxt-llms-txt-json-ld/",
+      "/blog/website-checker/",
+      "/blog/when-markdown-mirrors-help/",
+      "/docs/ai-crawlers/",
+      "/docs/json-ld/",
+      "/docs/llms-txt/"
+    ],
+    "prerendered": true
+  },
+  {
+    "route": "/blog/audit-ai-crawler-access/",
+    "title": "See your website the way AI crawlers do - agentmarkup",
+    "description": "Use @agentmarkup/audit to fetch any live URL as GPTBot, ClaudeBot, PerplexityBot, and other AI crawlers, diff each response against a browser, and catch machine-readability issues in CI.",
+    "canonical": "https://agentmarkup.dev/blog/audit-ai-crawler-access/",
+    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+    "h1": [
+      "See your website the way AI crawlers do"
+    ],
+    "h2": [
+      "The blind spot",
+      "What the audit does",
+      "Honest by design",
+      "Where it fits",
+      "More from the blog"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "Article",
+      "Organization",
+      "Person",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/authors/sebastian-cochinescu/",
+      "/blog/",
+      "/blog/agentmarkup-cli-any-static-site/",
+      "/blog/ai-crawler-audit-500-companies/",
+      "/blog/ai-crawlers-2026/",
+      "/blog/markdown-mirrors/",
+      "/blog/nuxt-llms-txt-json-ld/",
+      "/blog/website-checker/",
+      "/checker/",
+      "/docs/ai-crawlers/",
+      "/docs/audit/",
+      "/docs/json-ld/",
+      "/docs/llms-txt/"
+    ],
+    "prerendered": true
+  },
+  {
+    "route": "/blog/ai-crawler-audit-500-companies/",
+    "title": "We ran 500 of America's biggest companies through an AI-crawler audit - agentmarkup",
+    "description": "We fetched 500 corporate homepages the way ChatGPT, Claude, and Perplexity do. Most serve readable HTML, but 46% have no usable structured data, 86% have no llms.txt, and seven serve crawlers a blank page. Built for Google, not yet for AI agents.",
+    "canonical": "https://agentmarkup.dev/blog/ai-crawler-audit-500-companies/",
+    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+    "h1": [
+      "We ran 500 of America's biggest companies through an AI-crawler audit"
+    ],
+    "h2": [
+      "The AI-era layer is almost empty",
+      "It is not just what is missing",
+      "The pages are readable. The signals are missing.",
+      "How we measured (and what we are not claiming)",
+      "Check your own site in one command",
+      "More from the blog"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "Article",
+      "Organization",
+      "Person",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/authors/sebastian-cochinescu/",
+      "/blog/",
+      "/blog/agentmarkup-cli-any-static-site/",
+      "/blog/ai-crawlers-2026/",
+      "/blog/audit-ai-crawler-access/",
+      "/blog/nuxt-llms-txt-json-ld/",
+      "/checker/",
+      "/docs/ai-crawlers/",
+      "/docs/audit/",
+      "/docs/json-ld/",
+      "/docs/llms-txt/"
+    ],
+    "prerendered": true
+  },
+  {
+    "route": "/authors/sebastian-cochinescu/",
+    "title": "Sebastian Cochinescu - Developer of agentmarkup",
+    "description": "Sebastian Cochinescu is the developer of agentmarkup, an open-source toolkit for making websites machine-readable. Also founder of Anima Felix.",
+    "canonical": "https://agentmarkup.dev/authors/sebastian-cochinescu/",
+    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+    "h1": [
+      "Sebastian Cochinescu"
+    ],
+    "h2": [
+      "About",
+      "Articles"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "Organization",
+      "Person",
+      "ProfilePage",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/blog/agentmarkup-cli-any-static-site/",
+      "/blog/ai-crawler-audit-500-companies/",
+      "/blog/ai-crawlers-2026/",
+      "/blog/audit-ai-crawler-access/",
+      "/blog/brand-awareness-ai/",
+      "/blog/ecommerce-llm-optimization/",
+      "/blog/json-ld-structured-data-guide/",
+      "/blog/markdown-mirrors/",
+      "/blog/nextjs-llms-txt-json-ld/",
+      "/blog/nuxt-llms-txt-json-ld/",
+      "/blog/website-checker/",
+      "/blog/what-is-geo/",
+      "/blog/when-markdown-mirrors-help/",
+      "/blog/why-llms-txt-matters/"
+    ],
+    "prerendered": true
+  },
+  {
+    "route": "/license/",
+    "title": "MIT License - agentmarkup",
+    "description": "agentmarkup is released under the MIT License. Free to use, modify, and distribute.",
+    "canonical": "https://agentmarkup.dev/license/",
+    "robots": "index,follow",
+    "h1": [
+      "MIT License"
+    ],
+    "h2": [
+      "Allowed",
+      "Required",
+      "Not Covered",
+      "Full Text"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "Organization",
+      "WebPage",
+      "WebSite"
+    ],
+    "internalLinks": [],
+    "prerendered": true
+  },
+  {
+    "route": "/terms/",
+    "title": "Terms of Service - agentmarkup",
+    "description": "Terms of Service for agentmarkup.dev, including authorized-use, no-warranty, and limitation-of-liability terms for the website checker and passive security scan.",
+    "canonical": "https://agentmarkup.dev/terms/",
+    "robots": "index,follow",
+    "h1": [
+      "Terms of Service"
+    ],
+    "h2": [
+      "1. What the Services do",
+      "2. Authorized use only",
+      "3. Acceptable use",
+      "4. Enforcement, abuse reporting, and cooperation",
+      "5. No warranty",
+      "6. Assumption of risk",
+      "7. Limitation of liability",
+      "8. Indemnification",
+      "9. Third-party websites and services",
+      "10. Intellectual property and open source",
+      "11. Eligibility and capacity",
+      "12. Privacy",
+      "13. Changes to the Services and these Terms",
+      "14. Governing law and disputes",
+      "15. General",
+      "16. Contact"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "Organization",
+      "WebPage",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/.well-known/security.txt",
+      "/license/",
+      "/privacy/"
+    ],
+    "prerendered": true
+  },
+  {
+    "route": "/privacy/",
+    "title": "Privacy Policy - agentmarkup",
+    "description": "Privacy Policy for agentmarkup.dev: what data the website checker and passive security scan process, the legal basis, retention, and third-party processors.",
+    "canonical": "https://agentmarkup.dev/privacy/",
+    "robots": "index,follow",
+    "h1": [
+      "Privacy Policy"
+    ],
+    "h2": [
+      "1. Overview",
+      "2. What we process, why, and on what basis",
+      "3. Data about scanned websites",
+      "4. Cookies",
+      "5. Third-party processors and infrastructure",
+      "6. International transfers",
+      "7. Retention",
+      "8. Your rights",
+      "9. Children",
+      "10. Changes",
+      "11. Contact"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "Organization",
+      "WebPage",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/terms/"
+    ],
+    "prerendered": true
+  }
+]
