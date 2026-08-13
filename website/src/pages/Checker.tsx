@@ -251,6 +251,7 @@ function Checker() {
     setLoading(true);
     setFieldError(null);
     setError(null);
+    setFindingFilter('all');
 
     if (!turnstileToken) {
       setTurnstileChallenge(null);

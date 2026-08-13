@@ -318,6 +318,7 @@ function SecurityScan() {
     setLoading(true);
     setFieldError(null);
     setError(null);
+    setFindingFilter('all');
     if (!turnstileToken) setTurnstileChallenge(null);
 
     const nextUrl = new URL(window.location.href);
@@ -478,6 +479,8 @@ function SecurityScan() {
   return (
     <main>
       <article className="doc-page checker-page security-scan-page">
+        {showResults ? <h1>Passive security scan for public websites</h1> : null}
+
         {!showResults ? (
           <>
         <section className="checker-start">

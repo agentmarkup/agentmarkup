@@ -14,8 +14,8 @@ export function StatusIcon({ status, size = 18 }: { status: SemanticStatus; size
   if (status === 'action') {
     return (
       <svg className="status-icon" width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M12 3 2.8 19h18.4L12 3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-        <path d="M12 9v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path d="M8 3h8l5 5v8l-5 5H8l-5-5V8l5-5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+        <path d="M12 8v5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         <circle cx="12" cy="16.5" r="1" fill="currentColor" />
       </svg>
     )
