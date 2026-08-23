@@ -63,15 +63,34 @@ function Developers() {
           </p>
           <ul>
             <li>
-              <code>GET</code> or <code>POST /api/check</code> - fetch a public
-              site&apos;s homepage, llms.txt, robots.txt, sitemap and markdown
-              mirrors, and return the raw resources.
+              <code>GET</code> or <code>POST /api/v1/check</code> - fetch a
+              public site&apos;s homepage, llms.txt, robots.txt, sitemap and
+              markdown mirrors, and return the raw resources.
             </li>
             <li>
-              <code>POST /api/security-scan</code> - passive checks over
+              <code>POST /api/v1/security-scan</code> - passive checks over
               publicly observable headers and DNS records.
             </li>
           </ul>
+          <p>
+            The stable contract is versioned in the path. The unversioned{' '}
+            <code>/api/check</code> and <code>/api/security-scan</code> are
+            permanent aliases for v1 and will keep working, but integrate
+            against the versioned form. A breaking change would ship as{' '}
+            <code>/api/v2/</code> rather than changing v1, and a version
+            scheduled for removal would carry <code>Deprecation</code> and{' '}
+            <code>Sunset</code> headers with at least 180 days notice. Nothing
+            is deprecated today.
+          </p>
+          <p>
+            Every response carries the IETF{' '}
+            <code>RateLimit-Policy</code>, <code>RateLimit-Limit</code>,{' '}
+            <code>RateLimit-Remaining</code> and <code>RateLimit-Reset</code>{' '}
+            header fields, and a 429 adds <code>Retry-After</code>. Read them
+            and self-throttle rather than discovering the limit by being
+            refused. Everything under <code>/api/</code> answers JSON, including
+            errors for paths that do not exist.
+          </p>
           <p>
             No key is required. Both are rate limited per client IP and may ask
             for a Cloudflare Turnstile token after repeated requests, and every

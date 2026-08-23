@@ -484,14 +484,14 @@ function SecurityScan() {
         {!showResults ? (
           <>
         <section className="checker-start">
-          <header className="checker-heading">
+          <div className="checker-heading">
             <p className="section-kicker">Free security check</p>
             <h1>Passive security scan for public websites</h1>
             <p className="doc-intro checker-intro">
               Check the public safety signals a website shares with every visitor.
               You get clear findings and next steps, never an invented score.
             </p>
-          </header>
+          </div>
 
         <div className="checker-panel">
           <form className="checker-form" onSubmit={handleSubmit} aria-busy={loading} noValidate>

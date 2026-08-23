@@ -96,7 +96,12 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    if (url.pathname === '/api/check') {
+    // Versioned aliases. /api/v1/* is the stable contract an agent should
+    // integrate against; the unversioned paths stay as permanent aliases so
+    // existing callers keep working.
+    const apiRoute = resolveApiRoute(url.pathname);
+
+    if (apiRoute === 'check') {
       if (!['GET', 'POST'].includes(request.method)) {
         return jsonError('method_not_allowed', 'Method not allowed. Use GET or POST.', 405);
       }
@@ -104,7 +109,7 @@ export default {
       return handleCheckRequest(request, url, env, Date.now());
     }
 
-    if (url.pathname === '/api/security-scan') {
+    if (apiRoute === 'security-scan') {
       // POST-only: a scan mutates rate-limit state and runs on the caller's
       // behalf, so it must not be triggerable by a cross-site GET (e.g. an
       // <img> or link) that would bypass the on-page authorization gate.
@@ -120,6 +125,18 @@ export default {
       }
 
       return handleSecurityScanRequest(request, url, env, Date.now());
+    }
+
+    // The /api namespace is JSON-only. Without this, an unknown /api path falls
+    // through to the static assets and answers the HTML 404 page, so an agent
+    // probing the API surface is handed markup it cannot parse.
+    if (/^\/api(\/|$)/i.test(url.pathname)) {
+      return jsonError(
+        'not_found',
+        `No API endpoint at ${url.pathname}. See /openapi.json for the available operations.`,
+        404,
+        { documentation: `${url.origin}/openapi.json` }
+      );
     }
 
     return serveAssetWithSecurityHeaders(request, env);
@@ -265,7 +282,7 @@ async function handleCheckRequest(request, url, env, checkStartTime) {
       cacheExpiresAt
     );
 
-    return json(responseBody, 200);
+    return json(responseBody, 200, rateLimitHeaders(protection.metadata));
   } catch (error) {
     return jsonError(
       'invalid_request',
@@ -420,7 +437,7 @@ async function handleSecurityScanRequest(request, url, env, checkStartTime) {
       cacheExpiresAt
     );
 
-    return json(responseBody, 200);
+    return json(responseBody, 200, rateLimitHeaders(protection.metadata));
   } catch (error) {
     return jsonError(
       'invalid_request',
@@ -573,7 +590,10 @@ async function applyCheckerProtection(
         'Too many checker or security scan requests came from this IP recently.',
         429,
         { retryAfterSeconds },
-        { 'retry-after': String(retryAfterSeconds) }
+        {
+          'retry-after': String(retryAfterSeconds),
+          ...rateLimitHeaders({ ...metadata, remainingChecks: 0 }),
+        }
       ),
     };
   }
@@ -1794,6 +1814,42 @@ function clampInteger(value, min, max, fallback) {
   }
 
   return Math.min(Math.max(value, min), max);
+}
+
+/**
+ * RFC 9457-adjacent rate-limit signalling, using the IETF RateLimit header
+ * fields so an agent can self-throttle instead of discovering the limit by
+ * being refused. `ratelimit-policy` states the quota and window; `ratelimit-*`
+ * report the caller's current position.
+ */
+/**
+ * Maps both the versioned and unversioned forms of an API path to a route name.
+ * `/api/check` and `/api/v1/check` are the same endpoint; the versioned form is
+ * what the OpenAPI document advertises.
+ */
+function resolveApiRoute(pathname) {
+  const match = /^\/api(?:\/v1)?\/([a-z-]+)\/?$/i.exec(pathname);
+  if (!match) {
+    return null;
+  }
+
+  const route = match[1].toLowerCase();
+  return route === 'check' || route === 'security-scan' ? route : null;
+}
+
+function rateLimitHeaders(metadata) {
+  const limit = metadata?.maxChecksPerWindow ?? IP_RATE_LIMIT_MAX;
+  const windowSeconds =
+    metadata?.rateLimitWindowSeconds ?? Math.floor(IP_RATE_LIMIT_WINDOW_MS / 1000);
+  const remaining =
+    typeof metadata?.remainingChecks === 'number' ? metadata.remainingChecks : limit;
+
+  return {
+    'ratelimit-policy': `"public";q=${limit};w=${windowSeconds}`,
+    'ratelimit-limit': String(limit),
+    'ratelimit-remaining': String(Math.max(remaining, 0)),
+    'ratelimit-reset': String(windowSeconds),
+  };
 }
 
 /**

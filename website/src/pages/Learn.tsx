@@ -10,7 +10,7 @@ function Learn() {
   return (
     <main>
       <div className="learn-page">
-        <header className="learn-hero">
+        <div className="learn-hero">
           <WebThreads className="learn-hero-threads" />
           <div className="learn-hero-content">
             <p className="section-kicker">AgentMarkup learning center</p>
@@ -21,7 +21,7 @@ function Learn() {
               <a className="button button-secondary" href="#basics">Start with the basics</a>
             </div>
           </div>
-        </header>
+        </div>
 
         <section className="learn-section" id="basics">
           <div className="learn-section-heading">

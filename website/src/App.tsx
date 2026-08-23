@@ -48,7 +48,7 @@ function Home() {
 
   return (
     <main className="home-page">
-      <header className="home-hero">
+      <div className="home-hero">
         <div className="hero-copy">
           <p className="hero-overline">Open-source npm packages</p>
           <h1>Build websites AI can understand.</h1>
@@ -120,7 +120,7 @@ function Home() {
             </form>
           </section>
         </div>
-      </header>
+      </div>
 
       <section className="package-ecosystem" aria-labelledby="package-ecosystem-title">
         <div className="home-section-heading">

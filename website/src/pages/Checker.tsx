@@ -457,13 +457,13 @@ function Checker() {
         {!showResults ? (
           <>
             <section className="checker-start">
-              <header className="checker-heading">
+              <div className="checker-heading">
                 <p className="section-kicker">Free website check</p>
                 <h1>Check your website before AI crawlers and search engines do</h1>
                 <p className="doc-intro checker-intro">
                   See what machines can find, understand, and access, then get a clear next step.
                 </p>
-              </header>
+              </div>
 
               <div className="checker-panel">
                 <form className="checker-form" onSubmit={handleSubmit} aria-busy={loading} noValidate>

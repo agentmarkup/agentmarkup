@@ -4,16 +4,24 @@
     "title": "agentmarkup public tools API",
     "version": "1.0.0",
     "summary": "Read-only machine-readability and passive security checks for public websites.",
-    "description": "Two endpoints back the tools on agentmarkup.dev. Both are read-only: they fetch public URLs on the caller's behalf and return findings. Nothing is stored on the caller's behalf beyond a short cache and rate-limit bookkeeping, and neither endpoint mutates the target site.\n\nThere are no API keys and no accounts. Access is rate limited per client IP and, after repeated requests from the same IP, may require a Cloudflare Turnstile token. These endpoints exist to serve the tools on this site; they are documented here so agents can use them correctly rather than by guessing. Use them only against sites you own or are authorised to test, and see the Terms of Service for the full authorised-use limits.",
+    "description": "Two endpoints back the tools on agentmarkup.dev. Both are read-only: they fetch public URLs on the caller's behalf and return findings. Nothing is stored on the caller's behalf beyond a short cache and rate-limit bookkeeping, and neither endpoint mutates the target site.\n\nThere are no API keys and no accounts. Access is rate limited per client IP and, after repeated requests from the same IP, may require a Cloudflare Turnstile token. These endpoints exist to serve the tools on this site; they are documented here so agents can use them correctly rather than by guessing. Use them only against sites you own or are authorised to test, and see the Terms of Service for the full authorised-use limits.\n\n## Versioning and deprecation\n\nThe stable contract is versioned in the URL path: `/api/v1/check` and `/api/v1/security-scan`. The unversioned paths `/api/check` and `/api/security-scan` are permanent aliases for v1 and will keep working; integrate against the versioned form.\n\nA breaking change ships as a new path prefix (`/api/v2/...`) rather than a change to v1. When a version is scheduled for removal its responses carry `Deprecation` and `Sunset` headers (RFC 9745 and RFC 8594), and the superseding version is announced at least 180 days before the sunset date. No version has been deprecated.\n\n## Rate limits\n\nRequests are limited per client IP. Every response carries the IETF `RateLimit-Policy`, `RateLimit-Limit`, `RateLimit-Remaining` and `RateLimit-Reset` header fields, and a 429 additionally carries `Retry-After`. Read them and self-throttle rather than discovering the limit by being refused.",
     "contact": {
       "name": "agentmarkup",
       "url": "https://agentmarkup.dev/contact/",
       "email": "hello@animafelix.com"
     },
-    "license": { "name": "MIT", "identifier": "MIT" },
+    "license": {
+      "name": "MIT",
+      "identifier": "MIT"
+    },
     "termsOfService": "https://agentmarkup.dev/terms/"
   },
-  "servers": [{ "url": "https://agentmarkup.dev", "description": "Production" }],
+  "servers": [
+    {
+      "url": "https://agentmarkup.dev",
+      "description": "Production"
+    }
+  ],
   "externalDocs": {
     "description": "Website checker and security scan documentation",
     "url": "https://agentmarkup.dev/learn/"
@@ -29,10 +37,12 @@
     }
   ],
   "paths": {
-    "/api/check": {
+    "/api/v1/check": {
       "get": {
         "operationId": "checkSiteByQuery",
-        "tags": ["machine-readability"],
+        "tags": [
+          "machine-readability"
+        ],
         "summary": "Check a public website for machine-readability",
         "description": "Fetches a site's homepage, llms.txt, robots.txt, sitemap, markdown mirrors and at most one same-origin linked page, then returns the raw resources for analysis. Input is normalised to the site root before fetching, so 'example.com', 'https://example.com/some/page' and 'https://example.com' all resolve to the same origin.",
         "parameters": [
@@ -41,57 +51,318 @@
             "in": "query",
             "required": true,
             "description": "Public http(s) URL or bare domain. Normalised to the site root before fetching.",
-            "schema": { "type": "string", "examples": ["example.com", "https://example.com"] }
+            "schema": {
+              "type": "string",
+              "examples": [
+                "example.com",
+                "https://example.com"
+              ]
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "Fetched resources for the target origin.",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/SiteCheckResponse" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteCheckResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit-Policy": {
+                "description": "Quota and window, e.g. \"public\";q=10;w=600.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests left in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
             }
           },
-          "400": { "$ref": "#/components/responses/InvalidRequest" },
-          "403": { "$ref": "#/components/responses/VerificationRequired" },
-          "405": { "$ref": "#/components/responses/MethodNotAllowed" },
-          "429": { "$ref": "#/components/responses/RateLimited" }
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/VerificationRequired"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
         }
       },
       "post": {
         "operationId": "checkSite",
-        "tags": ["machine-readability"],
+        "tags": [
+          "machine-readability"
+        ],
         "summary": "Check a public website for machine-readability",
         "description": "Same behaviour as the GET form, with the target supplied in a JSON body. Use this form when a Turnstile token is required.",
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/CheckRequest" } }
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckRequest"
+              }
+            }
           }
         },
         "responses": {
           "200": {
             "description": "Fetched resources for the target origin.",
             "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/SiteCheckResponse" } }
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteCheckResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit-Policy": {
+                "description": "Quota and window, e.g. \"public\";q=10;w=600.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests left in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
             }
           },
-          "400": { "$ref": "#/components/responses/InvalidRequest" },
-          "403": { "$ref": "#/components/responses/VerificationRequired" },
-          "405": { "$ref": "#/components/responses/MethodNotAllowed" },
-          "429": { "$ref": "#/components/responses/RateLimited" }
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/VerificationRequired"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
         }
       }
     },
-    "/api/security-scan": {
+    "/api/check": {
+      "get": {
+        "operationId": "checkSiteByQueryUnversioned",
+        "tags": [
+          "machine-readability"
+        ],
+        "summary": "Check a public website for machine-readability (unversioned alias)",
+        "description": "Permanent alias for the v1 path. Fetches a site's homepage, llms.txt, robots.txt, sitemap, markdown mirrors and at most one same-origin linked page, then returns the raw resources for analysis. Input is normalised to the site root before fetching, so 'example.com', 'https://example.com/some/page' and 'https://example.com' all resolve to the same origin.",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": true,
+            "description": "Public http(s) URL or bare domain. Normalised to the site root before fetching.",
+            "schema": {
+              "type": "string",
+              "examples": [
+                "example.com",
+                "https://example.com"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Fetched resources for the target origin.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteCheckResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit-Policy": {
+                "description": "Quota and window, e.g. \"public\";q=10;w=600.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests left in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/VerificationRequired"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      },
+      "post": {
+        "operationId": "checkSiteUnversioned",
+        "tags": [
+          "machine-readability"
+        ],
+        "summary": "Check a public website for machine-readability (unversioned alias)",
+        "description": "Permanent alias for the v1 path. Same behaviour as the GET form, with the target supplied in a JSON body. Use this form when a Turnstile token is required.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Fetched resources for the target origin.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteCheckResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit-Policy": {
+                "description": "Quota and window, e.g. \"public\";q=10;w=600.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests left in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/VerificationRequired"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/v1/security-scan": {
       "post": {
         "operationId": "scanSiteSecurity",
-        "tags": ["security"],
+        "tags": [
+          "security"
+        ],
         "summary": "Run a passive security scan of a public website",
         "description": "Checks publicly observable signals only: HTTPS and HSTS, Content-Security-Policy, clickjacking and MIME-sniffing protections, cookie flags, mixed content, security.txt, and SPF, DMARC and DNSSEC records. Sends no attack traffic and never attempts authentication. POST only, and cross-site browser requests are rejected.",
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/CheckRequest" } }
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckRequest"
+              }
+            }
           }
         },
         "responses": {
@@ -99,14 +370,132 @@
             "description": "Observed security posture for the target origin.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/SecurityScanResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/SecurityScanResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit-Policy": {
+                "description": "Quota and window, e.g. \"public\";q=10;w=600.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests left in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the window resets.",
+                "schema": {
+                  "type": "integer"
+                }
               }
             }
           },
-          "400": { "$ref": "#/components/responses/InvalidRequest" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "405": { "$ref": "#/components/responses/MethodNotAllowed" },
-          "429": { "$ref": "#/components/responses/RateLimited" }
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/security-scan": {
+      "post": {
+        "operationId": "scanSiteSecurityUnversioned",
+        "tags": [
+          "security"
+        ],
+        "summary": "Run a passive security scan of a public website (unversioned alias)",
+        "description": "Permanent alias for the v1 path. Checks publicly observable signals only: HTTPS and HSTS, Content-Security-Policy, clickjacking and MIME-sniffing protections, cookie flags, mixed content, security.txt, and SPF, DMARC and DNSSEC records. Sends no attack traffic and never attempts authentication. POST only, and cross-site browser requests are rejected.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Observed security posture for the target origin.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecurityScanResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit-Policy": {
+                "description": "Quota and window, e.g. \"public\";q=10;w=600.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests left in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
         }
       }
     }
@@ -117,7 +506,9 @@
         "description": "The supplied target was missing, malformed, or not a public http(s) address.",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
             "example": {
               "error": "Enter a public http:// or https:// website URL.",
               "code": "invalid_request"
@@ -129,8 +520,13 @@
         "description": "The HTTP method is not supported for this endpoint.",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorResponse" },
-            "example": { "error": "Method not allowed. Use POST.", "code": "method_not_allowed" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": "Method not allowed. Use POST.",
+              "code": "method_not_allowed"
+            }
           }
         }
       },
@@ -138,7 +534,9 @@
         "description": "A cross-site browser request was rejected.",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
             "example": {
               "error": "Cross-site requests are not allowed.",
               "code": "cross_site_forbidden"
@@ -150,7 +548,9 @@
         "description": "Repeated requests from this IP require a Cloudflare Turnstile token. Solve the challenge with the returned site key and retry the POST form with `turnstileToken`.",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
             "example": {
               "error": "Additional verification is required before running more checks from this IP.",
               "code": "verification_required",
@@ -164,16 +564,50 @@
         "headers": {
           "Retry-After": {
             "description": "Seconds to wait before retrying.",
-            "schema": { "type": "integer", "minimum": 1 }
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
           }
         },
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
             "example": {
               "error": "Too many checker or security scan requests came from this IP recently.",
               "code": "rate_limited",
               "retryAfterSeconds": 240
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "No API endpoint exists at this path.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": "No API endpoint at /api/v1/nope.",
+              "code": "not_found",
+              "documentation": "https://agentmarkup.dev/openapi.json"
+            }
+          }
+        }
+      },
+      "ServerError": {
+        "description": "An unexpected server-side failure.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": "The request could not be completed.",
+              "code": "server_error"
             }
           }
         }
@@ -182,13 +616,18 @@
     "schemas": {
       "CheckRequest": {
         "type": "object",
-        "required": ["url"],
+        "required": [
+          "url"
+        ],
         "additionalProperties": false,
         "properties": {
           "url": {
             "type": "string",
             "description": "Public http(s) URL or bare domain. Normalised to the site root before fetching.",
-            "examples": ["example.com", "https://example.com"]
+            "examples": [
+              "example.com",
+              "https://example.com"
+            ]
           },
           "turnstileToken": {
             "type": "string",
@@ -198,10 +637,16 @@
       },
       "ErrorResponse": {
         "type": "object",
-        "required": ["error", "code"],
+        "required": [
+          "error",
+          "code"
+        ],
         "description": "Every error response carries a human-readable `error` and a stable machine-readable `code`.",
         "properties": {
-          "error": { "type": "string", "description": "Human-readable message." },
+          "error": {
+            "type": "string",
+            "description": "Human-readable message."
+          },
           "code": {
             "type": "string",
             "description": "Stable identifier an agent can branch on.",
@@ -210,11 +655,16 @@
               "method_not_allowed",
               "cross_site_forbidden",
               "rate_limited",
-              "verification_required"
+              "verification_required",
+              "not_found",
+              "server_error"
             ]
           },
           "retryAfterSeconds": {
-            "type": ["integer", "null"],
+            "type": [
+              "integer",
+              "null"
+            ],
             "description": "Seconds to wait before retrying. Present on `rate_limited`."
           },
           "turnstileRequired": {
@@ -222,82 +672,225 @@
             "description": "Present on `verification_required`."
           },
           "turnstileSiteKey": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "description": "Site key to render the Turnstile challenge with."
+          },
+          "documentation": {
+            "type": "string",
+            "format": "uri",
+            "description": "Link to the OpenAPI document describing the available operations."
           }
         }
       },
       "RemoteResource": {
         "type": "object",
         "description": "One fetched URL and its outcome. `body` is null when the fetch failed or the response was not text.",
-        "required": ["requestedUrl", "finalUrl", "status", "ok", "contentType", "body"],
+        "required": [
+          "requestedUrl",
+          "finalUrl",
+          "status",
+          "ok",
+          "contentType",
+          "body"
+        ],
         "properties": {
-          "requestedUrl": { "type": "string" },
-          "finalUrl": { "type": "string", "description": "URL after redirects." },
-          "status": { "type": "integer", "description": "HTTP status, or 0 if the fetch never completed." },
-          "ok": { "type": "boolean" },
-          "contentType": { "type": ["string", "null"] },
-          "body": { "type": ["string", "null"] },
-          "error": { "type": "string", "description": "Present when the fetch failed." },
-          "xRobotsTag": { "type": ["string", "null"] }
+          "requestedUrl": {
+            "type": "string"
+          },
+          "finalUrl": {
+            "type": "string",
+            "description": "URL after redirects."
+          },
+          "status": {
+            "type": "integer",
+            "description": "HTTP status, or 0 if the fetch never completed."
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "contentType": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "body": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "error": {
+            "type": "string",
+            "description": "Present when the fetch failed."
+          },
+          "xRobotsTag": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
         }
       },
       "SiteCheckResponse": {
         "type": "object",
         "description": "Raw resources fetched for one origin. Findings are derived from these client-side, so the response carries evidence rather than a verdict. There is deliberately no score, grade, or percentage.",
-        "required": ["targetUrl", "origin", "fetchedAt", "homepage", "llmsTxt", "robotsTxt"],
+        "required": [
+          "targetUrl",
+          "origin",
+          "fetchedAt",
+          "homepage",
+          "llmsTxt",
+          "robotsTxt"
+        ],
         "properties": {
-          "targetUrl": { "type": "string" },
-          "origin": { "type": "string" },
-          "fetchedAt": { "type": "string", "format": "date-time" },
+          "targetUrl": {
+            "type": "string"
+          },
+          "origin": {
+            "type": "string"
+          },
+          "fetchedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
           "normalizedFrom": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "description": "The caller's original input when it differed from the normalised target."
           },
-          "homepage": { "$ref": "#/components/schemas/RemoteResource" },
+          "homepage": {
+            "$ref": "#/components/schemas/RemoteResource"
+          },
           "homepageMarkdown": {
-            "oneOf": [{ "$ref": "#/components/schemas/RemoteResource" }, { "type": "null" }]
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/RemoteResource"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
-          "llmsTxt": { "$ref": "#/components/schemas/RemoteResource" },
-          "robotsTxt": { "$ref": "#/components/schemas/RemoteResource" },
+          "llmsTxt": {
+            "$ref": "#/components/schemas/RemoteResource"
+          },
+          "robotsTxt": {
+            "$ref": "#/components/schemas/RemoteResource"
+          },
           "sitemap": {
-            "oneOf": [{ "$ref": "#/components/schemas/RemoteResource" }, { "type": "null" }]
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/RemoteResource"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
-          "sitemapUrl": { "type": ["string", "null"] },
+          "sitemapUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "sitemapSource": {
-            "type": ["string", "null"],
-            "enum": ["robots", "default", null],
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "robots",
+              "default",
+              null
+            ],
             "description": "How the sitemap URL was discovered."
           },
           "samplePage": {
-            "oneOf": [{ "$ref": "#/components/schemas/RemoteResource" }, { "type": "null" }],
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/RemoteResource"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "description": "At most one same-origin linked page, sampled so checks stay cheap."
           },
           "samplePageMarkdown": {
-            "oneOf": [{ "$ref": "#/components/schemas/RemoteResource" }, { "type": "null" }]
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/RemoteResource"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
-          "cache": { "$ref": "#/components/schemas/CacheStatus" },
-          "protection": { "$ref": "#/components/schemas/ProtectionStatus" }
+          "cache": {
+            "$ref": "#/components/schemas/CacheStatus"
+          },
+          "protection": {
+            "$ref": "#/components/schemas/ProtectionStatus"
+          }
         }
       },
       "SecurityScanResponse": {
         "type": "object",
         "description": "Observed security posture for one origin, from passive checks only.",
-        "required": ["targetUrl", "origin", "fetchedAt", "homepage", "securityTxt", "dns"],
+        "required": [
+          "targetUrl",
+          "origin",
+          "fetchedAt",
+          "homepage",
+          "securityTxt",
+          "dns"
+        ],
         "properties": {
-          "targetUrl": { "type": "string" },
-          "origin": { "type": "string" },
-          "fetchedAt": { "type": "string", "format": "date-time" },
-          "normalizedFrom": { "type": ["string", "null"] },
-          "homepage": { "$ref": "#/components/schemas/RemoteResource" },
+          "targetUrl": {
+            "type": "string"
+          },
+          "origin": {
+            "type": "string"
+          },
+          "fetchedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "normalizedFrom": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "homepage": {
+            "$ref": "#/components/schemas/RemoteResource"
+          },
           "httpProbe": {
-            "type": ["object", "null"],
+            "type": [
+              "object",
+              "null"
+            ],
             "description": "Result of the first-hop plain-HTTP request, used to check redirect-to-HTTPS behaviour.",
             "additionalProperties": true
           },
-          "securityTxt": { "$ref": "#/components/schemas/RemoteResource" },
+          "securityTxt": {
+            "$ref": "#/components/schemas/RemoteResource"
+          },
           "securityTxtFallback": {
-            "oneOf": [{ "$ref": "#/components/schemas/RemoteResource" }, { "type": "null" }],
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/RemoteResource"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "description": "Legacy /security.txt location, checked when the well-known path is absent."
           },
           "crossOriginRedirect": {
@@ -308,17 +901,30 @@
             "type": "object",
             "description": "DNS-over-HTTPS lookups for email and zone-integrity records.",
             "properties": {
-              "spf": { "$ref": "#/components/schemas/DnsResult" },
-              "dmarc": { "$ref": "#/components/schemas/DnsResult" },
-              "dnssec": { "$ref": "#/components/schemas/DnsResult" }
+              "spf": {
+                "$ref": "#/components/schemas/DnsResult"
+              },
+              "dmarc": {
+                "$ref": "#/components/schemas/DnsResult"
+              },
+              "dnssec": {
+                "$ref": "#/components/schemas/DnsResult"
+              }
             }
           },
-          "cache": { "$ref": "#/components/schemas/CacheStatus" },
-          "protection": { "$ref": "#/components/schemas/ProtectionStatus" }
+          "cache": {
+            "$ref": "#/components/schemas/CacheStatus"
+          },
+          "protection": {
+            "$ref": "#/components/schemas/ProtectionStatus"
+          }
         }
       },
       "DnsResult": {
-        "type": ["object", "null"],
+        "type": [
+          "object",
+          "null"
+        ],
         "description": "One DNS-over-HTTPS lookup. Null when the lookup was skipped or timed out.",
         "additionalProperties": true
       },
@@ -326,20 +932,50 @@
         "type": "object",
         "description": "Short per-target cache used to avoid re-fetching the same origin repeatedly.",
         "properties": {
-          "hit": { "type": "boolean" },
-          "cachedAt": { "type": ["string", "null"], "format": "date-time" },
-          "expiresAt": { "type": ["string", "null"], "format": "date-time" }
+          "hit": {
+            "type": "boolean"
+          },
+          "cachedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
         }
       },
       "ProtectionStatus": {
         "type": "object",
         "description": "Current rate-limit position for the calling IP.",
         "properties": {
-          "rateLimitWindowSeconds": { "type": "integer" },
-          "maxChecksPerWindow": { "type": "integer" },
-          "remainingChecks": { "type": ["integer", "null"] },
-          "turnstileThreshold": { "type": ["integer", "null"] },
-          "turnstileVerified": { "type": "boolean" }
+          "rateLimitWindowSeconds": {
+            "type": "integer"
+          },
+          "maxChecksPerWindow": {
+            "type": "integer"
+          },
+          "remainingChecks": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "turnstileThreshold": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "turnstileVerified": {
+            "type": "boolean"
+          }
         }
       }
     }

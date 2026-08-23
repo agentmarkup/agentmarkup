@@ -19,14 +19,14 @@ function Blog() {
   return (
     <main>
       <div className="doc-page blog-index">
-        <header className="blog-index-header">
+        <div className="blog-index-header">
           <p className="section-kicker">AgentMarkup journal</p>
           <h1>Blog</h1>
           <p className="doc-intro">
             Technical writing about machine-readable websites, AI discoverability, and structured data.
             Written by <a href={author.profilePath}>{author.name}</a>, {author.role}.
           </p>
-        </header>
+        </div>
 
         <div className="topic-filter" aria-label="Filter articles by audience">
           <span>Show articles for</span>
