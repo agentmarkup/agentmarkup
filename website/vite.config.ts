@@ -280,6 +280,7 @@ export default defineConfig({
         learn: resolve(__dirname, 'learn/index.html'),
         'blog-index': resolve(__dirname, 'blog/index.html'),
         'blog-ai-crawler-audit-500-companies': resolve(__dirname, 'blog/ai-crawler-audit-500-companies/index.html'),
+        'blog-post-16': resolve(__dirname, 'blog/a-fix-is-not-a-verification/index.html'),
         'blog-post-15': resolve(__dirname, 'blog/soft-404-ai-discoverability-tools/index.html'),
         'blog-audit-ai-crawler-access': resolve(__dirname, 'blog/audit-ai-crawler-access/index.html'),
         'blog-nextjs-llms-txt-json-ld': resolve(__dirname, 'blog/nextjs-llms-txt-json-ld/index.html'),
@@ -313,6 +314,7 @@ export default defineConfig({
         'prerender-learn': resolve(__dirname, 'src/entries/learn.tsx'),
         'prerender-blog-index': resolve(__dirname, 'src/entries/blog-index.tsx'),
         'prerender-blog-ai-crawler-audit-500-companies': resolve(__dirname, 'src/entries/blog-post-14.tsx'),
+        'prerender-blog-post-16': resolve(__dirname, 'src/entries/blog-post-16.tsx'),
         'prerender-blog-post-15': resolve(__dirname, 'src/entries/blog-post-15.tsx'),
         'prerender-blog-audit-ai-crawler-access': resolve(__dirname, 'src/entries/blog-post-13.tsx'),
         'prerender-blog-nextjs-llms-txt-json-ld': resolve(__dirname, 'src/entries/blog-post-10.tsx'),
@@ -391,6 +393,7 @@ export default defineConfig({
           {
             title: 'Blog',
             entries: [
+              { title: 'The fix for our soft-404 published a second soft-404', url: '/blog/a-fix-is-not-a-verification/', description: 'A fix that recreated the same defect at a new URL, an H1 stripped as boilerplate, a cached audit that could not see the repair, and a lint command enforcing zero rules' },
               { title: 'agentmarkup.dev served a soft-404. Our own tooling missed it.', url: '/blog/soft-404-ai-discoverability-tools/', description: 'Why AI-discoverability audits and scores are not enough, what our own tools missed, and how build-time generation turns findings into site changes and CI gates' },
               { title: "We audited 500 of America's biggest companies for AI readiness", url: '/blog/ai-crawler-audit-500-companies/', description: 'We ran 500 of the largest US public companies through @agentmarkup/audit: most serve readable HTML, but 46% have no usable structured data, 86% have no llms.txt, and seven serve crawlers a blank page' },
               { title: 'See your site like AI crawlers do', url: '/blog/audit-ai-crawler-access/', description: 'Fetch any live URL as each major AI crawler with @agentmarkup/audit, diff against a browser, and catch machine-readability issues in CI' },

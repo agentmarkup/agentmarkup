@@ -98,22 +98,100 @@
             }
           },
           "400": {
-            "$ref": "#/components/responses/InvalidRequest"
+            "description": "The supplied target was missing, malformed, or not a public http(s) address.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Enter a public http:// or https:// website URL.",
+                  "code": "invalid_request"
+                }
+              }
+            }
           },
           "403": {
-            "$ref": "#/components/responses/VerificationRequired"
+            "description": "Repeated requests from this IP require a Cloudflare Turnstile token. Solve the challenge with the returned site key and retry the POST form with `turnstileToken`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Additional verification is required before running more checks from this IP.",
+                  "code": "verification_required",
+                  "turnstileRequired": true
+                }
+              }
+            }
           },
           "405": {
-            "$ref": "#/components/responses/MethodNotAllowed"
+            "description": "The HTTP method is not supported for this endpoint.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Method not allowed. Use POST.",
+                  "code": "method_not_allowed"
+                }
+              }
+            }
           },
           "429": {
-            "$ref": "#/components/responses/RateLimited"
+            "description": "Too many checker or security scan requests from this IP. Wait for the period given by the `Retry-After` header.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Too many checker or security scan requests came from this IP recently.",
+                  "code": "rate_limited",
+                  "retryAfterSeconds": 240
+                }
+              }
+            }
           },
           "404": {
-            "$ref": "#/components/responses/NotFound"
+            "description": "No API endpoint exists at this path.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "No API endpoint at /api/v1/nope.",
+                  "code": "not_found",
+                  "documentation": "https://agentmarkup.dev/openapi.json"
+                }
+              }
+            }
           },
           "500": {
-            "$ref": "#/components/responses/ServerError"
+            "description": "An unexpected server-side failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "The request could not be completed.",
+                  "code": "server_error"
+                }
+              }
+            }
           }
         }
       },
@@ -172,22 +250,100 @@
             }
           },
           "400": {
-            "$ref": "#/components/responses/InvalidRequest"
+            "description": "The supplied target was missing, malformed, or not a public http(s) address.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Enter a public http:// or https:// website URL.",
+                  "code": "invalid_request"
+                }
+              }
+            }
           },
           "403": {
-            "$ref": "#/components/responses/VerificationRequired"
+            "description": "Repeated requests from this IP require a Cloudflare Turnstile token. Solve the challenge with the returned site key and retry the POST form with `turnstileToken`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Additional verification is required before running more checks from this IP.",
+                  "code": "verification_required",
+                  "turnstileRequired": true
+                }
+              }
+            }
           },
           "405": {
-            "$ref": "#/components/responses/MethodNotAllowed"
+            "description": "The HTTP method is not supported for this endpoint.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Method not allowed. Use POST.",
+                  "code": "method_not_allowed"
+                }
+              }
+            }
           },
           "429": {
-            "$ref": "#/components/responses/RateLimited"
+            "description": "Too many checker or security scan requests from this IP. Wait for the period given by the `Retry-After` header.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Too many checker or security scan requests came from this IP recently.",
+                  "code": "rate_limited",
+                  "retryAfterSeconds": 240
+                }
+              }
+            }
           },
           "404": {
-            "$ref": "#/components/responses/NotFound"
+            "description": "No API endpoint exists at this path.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "No API endpoint at /api/v1/nope.",
+                  "code": "not_found",
+                  "documentation": "https://agentmarkup.dev/openapi.json"
+                }
+              }
+            }
           },
           "500": {
-            "$ref": "#/components/responses/ServerError"
+            "description": "An unexpected server-side failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "The request could not be completed.",
+                  "code": "server_error"
+                }
+              }
+            }
           }
         }
       }
@@ -253,22 +409,100 @@
             }
           },
           "400": {
-            "$ref": "#/components/responses/InvalidRequest"
+            "description": "The supplied target was missing, malformed, or not a public http(s) address.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Enter a public http:// or https:// website URL.",
+                  "code": "invalid_request"
+                }
+              }
+            }
           },
           "403": {
-            "$ref": "#/components/responses/VerificationRequired"
+            "description": "Repeated requests from this IP require a Cloudflare Turnstile token. Solve the challenge with the returned site key and retry the POST form with `turnstileToken`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Additional verification is required before running more checks from this IP.",
+                  "code": "verification_required",
+                  "turnstileRequired": true
+                }
+              }
+            }
           },
           "405": {
-            "$ref": "#/components/responses/MethodNotAllowed"
+            "description": "The HTTP method is not supported for this endpoint.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Method not allowed. Use POST.",
+                  "code": "method_not_allowed"
+                }
+              }
+            }
           },
           "429": {
-            "$ref": "#/components/responses/RateLimited"
+            "description": "Too many checker or security scan requests from this IP. Wait for the period given by the `Retry-After` header.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Too many checker or security scan requests came from this IP recently.",
+                  "code": "rate_limited",
+                  "retryAfterSeconds": 240
+                }
+              }
+            }
           },
           "404": {
-            "$ref": "#/components/responses/NotFound"
+            "description": "No API endpoint exists at this path.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "No API endpoint at /api/v1/nope.",
+                  "code": "not_found",
+                  "documentation": "https://agentmarkup.dev/openapi.json"
+                }
+              }
+            }
           },
           "500": {
-            "$ref": "#/components/responses/ServerError"
+            "description": "An unexpected server-side failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "The request could not be completed.",
+                  "code": "server_error"
+                }
+              }
+            }
           }
         }
       },
@@ -327,22 +561,100 @@
             }
           },
           "400": {
-            "$ref": "#/components/responses/InvalidRequest"
+            "description": "The supplied target was missing, malformed, or not a public http(s) address.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Enter a public http:// or https:// website URL.",
+                  "code": "invalid_request"
+                }
+              }
+            }
           },
           "403": {
-            "$ref": "#/components/responses/VerificationRequired"
+            "description": "Repeated requests from this IP require a Cloudflare Turnstile token. Solve the challenge with the returned site key and retry the POST form with `turnstileToken`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Additional verification is required before running more checks from this IP.",
+                  "code": "verification_required",
+                  "turnstileRequired": true
+                }
+              }
+            }
           },
           "405": {
-            "$ref": "#/components/responses/MethodNotAllowed"
+            "description": "The HTTP method is not supported for this endpoint.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Method not allowed. Use POST.",
+                  "code": "method_not_allowed"
+                }
+              }
+            }
           },
           "429": {
-            "$ref": "#/components/responses/RateLimited"
+            "description": "Too many checker or security scan requests from this IP. Wait for the period given by the `Retry-After` header.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Too many checker or security scan requests came from this IP recently.",
+                  "code": "rate_limited",
+                  "retryAfterSeconds": 240
+                }
+              }
+            }
           },
           "404": {
-            "$ref": "#/components/responses/NotFound"
+            "description": "No API endpoint exists at this path.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "No API endpoint at /api/v1/nope.",
+                  "code": "not_found",
+                  "documentation": "https://agentmarkup.dev/openapi.json"
+                }
+              }
+            }
           },
           "500": {
-            "$ref": "#/components/responses/ServerError"
+            "description": "An unexpected server-side failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "The request could not be completed.",
+                  "code": "server_error"
+                }
+              }
+            }
           }
         }
       }
@@ -403,22 +715,99 @@
             }
           },
           "400": {
-            "$ref": "#/components/responses/InvalidRequest"
+            "description": "The supplied target was missing, malformed, or not a public http(s) address.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Enter a public http:// or https:// website URL.",
+                  "code": "invalid_request"
+                }
+              }
+            }
           },
           "403": {
-            "$ref": "#/components/responses/Forbidden"
+            "description": "A cross-site browser request was rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Cross-site requests are not allowed.",
+                  "code": "cross_site_forbidden"
+                }
+              }
+            }
           },
           "405": {
-            "$ref": "#/components/responses/MethodNotAllowed"
+            "description": "The HTTP method is not supported for this endpoint.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Method not allowed. Use POST.",
+                  "code": "method_not_allowed"
+                }
+              }
+            }
           },
           "429": {
-            "$ref": "#/components/responses/RateLimited"
+            "description": "Too many checker or security scan requests from this IP. Wait for the period given by the `Retry-After` header.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Too many checker or security scan requests came from this IP recently.",
+                  "code": "rate_limited",
+                  "retryAfterSeconds": 240
+                }
+              }
+            }
           },
           "404": {
-            "$ref": "#/components/responses/NotFound"
+            "description": "No API endpoint exists at this path.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "No API endpoint at /api/v1/nope.",
+                  "code": "not_found",
+                  "documentation": "https://agentmarkup.dev/openapi.json"
+                }
+              }
+            }
           },
           "500": {
-            "$ref": "#/components/responses/ServerError"
+            "description": "An unexpected server-side failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "The request could not be completed.",
+                  "code": "server_error"
+                }
+              }
+            }
           }
         }
       }
@@ -479,140 +868,105 @@
             }
           },
           "400": {
-            "$ref": "#/components/responses/InvalidRequest"
+            "description": "The supplied target was missing, malformed, or not a public http(s) address.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Enter a public http:// or https:// website URL.",
+                  "code": "invalid_request"
+                }
+              }
+            }
           },
           "403": {
-            "$ref": "#/components/responses/Forbidden"
+            "description": "A cross-site browser request was rejected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Cross-site requests are not allowed.",
+                  "code": "cross_site_forbidden"
+                }
+              }
+            }
           },
           "405": {
-            "$ref": "#/components/responses/MethodNotAllowed"
+            "description": "The HTTP method is not supported for this endpoint.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Method not allowed. Use POST.",
+                  "code": "method_not_allowed"
+                }
+              }
+            }
           },
           "429": {
-            "$ref": "#/components/responses/RateLimited"
+            "description": "Too many checker or security scan requests from this IP. Wait for the period given by the `Retry-After` header.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Too many checker or security scan requests came from this IP recently.",
+                  "code": "rate_limited",
+                  "retryAfterSeconds": 240
+                }
+              }
+            }
           },
           "404": {
-            "$ref": "#/components/responses/NotFound"
+            "description": "No API endpoint exists at this path.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "No API endpoint at /api/v1/nope.",
+                  "code": "not_found",
+                  "documentation": "https://agentmarkup.dev/openapi.json"
+                }
+              }
+            }
           },
           "500": {
-            "$ref": "#/components/responses/ServerError"
+            "description": "An unexpected server-side failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "The request could not be completed.",
+                  "code": "server_error"
+                }
+              }
+            }
           }
         }
       }
     }
   },
   "components": {
-    "responses": {
-      "InvalidRequest": {
-        "description": "The supplied target was missing, malformed, or not a public http(s) address.",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            },
-            "example": {
-              "error": "Enter a public http:// or https:// website URL.",
-              "code": "invalid_request"
-            }
-          }
-        }
-      },
-      "MethodNotAllowed": {
-        "description": "The HTTP method is not supported for this endpoint.",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            },
-            "example": {
-              "error": "Method not allowed. Use POST.",
-              "code": "method_not_allowed"
-            }
-          }
-        }
-      },
-      "Forbidden": {
-        "description": "A cross-site browser request was rejected.",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            },
-            "example": {
-              "error": "Cross-site requests are not allowed.",
-              "code": "cross_site_forbidden"
-            }
-          }
-        }
-      },
-      "VerificationRequired": {
-        "description": "Repeated requests from this IP require a Cloudflare Turnstile token. Solve the challenge with the returned site key and retry the POST form with `turnstileToken`.",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            },
-            "example": {
-              "error": "Additional verification is required before running more checks from this IP.",
-              "code": "verification_required",
-              "turnstileRequired": true
-            }
-          }
-        }
-      },
-      "RateLimited": {
-        "description": "Too many checker or security scan requests from this IP. Wait for the period given by the `Retry-After` header.",
-        "headers": {
-          "Retry-After": {
-            "description": "Seconds to wait before retrying.",
-            "schema": {
-              "type": "integer",
-              "minimum": 1
-            }
-          }
-        },
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            },
-            "example": {
-              "error": "Too many checker or security scan requests came from this IP recently.",
-              "code": "rate_limited",
-              "retryAfterSeconds": 240
-            }
-          }
-        }
-      },
-      "NotFound": {
-        "description": "No API endpoint exists at this path.",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            },
-            "example": {
-              "error": "No API endpoint at /api/v1/nope.",
-              "code": "not_found",
-              "documentation": "https://agentmarkup.dev/openapi.json"
-            }
-          }
-        }
-      },
-      "ServerError": {
-        "description": "An unexpected server-side failure.",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            },
-            "example": {
-              "error": "The request could not be completed.",
-              "code": "server_error"
-            }
-          }
-        }
-      }
-    },
     "schemas": {
       "CheckRequest": {
         "type": "object",

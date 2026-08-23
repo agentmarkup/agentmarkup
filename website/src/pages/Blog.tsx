@@ -10,7 +10,7 @@ function Blog() {
   const featured = blogPosts[0]
   const groups = [
     { label: 'AI visibility and research', posts: blogPosts.filter((post) => ['ai-crawler-audit-500-companies', 'audit-ai-crawler-access', 'website-checker', 'brand-awareness-ai', 'ecommerce-llm-optimization', 'what-is-geo'].includes(post.slug)) },
-    { label: 'Implementation guides', posts: blogPosts.filter((post) => ['soft-404-ai-discoverability-tools', 'nuxt-llms-txt-json-ld', 'agentmarkup-cli-any-static-site', 'nextjs-llms-txt-json-ld', 'markdown-mirrors', 'when-markdown-mirrors-help'].includes(post.slug)) },
+    { label: 'Implementation guides', posts: blogPosts.filter((post) => ['a-fix-is-not-a-verification', 'soft-404-ai-discoverability-tools', 'nuxt-llms-txt-json-ld', 'agentmarkup-cli-any-static-site', 'nextjs-llms-txt-json-ld', 'markdown-mirrors', 'when-markdown-mirrors-help'].includes(post.slug)) },
     { label: 'Machine-readable foundations', posts: blogPosts.filter((post) => ['ai-crawlers-2026', 'json-ld-structured-data-guide', 'why-llms-txt-matters'].includes(post.slug)) },
   ]
   const matchesFilter = (audience: string) => filter === 'all' || audience === filter

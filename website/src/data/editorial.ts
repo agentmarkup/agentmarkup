@@ -44,6 +44,16 @@ export const editorialLabels = {
 
 export const blogPosts: BlogPostMeta[] = [
   {
+    slug: 'a-fix-is-not-a-verification',
+    title: 'The fix for our soft-404 published a second soft-404',
+    description: 'The soft-404 fix published /404.md, an extractor hid our H1, a cached audit hid the repair, and a green lint command enforced zero rules. What verification has to prove.',
+    date: '2026-08-23',
+    readingTime: '7 min read',
+    audience: 'technical',
+    topic: 'implementation',
+    level: 'intermediate',
+  },
+  {
     slug: 'soft-404-ai-discoverability-tools',
     title: 'agentmarkup.dev served a soft-404. Our own tooling missed it.',
     description: 'A snapshot of two Claude plugin catalogs found 23 entries near AI discoverability, almost all auditing or scoring. agentmarkup instead emits the artifacts at build time and can gate CI.',
