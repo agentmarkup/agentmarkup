@@ -327,7 +327,7 @@
       "Blog"
     ],
     "h2": [
-      "The fix for our soft-404 published a second soft-404",
+      "agentmarkup.dev served a soft-404. Our own tooling missed it.",
       "AI visibility and research",
       "Implementation guides",
       "Machine-readable foundations"
@@ -342,7 +342,6 @@
     ],
     "internalLinks": [
       "/authors/sebastian-cochinescu/",
-      "/blog/a-fix-is-not-a-verification/",
       "/blog/agentmarkup-cli-any-static-site/",
       "/blog/ai-crawler-audit-500-companies/",
       "/blog/ai-crawlers-2026/",
@@ -475,7 +474,7 @@
     "internalLinks": [
       "/authors/sebastian-cochinescu/",
       "/blog/",
-      "/blog/a-fix-is-not-a-verification/",
+      "/blog/agentmarkup-cli-any-static-site/",
       "/blog/ai-crawlers-2026/",
       "/blog/nuxt-llms-txt-json-ld/",
       "/blog/soft-404-ai-discoverability-tools/",
@@ -516,11 +515,11 @@
     "internalLinks": [
       "/authors/sebastian-cochinescu/",
       "/blog/",
-      "/blog/a-fix-is-not-a-verification/",
       "/blog/ai-crawler-audit-500-companies/",
       "/blog/audit-ai-crawler-access/",
       "/blog/ecommerce-llm-optimization/",
       "/blog/json-ld-structured-data-guide/",
+      "/blog/soft-404-ai-discoverability-tools/",
       "/blog/website-checker/",
       "/docs/ai-crawlers/",
       "/docs/json-ld/",
@@ -561,9 +560,9 @@
     "internalLinks": [
       "/authors/sebastian-cochinescu/",
       "/blog/",
-      "/blog/a-fix-is-not-a-verification/",
       "/blog/ai-crawlers-2026/",
       "/blog/brand-awareness-ai/",
+      "/blog/soft-404-ai-discoverability-tools/",
       "/blog/website-checker/",
       "/blog/what-is-geo/",
       "/blog/why-llms-txt-matters/"
@@ -604,9 +603,9 @@
     "internalLinks": [
       "/authors/sebastian-cochinescu/",
       "/blog/",
-      "/blog/a-fix-is-not-a-verification/",
       "/blog/ecommerce-llm-optimization/",
       "/blog/markdown-mirrors/",
+      "/blog/soft-404-ai-discoverability-tools/",
       "/blog/website-checker/",
       "/blog/what-is-geo/",
       "/blog/why-llms-txt-matters/"
@@ -649,7 +648,7 @@
     "internalLinks": [
       "/authors/sebastian-cochinescu/",
       "/blog/",
-      "/blog/a-fix-is-not-a-verification/",
+      "/blog/agentmarkup-cli-any-static-site/",
       "/blog/brand-awareness-ai/",
       "/blog/nuxt-llms-txt-json-ld/",
       "/blog/soft-404-ai-discoverability-tools/",
@@ -733,8 +732,8 @@
     "internalLinks": [
       "/authors/sebastian-cochinescu/",
       "/blog/",
-      "/blog/a-fix-is-not-a-verification/",
       "/blog/nextjs-llms-txt-json-ld/",
+      "/blog/soft-404-ai-discoverability-tools/",
       "/blog/website-checker/",
       "/blog/what-is-geo/",
       "/blog/why-llms-txt-matters/",
@@ -775,8 +774,8 @@
     "internalLinks": [
       "/authors/sebastian-cochinescu/",
       "/blog/",
-      "/blog/a-fix-is-not-a-verification/",
       "/blog/agentmarkup-cli-any-static-site/",
+      "/blog/markdown-mirrors/",
       "/blog/nuxt-llms-txt-json-ld/",
       "/blog/soft-404-ai-discoverability-tools/",
       "/blog/website-checker/",
@@ -819,9 +818,9 @@
     "internalLinks": [
       "/authors/sebastian-cochinescu/",
       "/blog/",
-      "/blog/a-fix-is-not-a-verification/",
       "/blog/agentmarkup-cli-any-static-site/",
       "/blog/audit-ai-crawler-access/",
+      "/blog/markdown-mirrors/",
       "/blog/nextjs-llms-txt-json-ld/",
       "/blog/soft-404-ai-discoverability-tools/",
       "/blog/website-checker/",
@@ -862,12 +861,12 @@
     "internalLinks": [
       "/authors/sebastian-cochinescu/",
       "/blog/",
-      "/blog/a-fix-is-not-a-verification/",
       "/blog/markdown-mirrors/",
       "/blog/nextjs-llms-txt-json-ld/",
       "/blog/nuxt-llms-txt-json-ld/",
       "/blog/soft-404-ai-discoverability-tools/",
       "/blog/website-checker/",
+      "/blog/when-markdown-mirrors-help/",
       "/docs/ai-crawlers/",
       "/docs/json-ld/",
       "/docs/llms-txt/"
@@ -903,11 +902,11 @@
     "internalLinks": [
       "/authors/sebastian-cochinescu/",
       "/blog/",
-      "/blog/a-fix-is-not-a-verification/",
       "/blog/ai-crawler-audit-500-companies/",
       "/blog/ai-crawlers-2026/",
       "/blog/markdown-mirrors/",
       "/blog/nuxt-llms-txt-json-ld/",
+      "/blog/soft-404-ai-discoverability-tools/",
       "/blog/website-checker/",
       "/checker/",
       "/docs/ai-crawlers/",
@@ -947,7 +946,7 @@
     "internalLinks": [
       "/authors/sebastian-cochinescu/",
       "/blog/",
-      "/blog/a-fix-is-not-a-verification/",
+      "/blog/agentmarkup-cli-any-static-site/",
       "/blog/ai-crawlers-2026/",
       "/blog/audit-ai-crawler-access/",
       "/blog/nuxt-llms-txt-json-ld/",
@@ -957,45 +956,6 @@
       "/docs/audit/",
       "/docs/json-ld/",
       "/docs/llms-txt/"
-    ],
-    "prerendered": true,
-    "rawH1Count": 1
-  },
-  {
-    "route": "/blog/a-fix-is-not-a-verification/",
-    "title": "The fix for our soft-404 published a second soft-404 - agentmarkup",
-    "description": "The soft-404 fix published /404.md, an extractor hid our H1, a cached audit hid the repair, and a green lint command enforced zero rules. What verification has to prove.",
-    "canonical": "https://agentmarkup.dev/blog/a-fix-is-not-a-verification/",
-    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
-    "h1": [
-      "The fix for our soft-404 published a second soft-404"
-    ],
-    "h2": [
-      "The fix created a real page that should not exist",
-      "The H1 was present and still invisible",
-      "Our own thin-HTML check has the same blind spot",
-      "The verification command returned an old result",
-      "A green lint check was enforcing zero rules",
-      "Validate the artifact, then validate the check",
-      "More from the blog"
-    ],
-    "sectionIds": [],
-    "schemaTypes": [
-      "Article",
-      "ContactPoint",
-      "Organization",
-      "Person",
-      "PostalAddress",
-      "WebSite"
-    ],
-    "internalLinks": [
-      "/authors/sebastian-cochinescu/",
-      "/blog/",
-      "/blog/agentmarkup-cli-any-static-site/",
-      "/blog/nextjs-llms-txt-json-ld/",
-      "/blog/nuxt-llms-txt-json-ld/",
-      "/blog/soft-404-ai-discoverability-tools/",
-      "/blog/website-checker/"
     ],
     "prerendered": true,
     "rawH1Count": 1
@@ -1030,7 +990,6 @@
     "internalLinks": [
       "/authors/sebastian-cochinescu/",
       "/blog/",
-      "/blog/a-fix-is-not-a-verification/",
       "/blog/agentmarkup-cli-any-static-site/",
       "/blog/ai-crawler-audit-500-companies/",
       "/blog/nextjs-llms-txt-json-ld/",
@@ -1063,7 +1022,6 @@
       "WebSite"
     ],
     "internalLinks": [
-      "/blog/a-fix-is-not-a-verification/",
       "/blog/agentmarkup-cli-any-static-site/",
       "/blog/ai-crawler-audit-500-companies/",
       "/blog/ai-crawlers-2026/",

@@ -43,20 +43,16 @@ function Soft404DiscoverabilityTools() {
             checker nor <code>@agentmarkup/audit</code> requests a path that
             should not exist. Both defend against soft-404 responses on the
             assets they already fetch, but neither performs a deliberate probe.
-            My own tooling did not catch my own mistake. That is a known gap,
-            and I intend to close it.
+            That gap is worth naming rather than glossing over.
           </p>
           <p className="post-update">
-            <strong>Update, later the same day:</strong> the gap is closed. Both
-            surfaces now make one deliberate request to a path that should not
-            exist and compare the response against the homepage. A 404 or 410
-            passes; a 200 whose body matches the homepage is an error, because
-            every path then appears to exist; a 200 with a different body is a
-            warning; and a probe that never completes reports that the check
-            could not be made rather than asserting a defect, because a timeout
-            and a soft-404 are not the same thing. It shipped in{' '}
-            <code>@agentmarkup/audit</code> 0.2.5 and is live in the hosted
-            checker.
+            <strong>Update:</strong> this check now ships. Both{' '}
+            <code>@agentmarkup/audit</code> 0.2.5 and the hosted checker request
+            a path that should not exist and compare the response against the
+            homepage. A 404 or 410 passes. A 200 matching the homepage is an
+            error, because every path then appears to exist. A probe that never
+            completes reports that the check could not be made, because a
+            timeout and a soft-404 are not the same thing.
           </p>
           <p>
             The honest output is a

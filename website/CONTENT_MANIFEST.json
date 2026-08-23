@@ -115,11 +115,6 @@
     "heading": "We ran 500 of America's biggest companies through an AI-crawler audit"
   },
   {
-    "route": "/blog/a-fix-is-not-a-verification/",
-    "source": "src/pages/BlogPost16.tsx",
-    "heading": "The fix for our soft-404 published a second soft-404"
-  },
-  {
     "route": "/blog/soft-404-ai-discoverability-tools/",
     "source": "src/pages/BlogPost15.tsx",
     "heading": "agentmarkup.dev served a soft-404. Our own tooling missed it."
