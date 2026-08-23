@@ -44,6 +44,16 @@ export const editorialLabels = {
 
 export const blogPosts: BlogPostMeta[] = [
   {
+    slug: 'soft-404-ai-discoverability-tools',
+    title: 'agentmarkup.dev served a soft-404. Our own tooling missed it.',
+    description: 'A snapshot of two Claude plugin catalogs found 23 entries near AI discoverability, almost all auditing or scoring. agentmarkup instead emits the artifacts at build time and can gate CI.',
+    date: '2026-08-23',
+    readingTime: '5 min read',
+    audience: 'technical',
+    topic: 'implementation',
+    level: 'intermediate',
+  },
+  {
     slug: 'ai-crawler-audit-500-companies',
     title: "We ran 500 of America's biggest companies through an AI-crawler audit",
     description: 'We fetched 500 corporate homepages the way ChatGPT, Claude, and Perplexity do. Most serve readable HTML, but 46% have no usable structured data, 86% have no llms.txt, and seven serve crawlers a blank page. Built for Google, not yet for AI agents.',

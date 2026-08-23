@@ -22,6 +22,7 @@
   { "route": "/blog/agentmarkup-cli-any-static-site/", "source": "src/pages/BlogPost12.tsx", "heading": "Run agentmarkup on any static site with the CLI" },
   { "route": "/blog/audit-ai-crawler-access/", "source": "src/pages/BlogPost13.tsx", "heading": "See your website the way AI crawlers do" },
   { "route": "/blog/ai-crawler-audit-500-companies/", "source": "src/pages/BlogPost14.tsx", "heading": "We ran 500 of America's biggest companies through an AI-crawler audit" },
+  { "route": "/blog/soft-404-ai-discoverability-tools/", "source": "src/pages/BlogPost15.tsx", "heading": "agentmarkup.dev served a soft-404. Our own tooling missed it." },
   { "route": "/authors/sebastian-cochinescu/", "source": "src/pages/AuthorProfile.tsx", "heading": "Sebastian Cochinescu" },
   { "route": "/license/", "source": "src/pages/License.tsx", "heading": "MIT License" },
   { "route": "/terms/", "source": "src/pages/Terms.tsx", "heading": "Terms of Service" },

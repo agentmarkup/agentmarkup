@@ -41,9 +41,9 @@ describe('TOC slugging', () => {
 })
 
 describe('route and content preservation manifest', () => {
-  it('covers every one of the 30 public routes exactly once', () => {
-    expect(manifest).toHaveLength(30)
-    expect(new Set(manifest.map((entry) => entry.route)).size).toBe(30)
+  it('covers every one of the 31 public routes exactly once', () => {
+    expect(manifest).toHaveLength(31)
+    expect(new Set(manifest.map((entry) => entry.route)).size).toBe(31)
   })
 
   for (const entry of manifest) {
@@ -61,8 +61,8 @@ describe('route and content preservation manifest', () => {
 })
 
 describe('editorial learning metadata', () => {
-  it('classifies all 14 articles for audience-first navigation', () => {
-    expect(blogPosts).toHaveLength(14)
+  it('classifies all 15 articles for audience-first navigation', () => {
+    expect(blogPosts).toHaveLength(15)
     for (const post of blogPosts) {
       expect(['plain-language', 'technical', 'research']).toContain(post.audience)
       expect(['discoverability', 'structured-data', 'crawler-access', 'implementation', 'business']).toContain(post.topic)

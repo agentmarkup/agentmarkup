@@ -327,7 +327,7 @@
       "Blog"
     ],
     "h2": [
-      "We ran 500 of America's biggest companies through an AI-crawler audit",
+      "agentmarkup.dev served a soft-404. Our own tooling missed it.",
       "AI visibility and research",
       "Implementation guides",
       "Machine-readable foundations"
@@ -352,6 +352,7 @@
       "/blog/markdown-mirrors/",
       "/blog/nextjs-llms-txt-json-ld/",
       "/blog/nuxt-llms-txt-json-ld/",
+      "/blog/soft-404-ai-discoverability-tools/",
       "/blog/website-checker/",
       "/blog/what-is-geo/",
       "/blog/when-markdown-mirrors-help/",
@@ -475,8 +476,8 @@
       "/blog/",
       "/blog/agentmarkup-cli-any-static-site/",
       "/blog/ai-crawlers-2026/",
-      "/blog/nextjs-llms-txt-json-ld/",
       "/blog/nuxt-llms-txt-json-ld/",
+      "/blog/soft-404-ai-discoverability-tools/",
       "/blog/website-checker/",
       "/blog/what-is-geo/",
       "/docs/json-ld/"
@@ -518,7 +519,7 @@
       "/blog/audit-ai-crawler-access/",
       "/blog/ecommerce-llm-optimization/",
       "/blog/json-ld-structured-data-guide/",
-      "/blog/nuxt-llms-txt-json-ld/",
+      "/blog/soft-404-ai-discoverability-tools/",
       "/blog/website-checker/",
       "/docs/ai-crawlers/",
       "/docs/json-ld/",
@@ -559,9 +560,9 @@
     "internalLinks": [
       "/authors/sebastian-cochinescu/",
       "/blog/",
-      "/blog/ai-crawler-audit-500-companies/",
       "/blog/ai-crawlers-2026/",
       "/blog/brand-awareness-ai/",
+      "/blog/soft-404-ai-discoverability-tools/",
       "/blog/website-checker/",
       "/blog/what-is-geo/",
       "/blog/why-llms-txt-matters/"
@@ -602,9 +603,9 @@
     "internalLinks": [
       "/authors/sebastian-cochinescu/",
       "/blog/",
-      "/blog/ai-crawler-audit-500-companies/",
       "/blog/ecommerce-llm-optimization/",
       "/blog/markdown-mirrors/",
+      "/blog/soft-404-ai-discoverability-tools/",
       "/blog/website-checker/",
       "/blog/what-is-geo/",
       "/blog/why-llms-txt-matters/"
@@ -649,8 +650,8 @@
       "/blog/",
       "/blog/agentmarkup-cli-any-static-site/",
       "/blog/brand-awareness-ai/",
-      "/blog/nextjs-llms-txt-json-ld/",
       "/blog/nuxt-llms-txt-json-ld/",
+      "/blog/soft-404-ai-discoverability-tools/",
       "/blog/website-checker/",
       "/docs/audit/",
       "/docs/llms-txt/"
@@ -732,7 +733,7 @@
       "/authors/sebastian-cochinescu/",
       "/blog/",
       "/blog/nextjs-llms-txt-json-ld/",
-      "/blog/nuxt-llms-txt-json-ld/",
+      "/blog/soft-404-ai-discoverability-tools/",
       "/blog/website-checker/",
       "/blog/what-is-geo/",
       "/blog/why-llms-txt-matters/",
@@ -774,9 +775,9 @@
       "/authors/sebastian-cochinescu/",
       "/blog/",
       "/blog/agentmarkup-cli-any-static-site/",
-      "/blog/ai-crawlers-2026/",
       "/blog/markdown-mirrors/",
       "/blog/nuxt-llms-txt-json-ld/",
+      "/blog/soft-404-ai-discoverability-tools/",
       "/blog/website-checker/",
       "/blog/when-markdown-mirrors-help/",
       "/docs/ai-crawlers/",
@@ -821,8 +822,8 @@
       "/blog/audit-ai-crawler-access/",
       "/blog/markdown-mirrors/",
       "/blog/nextjs-llms-txt-json-ld/",
+      "/blog/soft-404-ai-discoverability-tools/",
       "/blog/website-checker/",
-      "/blog/when-markdown-mirrors-help/",
       "/docs/ai-crawlers/",
       "/docs/json-ld/",
       "/docs/llms-txt/"
@@ -860,10 +861,10 @@
     "internalLinks": [
       "/authors/sebastian-cochinescu/",
       "/blog/",
-      "/blog/ai-crawlers-2026/",
       "/blog/markdown-mirrors/",
       "/blog/nextjs-llms-txt-json-ld/",
       "/blog/nuxt-llms-txt-json-ld/",
+      "/blog/soft-404-ai-discoverability-tools/",
       "/blog/website-checker/",
       "/blog/when-markdown-mirrors-help/",
       "/docs/ai-crawlers/",
@@ -901,11 +902,11 @@
     "internalLinks": [
       "/authors/sebastian-cochinescu/",
       "/blog/",
-      "/blog/agentmarkup-cli-any-static-site/",
       "/blog/ai-crawler-audit-500-companies/",
       "/blog/ai-crawlers-2026/",
       "/blog/markdown-mirrors/",
       "/blog/nuxt-llms-txt-json-ld/",
+      "/blog/soft-404-ai-discoverability-tools/",
       "/blog/website-checker/",
       "/checker/",
       "/docs/ai-crawlers/",
@@ -949,11 +950,51 @@
       "/blog/ai-crawlers-2026/",
       "/blog/audit-ai-crawler-access/",
       "/blog/nuxt-llms-txt-json-ld/",
+      "/blog/soft-404-ai-discoverability-tools/",
       "/checker/",
       "/docs/ai-crawlers/",
       "/docs/audit/",
       "/docs/json-ld/",
       "/docs/llms-txt/"
+    ],
+    "prerendered": true,
+    "rawH1Count": 1
+  },
+  {
+    "route": "/blog/soft-404-ai-discoverability-tools/",
+    "title": "agentmarkup.dev served a soft-404. Our own tooling missed it. - agentmarkup",
+    "description": "A review of 2,567 Claude plugins found 23 near AI discoverability, almost all auditing or scoring. agentmarkup instead emits the artifacts at build time and can gate CI.",
+    "canonical": "https://agentmarkup.dev/blog/soft-404-ai-discoverability-tools/",
+    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+    "h1": [
+      "agentmarkup.dev served a soft-404. Our own tooling missed it."
+    ],
+    "h2": [
+      "The bug was real, and the blind spot was ours",
+      "In Claude's plugin catalogs, most of these tools stop at the report",
+      "What a build integration does instead",
+      "No score is part of the honesty",
+      "Why I built it this way",
+      "Use the plugin where you already work",
+      "More from the blog"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "Article",
+      "ContactPoint",
+      "Organization",
+      "Person",
+      "PostalAddress",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/authors/sebastian-cochinescu/",
+      "/blog/",
+      "/blog/agentmarkup-cli-any-static-site/",
+      "/blog/ai-crawler-audit-500-companies/",
+      "/blog/nextjs-llms-txt-json-ld/",
+      "/blog/nuxt-llms-txt-json-ld/",
+      "/blog/website-checker/"
     ],
     "prerendered": true,
     "rawH1Count": 1
@@ -991,6 +1032,7 @@
       "/blog/markdown-mirrors/",
       "/blog/nextjs-llms-txt-json-ld/",
       "/blog/nuxt-llms-txt-json-ld/",
+      "/blog/soft-404-ai-discoverability-tools/",
       "/blog/website-checker/",
       "/blog/what-is-geo/",
       "/blog/when-markdown-mirrors-help/",
