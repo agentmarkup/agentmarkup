@@ -1,6 +1,6 @@
 {
   "name": "@agentmarkup/audit",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Audit a live URL the way AI crawlers see it: fetch as GPTBot, ClaudeBot, PerplexityBot and more, diff against a browser to catch accidental CDN blocks and JS-gated content, plus llms.txt, JSON-LD, robots.txt intent, Content-Signal, markdown mirror, sitemap, and page-metadata checks",
   "type": "module",
   "license": "MIT",
