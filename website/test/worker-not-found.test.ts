@@ -200,6 +200,49 @@ describe('worker not-found handling', () => {
   })
 })
 
+describe('worker API surface', () => {
+  it('answers JSON, never HTML, for any unknown path under /api', async () => {
+    for (const path of ['/api', '/api/', '/api/docs', '/api/v2/check', '/api/deep/nested/path']) {
+      const response = await worker.fetch(request(path), makeEnv())
+
+      expect(response.status).toBe(404)
+      expect(response.headers.get('content-type')).toContain('application/json')
+      const payload = (await response.json()) as { code: string; documentation: string }
+      expect(payload.code).toBe('not_found')
+      expect(payload.documentation).toContain('/openapi.json')
+    }
+  })
+
+  it('routes the versioned and unversioned forms to the same endpoint', async () => {
+    for (const path of ['/api/check', '/api/v1/check']) {
+      const response = await worker.fetch(request(path), makeEnv())
+      // Reaches the handler and fails validation, rather than 404ing as unknown.
+      expect(response.status).toBe(400)
+      expect((await response.json() as { code: string }).code).toBe('invalid_request')
+    }
+
+    for (const path of ['/api/security-scan', '/api/v1/security-scan']) {
+      const response = await worker.fetch(request(path), makeEnv())
+      expect(response.status).toBe(405)
+    }
+  })
+
+  it('advertises the rate-limit policy on every API response, including errors', async () => {
+    const response = await worker.fetch(request('/api/nope'), makeEnv())
+
+    expect(response.headers.get('ratelimit-limit')).toBeTruthy()
+    expect(response.headers.get('ratelimit-remaining')).toBeTruthy()
+    expect(response.headers.get('ratelimit-reset')).toBeTruthy()
+    expect(response.headers.get('ratelimit-policy')).toContain('w=')
+  })
+
+  it('does not treat a non-API path as an API path', async () => {
+    const response = await worker.fetch(request('/apiary'), makeEnv())
+
+    expect(response.headers.get('content-type')).toContain('text/html')
+  })
+})
+
 describe('worker markdown content negotiation', () => {
   it('serves the markdown mirror at the page URL when markdown is requested', async () => {
     const response = await worker.fetch(

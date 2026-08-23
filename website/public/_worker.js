@@ -165,7 +165,7 @@ async function handleCheckRequest(request, url, env, checkStartTime) {
       protection.metadata
     );
     if (cachedResponse) {
-      return json(cachedResponse, 200);
+      return json(cachedResponse, 200, rateLimitHeaders(protection.metadata));
     }
 
     const homepage = await fetchText(normalized, checkStartTime);
@@ -221,9 +221,15 @@ async function handleCheckRequest(request, url, env, checkStartTime) {
 
     // One extra request to a path no real route should claim, so the report can
     // tell a real 404 from a soft-404 that makes every path look like it exists.
+    // Deliberately does not follow redirects, for two reasons. Correctness: a
+    // missing path that 302s to the homepage is its own distinct behaviour, and
+    // following the hop would report it as a soft-404 instead of a redirect.
+    // Budget: a followed chain costs up to MAX_REDIRECTS extra subrequests, and
+    // the free Workers tier allows 50 per request.
     const notFoundProbe = await fetchText(
       new URL(SOFT_404_PROBE_PATH, targetUrl).toString(),
-      checkStartTime
+      checkStartTime,
+      { maxRedirects: 0 }
     );
 
     const sitemap = sitemapUrl ? await fetchText(sitemapUrl, checkStartTime) : null;
@@ -1187,7 +1193,9 @@ async function fetchText(targetUrl, checkStartTime, options = {}) {
   try {
     let currentUrl = targetUrl;
 
-    for (let redirectCount = 0; redirectCount < MAX_REDIRECTS; redirectCount += 1) {
+    const maxRedirects = options.maxRedirects ?? MAX_REDIRECTS;
+
+    for (let redirectCount = 0; redirectCount <= maxRedirects; redirectCount += 1) {
       const remainingGlobalTime =
         TOTAL_TIMEOUT_MS - (Date.now() - overallStartTime);
       const remainingInvocationTime = invocationDeadline - Date.now();
@@ -1868,6 +1876,10 @@ function json(body, status, extraHeaders = {}) {
       'content-type': 'application/json; charset=utf-8',
       'cache-control': 'no-store',
       'x-content-type-options': 'nosniff',
+      // The quota is a fixed policy, so it can be advertised on every API
+      // response including errors and cache hits. Callers that know the
+      // caller-specific position pass fuller values, which win via the spread.
+      ...rateLimitHeaders(),
       ...extraHeaders,
     },
   });
