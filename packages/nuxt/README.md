@@ -39,6 +39,8 @@ The module runs after Nitro finishes prerendering (the `nuxt generate` / `preren
 - Adds AI-crawler rules to `robots.txt`, including the canonical `Content-Signal` policy alongside them, plus the optional `Content-Signal` `_headers` header.
 - Runs deterministic validation and prints a build-time report.
 
+`llmsTxt.whenToUse` takes a short list of the concrete jobs your site is right for, rendered as a labelled bullet list in the free-form part of `llms.txt` before the first `##` section. It tells an agent when to reach for you, which a list of links does not. Be specific about the tasks, and say what the site is not for.
+
 Existing curated `llms.txt`, `robots.txt` rules, and page JSON-LD are **preserved by default** — the module only fills gaps. Opt into replacement per feature (`llmsTxt.replaceExisting`, `markdownPages.replaceExisting`, `jsonLd.replaceExistingTypes`, etc.). Use `markdownPages.exclude` to skip mirroring pages that are not agent-fetchable content, such as a `404` page.
 
 ## Scope

@@ -75,11 +75,21 @@ describe('@agentmarkup/astro', () => {
       logger: {} as unknown as AstroIntegrationLogger,
     } as AstroConfigDoneArgs);
 
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
     await integration.hooks['astro:build:done']?.({
       dir: pathToFileURL(join(root, 'dist/')),
       routes: [],
       pages: [{ pathname: '/' }, { pathname: '/404' }],
     } as AstroBuildDoneArgs);
+
+    // The report colourises each finding, which puts ANSI escapes between the
+    // page path and the message; strip them so the assertion can span both.
+    const ansi = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
+    const report = consoleSpy.mock.calls
+      .map((args) => args.map(String).join(' '))
+      .join('\n')
+      .replace(ansi, '');
 
     const homeHtml = await readFile(join(root, 'dist', 'index.html'), 'utf8');
     const notFoundHtml = await readFile(join(root, 'dist', '404.html'), 'utf8');
@@ -87,7 +97,15 @@ describe('@agentmarkup/astro', () => {
     const llmsTxt = await readFile(join(root, 'dist', 'llms.txt'), 'utf8');
 
     await expect(readFile(join(root, 'dist', 'index.md'), 'utf8')).resolves.toContain('# Home');
-    await expect(readFile(join(root, 'dist', '404.md'), 'utf8')).rejects.toThrow();
+    // ENOENT specifically: a permissions or other read error must not satisfy this.
+    await expect(readFile(join(root, 'dist', '404.md'), 'utf8')).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+
+    // An excluded page has no mirror by design, so it must not be reported as
+    // missing one. Without the validation guard this warns "/404: Page is
+    // missing a markdown alternate link in the head".
+    expect(report).not.toContain('/404: Page is missing a markdown alternate link');
 
     expect(homeHtml).toContain('href="/index.md"');
     expect(notFoundHtml).not.toContain('text/markdown');

@@ -197,6 +197,8 @@ describe('@agentmarkup/next', () => {
       'out/thank-you.html': page('Thank you'),
     });
 
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
     await processNextBuildOutput(
       {
         site: 'https://example.com',
@@ -232,8 +234,23 @@ describe('@agentmarkup/next', () => {
     const headers = await readFile(join(root, 'out', '_headers'), 'utf8');
     const llmsTxt = await readFile(join(root, 'out', 'llms.txt'), 'utf8');
 
+    // The report colourises each finding, which puts ANSI escapes between the
+    // page path and the message; strip them so the assertion can span both.
+    const ansi = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
+    const report = consoleSpy.mock.calls
+      .map((args) => args.map(String).join(' '))
+      .join('\n')
+      .replace(ansi, '');
+
     await expect(readFile(join(root, 'out', 'index.md'), 'utf8')).resolves.toContain('# Home');
-    await expect(readFile(join(root, 'out', 'thank-you.md'), 'utf8')).rejects.toThrow();
+    // ENOENT specifically: a permissions or other read error must not satisfy this.
+    await expect(readFile(join(root, 'out', 'thank-you.md'), 'utf8')).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+
+    // An excluded page has no mirror by design, so it must not be reported as
+    // missing one.
+    expect(report).not.toContain('/thank-you: Page is missing a markdown alternate link');
 
     expect(homeHtml).toContain('href="/index.md"');
     expect(excludedHtml).not.toContain('text/markdown');

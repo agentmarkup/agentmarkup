@@ -112,6 +112,8 @@ If the page already contains JSON-LD for a schema type, or the site already ship
 
 Markdown mirrors are optional. They are usually most useful for thin, noisy, or client-rendered HTML where the raw page is a weak fetch target for agents. Use `markdownPages.exclude` for pages that exist but are not content an agent should fetch: mirroring a `404` page publishes a `/404.md` that answers 200 with "not found" text and canonicalises to a URL that 404s. Excluded pages get no `.md` file, no `text/markdown` alternate link, no canonical `Link` header, no markdown URL in `llms.txt`, and no "missing mirror" warning. The generated `.md` files stay directly fetchable for agents, while their `_headers` entries point search engines back at the HTML page as canonical. Existing files are still preserved unless you opt into replacement with `markdownPages.replaceExisting` or `contentSignalHeaders.replaceExisting`.
 
+`llmsTxt.whenToUse` takes a short list of the concrete jobs your site is right for, rendered as a labelled bullet list in the free-form part of `llms.txt` before the first `##` section. It tells an agent when to reach for you, which a list of links does not. Be specific about the tasks, and say what the site is not for.
+
 When markdown mirrors are enabled, same-site page entries in `llms.txt` automatically point at the generated `.md` mirrors by default. Set `llmsTxt.preferMarkdownMirrors: false` if you want `llms.txt` to keep linking to HTML routes instead.
 
 Enable `llmsFullTxt` when you want a richer companion file for agents that can consume more than the compact `llms.txt` manifest. The generated `llms-full.txt` keeps the same section structure but inlines same-site markdown mirror content when those mirrors exist.

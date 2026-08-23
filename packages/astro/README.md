@@ -111,6 +111,8 @@ Markdown mirrors are optional. They are usually most useful for thin, noisy, or 
 
 When markdown mirrors are enabled, the adapter also writes canonical `Link` headers for those `.md` files so search engines can keep the HTML route as the preferred indexed URL without making the markdown mirror unavailable to direct fetchers.
 
+`llmsTxt.whenToUse` takes a short list of the concrete jobs your site is right for, rendered as a labelled bullet list in the free-form part of `llms.txt` before the first `##` section. It tells an agent when to reach for you, which a list of links does not. Be specific about the tasks, and say what the site is not for.
+
 When markdown mirrors are enabled, same-site page entries in `llms.txt` automatically point at the generated `.md` mirrors by default. Set `llmsTxt.preferMarkdownMirrors: false` if you want `llms.txt` to keep linking to HTML routes instead.
 
 Enable `llmsFullTxt` when you want a richer companion file for agents that can consume more than the compact `llms.txt` manifest. The generated `llms-full.txt` keeps the same section structure but inlines same-site markdown mirror content when those mirrors exist.
