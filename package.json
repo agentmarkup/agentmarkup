@@ -10,9 +10,11 @@
   },
   "scripts": {
     "build": "pnpm -r --workspace-concurrency=1 build",
-    "test": "pnpm -r --workspace-concurrency=1 test",
-    "lint": "pnpm -r lint",
+    "test": "pnpm -r --workspace-concurrency=1 test && pnpm test:plugin",
+    "lint": "pnpm -r lint && eslint scripts test",
     "typecheck": "pnpm -r --workspace-concurrency=1 typecheck",
-    "smoke:website": "pnpm -C website smoke"
+    "smoke:website": "pnpm -C website smoke",
+    "test:plugin": "node --test test/claude-plugin.test.mjs",
+    "sync:plugin": "node scripts/sync-plugin-skill.mjs"
   }
 }

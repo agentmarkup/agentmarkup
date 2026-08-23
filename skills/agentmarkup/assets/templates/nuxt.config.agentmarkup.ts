@@ -1,17 +1,18 @@
-import type { NextConfig } from 'next';
-import { withAgentmarkup } from '@agentmarkup/next';
+// Pattern, not a drop-in replacement. Merge into the project's existing nuxt.config.ts.
+//
+// @agentmarkup/nuxt processes PRERENDERED output (`nuxt generate`, or routes with
+// `prerender: true`). It runs after Nitro finishes and writes into `.output/public`.
+// Fully dynamic SSR routes never emit build-time HTML and are not patched; use the
+// re-exported @agentmarkup/core helpers in app code for those.
 
-const nextConfig: NextConfig = {
-  // Keep existing Next.js settings here.
-  // Static export gets the full file-emission flow. Remove this if the app uses a server deployment.
-  output: 'export',
-};
+export default defineNuxtConfig({
+  // Keep existing modules, then add agentmarkup once.
+  modules: ['@agentmarkup/nuxt'],
 
-export default withAgentmarkup(
-  {
+  agentmarkup: {
     site: 'https://example.com',
     name: 'Example',
-    description: 'Machine-readable metadata for this Next.js site.',
+    description: 'Machine-readable metadata for this site.',
     llmsTxt: {
       sections: [
         {
@@ -55,5 +56,4 @@ export default withAgentmarkup(
       warnOnMissingSchema: true,
     },
   },
-  nextConfig
-);
+});

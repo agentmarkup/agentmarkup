@@ -2,12 +2,19 @@
 
 ## Supported Versions
 
-Security fixes are applied to the latest published release line.
+Security fixes are applied to the latest published release line of each package.
 
-| Version | Supported |
+| Package | Supported line |
 | --- | --- |
-| 0.5.x | Yes |
-| < 0.5 | No |
+| `@agentmarkup/core` | 0.6.x |
+| `@agentmarkup/vite` | 0.6.x |
+| `@agentmarkup/astro` | 0.6.x |
+| `@agentmarkup/next` | 0.6.x |
+| `@agentmarkup/nuxt` | 0.6.x |
+| `@agentmarkup/cli` | 0.6.x |
+| `@agentmarkup/audit` | 0.2.x |
+
+Any line older than the one listed for a package is not supported.
 
 ## Reporting a Vulnerability
 

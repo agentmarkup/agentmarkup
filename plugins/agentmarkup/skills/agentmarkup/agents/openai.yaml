@@ -1,0 +1,4 @@
+interface:
+  display_name: "AgentMarkup"
+  short_description: "Install, audit, and fix agent-ready metadata"
+  default_prompt: "Use $agentmarkup to install AgentMarkup in this repo, configure it for my preferences, audit the output, and implement fixes."

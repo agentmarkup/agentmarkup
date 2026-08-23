@@ -1,0 +1,17 @@
+{
+  "name": "agentmarkup",
+  "description": "AgentMarkup build-time tools that make a website readable by LLMs and AI agents.",
+  "owner": {
+    "name": "Sebastian Cochinescu",
+    "email": "hello@animafelix.com"
+  },
+  "plugins": [
+    {
+      "name": "agentmarkup",
+      "source": "./plugins/agentmarkup",
+      "description": "Generate llms.txt, JSON-LD, markdown mirrors, and AI-crawler rules at build time, then validate the output.",
+      "homepage": "https://agentmarkup.dev",
+      "category": "development"
+    }
+  ]
+}
