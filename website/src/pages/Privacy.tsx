@@ -1,4 +1,4 @@
-const lastUpdated = 'August 8, 2026';
+const lastUpdated = 'August 23, 2026';
 
 function Privacy() {
   return (
@@ -24,6 +24,19 @@ function Privacy() {
             not require accounts, and we do not ask for names, emails, or
             passwords to use the Services. We do not sell, rent, or share your
             data for advertising.
+          </p>
+          <p>
+            This policy covers this website and the tools hosted on it, namely
+            the website checker and the security scan. It does not need to cover
+            the software we publish, because that software collects nothing. The{' '}
+            <code>@agentmarkup/*</code> npm packages, the agentmarkup Agent
+            Skill, and the agentmarkup plugins for Claude Code and for ChatGPT
+            and Codex all run locally in your own environment. They have no
+            telemetry, no analytics, no accounts, and no phone-home of any kind,
+            and they send nothing to us. The one network request any of them
+            makes is the optional live audit in{' '}
+            <code>@agentmarkup/audit</code>, which fetches a URL you supply and
+            returns the result to you on your own machine.
           </p>
         </section>
 
