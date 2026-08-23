@@ -143,6 +143,21 @@ Contribution guidelines live in [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 Website deploys are manual via `./deploy/website-deploy.sh`.
 
+## Claude Code plugin
+
+This repo is also a Claude Code marketplace. Install the plugin from it:
+
+```text
+/plugin marketplace add agentmarkup/agentmarkup
+/plugin install agentmarkup@agentmarkup
+```
+
+Then, in the repo you want to set up, say what you want, for example "set up llms.txt and JSON-LD for this site". The skill is model-invoked, so there is no command to remember.
+
+It works out which layer owns your final HTML, installs the matching package, patches the config, builds, and audits the result. Inspecting your repo is read-only; it asks for approval as a single plan before installing anything, writing config, running a build, or making an outbound audit request.
+
+Plugin source lives in [plugins/agentmarkup](./plugins/agentmarkup).
+
 ## Public Agent Skill
 
 This repo ships a public Agent Skills / skills.sh-compatible skill at `skills/agentmarkup`.

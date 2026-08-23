@@ -20,8 +20,12 @@ pnpm build
 - `packages/next` contains the publishable `@agentmarkup/next` adapter.
 - `packages/nuxt` contains the publishable `@agentmarkup/nuxt` module for prerendered / `nuxt generate` output.
 - `packages/cli` contains the publishable `@agentmarkup/cli`, a framework-agnostic command for any built static output.
+- `packages/audit` contains the publishable `@agentmarkup/audit`, a CLI that fetches a live URL as a browser and as several AI crawler user agents and diffs the results.
 - `website` is the dogfooding site and consumes `@agentmarkup/vite` through the workspace package boundary.
 - `examples/vite-react` is the minimal consumer example.
+- `skills/agentmarkup` is the public Agent Skills / skills.sh skill, and is the canonical copy.
+- `plugins/agentmarkup` is the Claude Code plugin. Its skill is a copy of the canonical one, kept honest by `pnpm sync:plugin` and asserted by `pnpm test:plugin`. Edit `skills/agentmarkup/`, never the copy.
+- `.claude-plugin/marketplace.json` makes this repo a Claude Code marketplace pointing at `plugins/agentmarkup`.
 
 ## Contribution Expectations
 
