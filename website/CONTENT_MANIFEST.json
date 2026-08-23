@@ -25,5 +25,6 @@
   { "route": "/authors/sebastian-cochinescu/", "source": "src/pages/AuthorProfile.tsx", "heading": "Sebastian Cochinescu" },
   { "route": "/license/", "source": "src/pages/License.tsx", "heading": "MIT License" },
   { "route": "/terms/", "source": "src/pages/Terms.tsx", "heading": "Terms of Service" },
+  { "route": "/support/", "source": "src/pages/Support.tsx", "heading": "Support" },
   { "route": "/privacy/", "source": "src/pages/Privacy.tsx", "heading": "Privacy Policy" }
 ]

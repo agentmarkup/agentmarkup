@@ -153,6 +153,17 @@ const informationalPages = [
     ],
   },
   {
+    path: '/support/',
+    schemas: [
+      {
+        '@type': 'ContactPage',
+        name: 'Support - agentmarkup',
+        url: `${siteUrl}/support/`,
+        description: 'Support for agentmarkup, including documentation, GitHub issues, security reporting, and general contact details.',
+      },
+    ],
+  },
+  {
     path: '/privacy/',
     schemas: [
       {
@@ -203,6 +214,7 @@ export default defineConfig({
         'author': resolve(__dirname, 'authors/sebastian-cochinescu/index.html'),
         'license': resolve(__dirname, 'license/index.html'),
         'terms': resolve(__dirname, 'terms/index.html'),
+        'support': resolve(__dirname, 'support/index.html'),
         'privacy': resolve(__dirname, 'privacy/index.html'),
         'prerender-main': resolve(__dirname, 'src/main.tsx'),
         'prerender-checker': resolve(__dirname, 'src/entries/checker.tsx'),
@@ -230,6 +242,7 @@ export default defineConfig({
         'prerender-author': resolve(__dirname, 'src/entries/author.tsx'),
         'prerender-license': resolve(__dirname, 'src/entries/license.tsx'),
         'prerender-terms': resolve(__dirname, 'src/entries/terms.tsx'),
+        'prerender-support': resolve(__dirname, 'src/entries/support.tsx'),
         'prerender-privacy': resolve(__dirname, 'src/entries/privacy.tsx'),
       },
     },
@@ -247,6 +260,7 @@ export default defineConfig({
           {
             title: 'Documentation',
             entries: [
+              { title: 'Support', url: `${siteUrl}/support/`, description: 'Documentation links, issue reporting, security reporting, and general contact details' },
               { title: 'GitHub Repository', url: 'https://github.com/agentmarkup/agentmarkup', description: 'Source code, issues, and contributing guide' },
               { title: 'AgentMarkup Agent Skill', url: 'https://github.com/agentmarkup/agentmarkup/tree/main/skills/agentmarkup', description: 'Public agent skill for installing AgentMarkup, configuring preferences, auditing output, and implementing fixes' },
               { title: 'Vite Package', url: 'https://www.npmjs.com/package/@agentmarkup/vite', description: 'Install with pnpm add -D @agentmarkup/vite' },
