@@ -4,6 +4,7 @@ import {
   generatePageMarkdown,
   resolveMarkdownCanonicalUrl,
 } from '../src/generators/markdown.js';
+import { isMarkdownPageExcluded } from '../src/html.js';
 
 describe('generatePageMarkdown', () => {
   it('converts page content into markdown and strips navigation chrome', () => {
@@ -269,3 +270,23 @@ describe('resolveMarkdownCanonicalUrl', () => {
     ).toBe('https://example.com/docs');
   });
 });
+
+describe('isMarkdownPageExcluded', () => {
+  it('matches excluded pages regardless of trailing slash or .html suffix', () => {
+    for (const configured of ['/404', '/404/', '/404.html']) {
+      expect(isMarkdownPageExcluded('/404', [configured])).toBe(true);
+      expect(isMarkdownPageExcluded('/404.html', [configured])).toBe(true);
+    }
+  });
+
+  it('does not match a different page or a prefix of one', () => {
+    expect(isMarkdownPageExcluded('/404-guide', ['/404'])).toBe(false);
+    expect(isMarkdownPageExcluded('/docs/404', ['/404'])).toBe(false);
+    expect(isMarkdownPageExcluded('/', ['/404'])).toBe(false);
+  });
+
+  it('excludes nothing when the list is absent or empty', () => {
+    expect(isMarkdownPageExcluded('/404', undefined)).toBe(false);
+    expect(isMarkdownPageExcluded('/404', [])).toBe(false);
+  });
+})

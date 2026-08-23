@@ -18,12 +18,35 @@ export interface WebSiteSchema {
   };
 }
 
+/** A schema.org ContactPoint, without the `@type` the preset adds for you. */
+export interface OrganizationContactPoint {
+  /** schema.org contactType, e.g. "customer support", "technical support", "security". */
+  contactType: string;
+  email?: string;
+  telephone?: string;
+  url?: string;
+  areaServed?: string | string[];
+  availableLanguage?: string | string[];
+}
+
+/** A schema.org PostalAddress, without the `@type` the preset adds for you. */
+export interface OrganizationPostalAddress {
+  streetAddress?: string;
+  addressLocality?: string;
+  addressRegion?: string;
+  postalCode?: string;
+  /** ISO 3166-1 country code or country name. */
+  addressCountry: string;
+}
+
 export interface OrganizationSchema {
   preset: 'organization';
   name: string;
   url: string;
   logo?: string;
   description?: string;
+  contactPoint?: OrganizationContactPoint[];
+  address?: OrganizationPostalAddress;
   sameAs?: string[];
 }
 
@@ -106,6 +129,13 @@ export interface LlmsTxtSection {
 
 export interface LlmsTxtConfig {
   instructions?: string;
+  /**
+   * Short, concrete statements telling an agent when this site is the right
+   * thing to reach for. Rendered as a labelled bullet list in the free-form
+   * details block of `llms.txt`, before the first `##` section, so the file
+   * stays within the llmstxt.org structure (H1, blockquote, details, sections).
+   */
+  whenToUse?: string[];
   sections: LlmsTxtSection[];
   replaceExisting?: boolean;
   preferMarkdownMirrors?: boolean;
@@ -228,6 +258,13 @@ export interface ResolvedLlmsTxtSection {
 export interface MarkdownPagesConfig {
   enabled?: boolean;
   replaceExisting?: boolean;
+  /**
+   * Page paths that should not get a markdown mirror, matched the same way as
+   * `pages[].path`. Use it for pages that exist but are not content an agent
+   * should fetch, such as a `404` page: mirroring one publishes a URL that
+   * answers 200 with "not found" text and canonicalises to a URL that 404s.
+   */
+  exclude?: string[];
 }
 
 export type ContentSignalDirective = 'yes' | 'no';

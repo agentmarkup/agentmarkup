@@ -488,6 +488,7 @@
 /* Legal and license */
 .legal-page { width: min(100%, 50rem); }
 .legal-updated { color: var(--text-tertiary); font-size: 0.82rem; }
+.contact-address { padding: var(--space-4); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); background: var(--surface-secondary); color: var(--text-secondary); font-style: normal; line-height: 1.6; }
 .license-page { width: min(100%, 62rem); }
 .license-intro-card,
 .license-panel,

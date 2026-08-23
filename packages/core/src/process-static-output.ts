@@ -11,6 +11,7 @@ import {
   generateLlmsTxtDiscoveryLink,
   generateMarkdownAlternateLink,
   generatePageMarkdown,
+  isMarkdownPageExcluded,
   resolveMarkdownCanonicalUrl,
   generateJsonLdTags,
   hasExistingJsonLdScripts,
@@ -173,6 +174,7 @@ async function runGenerate(
     if (
       isFeatureEnabled(config.markdownPages) &&
       pagePath &&
+      !isMarkdownPageExcluded(pagePath, config.markdownPages?.exclude) &&
       !hasMarkdownAlternateLink(nextHtml)
     ) {
       nextHtml = injectHeadContent(
@@ -239,6 +241,14 @@ async function runGenerate(
 
     for (const htmlFile of htmlFiles) {
       const relativeHtmlPath = relative(outDir, htmlFile).replace(/\\/g, '/');
+      const pagePathForExclusion = pagePathFromOutputFile(outDir, htmlFile);
+
+      if (
+        isMarkdownPageExcluded(pagePathForExclusion, config.markdownPages?.exclude)
+      ) {
+        continue;
+      }
+
       const markdownFileName = markdownFileNameFromHtmlFile(relativeHtmlPath);
       const outputMarkdownPath = join(outDir, markdownFileName);
       const html =
@@ -523,7 +533,10 @@ async function runCheck(
       });
     }
 
-    if (markdownEnabled) {
+    if (
+      markdownEnabled &&
+      !isMarkdownPageExcluded(pagePath, config.markdownPages?.exclude)
+    ) {
       validationResults.push(...validateMarkdownAlternateLink(html, pagePath));
 
       const relativeHtmlPath = relative(outDir, htmlFile).replace(/\\/g, '/');
@@ -583,7 +596,18 @@ async function runCheck(
     }
   }
 
-  if (markdownEnabled && markdownPages === 0 && htmlFiles.length > 0) {
+  // Count only pages that were eligible for a mirror: if every HTML page is
+  // listed in `markdownPages.exclude`, zero mirrors is the correct outcome and
+  // warning about it would be a false positive.
+  const mirrorablePageCount = htmlFiles.filter(
+    (htmlFile) =>
+      !isMarkdownPageExcluded(
+        pagePathFromOutputFile(outDir, htmlFile),
+        config.markdownPages?.exclude
+      )
+  ).length;
+
+  if (markdownEnabled && markdownPages === 0 && mirrorablePageCount > 0) {
     warnMissing('markdown mirrors');
   }
 

@@ -48,6 +48,56 @@ afterEach(async () => {
 });
 
 describe('@agentmarkup/astro', () => {
+  it('honours markdownPages.exclude for mirrors, alternate links and headers', async () => {
+    const page = (title: string) =>
+      `<html><head><title>${title}</title></head><body><main><h1>${title}</h1><p>Body copy substantial enough for a useful markdown mirror.</p></main></body></html>`;
+
+    const root = await createFixture({
+      'dist/index.html': page('Home'),
+      'dist/404.html': page('Not found'),
+    });
+
+    const integration = agentmarkup({
+      site: 'https://example.com',
+      name: 'Example',
+      llmsTxt: {
+        sections: [
+          { title: 'Pages', entries: [{ title: 'Home', url: '/' }, { title: 'Not found', url: '/404' }] },
+        ],
+      },
+      markdownPages: { enabled: true, exclude: ['/404'] },
+    });
+
+    await integration.hooks['astro:config:done']?.({
+      config: { publicDir: pathToFileURL(join(root, 'public/')) } as unknown as AstroConfig,
+      setAdapter: () => {},
+      injectTypes: () => pathToFileURL(join(root, 'types.d.ts')),
+      logger: {} as unknown as AstroIntegrationLogger,
+    } as AstroConfigDoneArgs);
+
+    await integration.hooks['astro:build:done']?.({
+      dir: pathToFileURL(join(root, 'dist/')),
+      routes: [],
+      pages: [{ pathname: '/' }, { pathname: '/404' }],
+    } as AstroBuildDoneArgs);
+
+    const homeHtml = await readFile(join(root, 'dist', 'index.html'), 'utf8');
+    const notFoundHtml = await readFile(join(root, 'dist', '404.html'), 'utf8');
+    const headers = await readFile(join(root, 'dist', '_headers'), 'utf8');
+    const llmsTxt = await readFile(join(root, 'dist', 'llms.txt'), 'utf8');
+
+    await expect(readFile(join(root, 'dist', 'index.md'), 'utf8')).resolves.toContain('# Home');
+    await expect(readFile(join(root, 'dist', '404.md'), 'utf8')).rejects.toThrow();
+
+    expect(homeHtml).toContain('href="/index.md"');
+    expect(notFoundHtml).not.toContain('text/markdown');
+    expect(headers).toContain('/index.md');
+    expect(headers).not.toContain('/404.md');
+    expect(llmsTxt).toContain('[Home](https://example.com/index.md)');
+    expect(llmsTxt).toContain('[Not found](https://example.com/404)');
+    expect(llmsTxt).not.toContain('/404.md');
+  });
+
   it('injects JSON-LD and writes llms.txt and robots.txt at build:done', async () => {
     const root = await createFixture({
       'dist/index.html': '<html><head><title>Home</title></head><body></body></html>',

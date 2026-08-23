@@ -26,6 +26,57 @@ describe('presetToJsonLd', () => {
     expect(result.logo).toBe('https://acme.com/logo.png');
   });
 
+  it('adds ContactPoint and PostalAddress types to organization contact details', () => {
+    const result = presetToJsonLd({
+      preset: 'organization',
+      name: 'Acme',
+      url: 'https://acme.com',
+      contactPoint: [
+        {
+          contactType: 'technical support',
+          email: 'support@acme.com',
+          availableLanguage: ['English'],
+        },
+        { contactType: 'security', email: 'security@acme.com' },
+      ],
+      address: {
+        addressLocality: 'Bucharest',
+        addressCountry: 'RO',
+      },
+    });
+
+    expect(result.contactPoint).toEqual([
+      {
+        '@type': 'ContactPoint',
+        contactType: 'technical support',
+        email: 'support@acme.com',
+        availableLanguage: ['English'],
+      },
+      {
+        '@type': 'ContactPoint',
+        contactType: 'security',
+        email: 'security@acme.com',
+      },
+    ]);
+    expect(result.address).toEqual({
+      '@type': 'PostalAddress',
+      addressLocality: 'Bucharest',
+      addressCountry: 'RO',
+    });
+  });
+
+  it('omits organization contact details when they are absent or empty', () => {
+    const result = presetToJsonLd({
+      preset: 'organization',
+      name: 'Acme',
+      url: 'https://acme.com',
+      contactPoint: [],
+    });
+
+    expect(result).not.toHaveProperty('contactPoint');
+    expect(result).not.toHaveProperty('address');
+  });
+
   it('builds article schema with string author', () => {
     const result = presetToJsonLd({
       preset: 'article',

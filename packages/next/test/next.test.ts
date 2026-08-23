@@ -186,6 +186,64 @@ describe('@agentmarkup/next', () => {
     expect(headers).toHaveLength(2);
   });
 
+  it('honours markdownPages.exclude for mirrors, alternate links and headers', async () => {
+    // NOTE: /404, /500, /error and /not-found are skipped by Next's own
+    // shouldSkipPagePath, so an ordinary route is required to exercise `exclude`.
+    const page = (title: string) =>
+      `<html><head><title>${title}</title></head><body><main><h1>${title}</h1><p>Body copy substantial enough for a useful markdown mirror.</p></main></body></html>`;
+
+    const root = await createFixture({
+      'out/index.html': page('Home'),
+      'out/thank-you.html': page('Thank you'),
+    });
+
+    await processNextBuildOutput(
+      {
+        site: 'https://example.com',
+        name: 'Example',
+        description: 'Next fixture for markdown exclusions.',
+        llmsTxt: {
+          sections: [
+            {
+              title: 'Pages',
+              entries: [
+                { title: 'Home', url: '/' },
+                { title: 'Thank you', url: '/thank-you' },
+              ],
+            },
+          ],
+        },
+        markdownPages: { enabled: true, exclude: ['/thank-you'] },
+      },
+      {
+        projectDir: root,
+        nextConfig: { output: 'export' },
+        outputs: {
+          staticFiles: [
+            { filePath: join(root, 'out', 'index.html'), pathname: '/' },
+            { filePath: join(root, 'out', 'thank-you.html'), pathname: '/thank-you' },
+          ],
+        },
+      }
+    );
+
+    const homeHtml = await readFile(join(root, 'out', 'index.html'), 'utf8');
+    const excludedHtml = await readFile(join(root, 'out', 'thank-you.html'), 'utf8');
+    const headers = await readFile(join(root, 'out', '_headers'), 'utf8');
+    const llmsTxt = await readFile(join(root, 'out', 'llms.txt'), 'utf8');
+
+    await expect(readFile(join(root, 'out', 'index.md'), 'utf8')).resolves.toContain('# Home');
+    await expect(readFile(join(root, 'out', 'thank-you.md'), 'utf8')).rejects.toThrow();
+
+    expect(homeHtml).toContain('href="/index.md"');
+    expect(excludedHtml).not.toContain('text/markdown');
+    expect(headers).toContain('/index.md');
+    expect(headers).not.toContain('/thank-you.md');
+    expect(llmsTxt).toContain('[Home](https://example.com/index.md)');
+    expect(llmsTxt).toContain('[Thank you](https://example.com/thank-you)');
+    expect(llmsTxt).not.toContain('/thank-you.md');
+  });
+
   it('uses output metadata to handle export builds with a basePath', async () => {
     const root = await createFixture({
       'out/index.html': '<html><head><title>Home</title></head><body><main><h1>Home</h1><p>Welcome.</p></main></body></html>',

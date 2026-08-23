@@ -106,6 +106,22 @@ export function markdownFileNameFromHtmlFile(fileName: string): string {
   return normalized.replace(/\.html$/i, '.md');
 }
 
+/**
+ * True when a page path is listed in `markdownPages.exclude`. Comparison uses
+ * the same normalization as `pages[].path`, so "/404", "/404/" and "/404.html"
+ * are all the same entry.
+ */
+export function isMarkdownPageExcluded(
+  pagePath: string,
+  exclude: string[] | undefined
+): boolean {
+  if (!exclude || exclude.length === 0) {
+    return false;
+  }
+
+  return exclude.some((candidate) => matchesPage(pagePath, candidate));
+}
+
 export function markdownHrefForPagePath(path: string): string {
   const normalized = normalizePagePath(path);
   return normalized === '/' ? '/index.md' : `${normalized}.md`;

@@ -81,9 +81,17 @@ const jsonLdTags = generateJsonLdTags(
   config.globalSchemas.map((schema) => presetToJsonLd(schema))
 );
 const homepagePath = join(outputDir, 'index.html');
+
+// Only the read is optional: a build with no top-level index.html is a legitimate
+// layout worth skipping. The write is not - a permissions or disk error there must
+// fail the build rather than let it succeed with no JSON-LD on the homepage.
+let homepageHtml: string | null = null;
 try {
-  const homepageHtml = await readFile(homepagePath, 'utf8');
-  await writeFile(homepagePath, injectJsonLdTags(homepageHtml, jsonLdTags), 'utf8');
+  homepageHtml = await readFile(homepagePath, 'utf8');
 } catch {
   console.warn(`Skipped JSON-LD injection because ${homepagePath} was not readable.`);
+}
+
+if (homepageHtml !== null) {
+  await writeFile(homepagePath, injectJsonLdTags(homepageHtml, jsonLdTags), 'utf8');
 }

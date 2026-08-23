@@ -11,6 +11,7 @@ import {
   generateLlmsTxtDiscoveryLink,
   generateMarkdownAlternateLink,
   generatePageMarkdown,
+  isMarkdownPageExcluded,
   resolveMarkdownCanonicalUrl,
   generateLlmsTxt,
   generateJsonLdTags,
@@ -141,6 +142,7 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
         if (
           isFeatureEnabled(config.markdownPages) &&
           pagePath &&
+          !isMarkdownPageExcluded(pagePath, config.markdownPages?.exclude) &&
           !hasMarkdownAlternateLink(nextHtml)
         ) {
           nextHtml = injectHeadContent(
@@ -412,6 +414,11 @@ export function agentmarkup(config: AgentMarkupConfig): Plugin {
         for (const [htmlFileName, asset] of htmlAssets) {
           const html = getAssetText(asset.source);
           const pagePath = resolveOutputPagePath(htmlFileName);
+
+          if (isMarkdownPageExcluded(pagePath, config.markdownPages?.exclude)) {
+            continue;
+          }
+
           const markdownFileName = markdownFileNameFromHtmlFile(htmlFileName);
           const markdownAbsoluteUrl = buildAbsoluteMarkdownUrl(config.site, pagePath);
           const markdown = generatePageMarkdown({
@@ -815,7 +822,10 @@ async function collectFinalHtmlValidationResults(
 
     results.push(...validateHtmlContent(html, pagePath));
 
-    if (isFeatureEnabled(config.markdownPages)) {
+    if (
+      isFeatureEnabled(config.markdownPages) &&
+      !isMarkdownPageExcluded(pagePath, config.markdownPages?.exclude)
+    ) {
       results.push(...validateMarkdownAlternateLink(html, pagePath));
     }
   }

@@ -117,10 +117,11 @@ If your site already has a custom prerender or post-build step, `@agentmarkup/co
 - optional A2A Agent Card generation plus config and output validation
 - `llms.txt` generation
 - optional `llms-full.txt` generation
+- optional `llmsTxt.whenToUse` guidance so agents learn when to reach for the site
 - automatic `llms.txt` discovery-link injection
 - JSON-LD injection
 - existing JSON-LD validation
-- markdown page generation
+- markdown page generation, with `markdownPages.exclude` for pages that should not be mirrored
 - markdown alternate-link and mirror-coverage validation
 - schema presets for website and ecommerce basics
 - AI crawler `robots.txt` management

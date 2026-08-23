@@ -4,6 +4,7 @@ import {
   generateLlmsTxt,
   generateLlmsTxtDiscoveryLink,
   hasLlmsTxtDiscoveryLink,
+  resolveLlmsTxtSections,
 } from '../src/generators/llms-txt.js';
 import type { AgentMarkupConfig } from '../src/types.js';
 
@@ -340,6 +341,114 @@ describe('generateLlmsTxt', () => {
     ).toHaveLength(1);
     expect(result).not.toContain('\n# Guide\n');
     expect(result).not.toContain('> Implementation guide\n\nSource: https://example.com/docs/guide/\n\n## Setup');
+  });
+
+  it('renders when-to-use guidance in the details block before the first section', () => {
+    const result = generateLlmsTxt(
+      makeConfig({
+        description: 'An example site',
+        llmsTxt: {
+          instructions: 'Example is a build-time toolkit.',
+          whenToUse: [
+            'The user asks whether a website is readable by AI crawlers.',
+            'The user needs an llms.txt or JSON-LD generated at build time.',
+          ],
+          sections: [
+            { title: 'Docs', entries: [{ title: 'Start', url: '/docs/start' }] },
+          ],
+        },
+      })
+    );
+
+    expect(result).toContain('**When to use Example:**');
+    expect(result).toContain(
+      '- The user asks whether a website is readable by AI crawlers.'
+    );
+    expect(result!.indexOf('**When to use Example:**')).toBeGreaterThan(
+      result!.indexOf('Example is a build-time toolkit.')
+    );
+    expect(result!.indexOf('**When to use Example:**')).toBeLessThan(
+      result!.indexOf('## Docs')
+    );
+  });
+
+  it('omits the when-to-use block when it is absent or entirely blank', () => {
+    const withoutGuidance = generateLlmsTxt(
+      makeConfig({
+        llmsTxt: { sections: [{ title: 'Docs', entries: [{ title: 'Start', url: '/docs/start' }] }] },
+      })
+    );
+    const withBlankGuidance = generateLlmsTxt(
+      makeConfig({
+        llmsTxt: {
+          whenToUse: ['   ', ''],
+          sections: [{ title: 'Docs', entries: [{ title: 'Start', url: '/docs/start' }] }],
+        },
+      })
+    );
+
+    expect(withoutGuidance).not.toContain('When to use');
+    expect(withBlankGuidance).not.toContain('When to use');
+  });
+
+  it('collapses a multi-line when-to-use item so it cannot escape its list item', () => {
+    const result = generateLlmsTxt(
+      makeConfig({
+        llmsTxt: {
+          whenToUse: ['First line\n## Injected Section\nsecond line'],
+          sections: [{ title: 'Docs', entries: [{ title: 'Start', url: '/docs/start' }] }],
+        },
+      })
+    );
+
+    expect(result).toContain('- First line ## Injected Section second line');
+    expect(result).not.toContain('\n## Injected Section');
+  });
+
+  it('repeats when-to-use guidance in llms-full.txt', () => {
+    const result = generateLlmsFullTxt(
+      makeConfig({
+        llmsFullTxt: { enabled: true },
+        llmsTxt: {
+          whenToUse: ['The user wants a machine-readable website.'],
+          sections: [{ title: 'Docs', entries: [{ title: 'Start', url: '/docs/start' }] }],
+        },
+      })
+    );
+
+    expect(result).toContain('**When to use Example:**');
+    expect(result).toContain('- The user wants a machine-readable website.');
+  });
+
+  it('never advertises a markdown mirror for a page in markdownPages.exclude', () => {
+    const config = makeConfig({
+      markdownPages: { enabled: true, exclude: ['/404'] },
+      llmsFullTxt: { enabled: true },
+      llmsTxt: {
+        sections: [
+          {
+            title: 'Pages',
+            entries: [
+              { title: 'Docs', url: '/docs/start' },
+              { title: 'Not found', url: '/404' },
+            ],
+          },
+        ],
+      },
+    });
+
+    const llmsTxt = generateLlmsTxt(config);
+    const llmsFullTxt = generateLlmsFullTxt(config);
+    const [entries] = resolveLlmsTxtSections(config).map((section) => section.entries);
+
+    // The excluded page keeps its HTML URL; the ordinary page still prefers its mirror.
+    expect(llmsTxt).toContain('- [Docs](https://example.com/docs/start.md)');
+    expect(llmsTxt).toContain('- [Not found](https://example.com/404)');
+    expect(llmsTxt).not.toContain('/404.md');
+    expect(llmsFullTxt).not.toContain('/404.md');
+
+    expect(entries[0].markdownUrl).toBe('https://example.com/docs/start.md');
+    expect(entries[1].markdownUrl).toBeNull();
   });
 
   it('builds a discoverable llms.txt alternate link and detects it in HTML', () => {

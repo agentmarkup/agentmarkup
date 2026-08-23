@@ -5,9 +5,20 @@ import { pathToFileURL } from 'node:url'
 import type { Plugin, ResolvedConfig } from 'vite'
 import {
   generatePageMarkdown,
+  isMarkdownPageExcluded,
   markdownFileNameFromHtmlFile,
   normalizePagePath,
 } from '../packages/core/dist/index.js'
+
+/**
+ * Single source of truth for `markdownPages.exclude`. vite.config.ts feeds this
+ * to the agentmarkup plugin, and the late prerender pass below honours the same
+ * list, so the two cannot drift.
+ *
+ * The 404 page exists but is not content: mirroring it would publish a /404.md
+ * that answers 200 with "not found" text and canonicalises to a URL that 404s.
+ */
+export const MARKDOWN_EXCLUDED_PAGES = ['/404']
 
 interface BundleEntryLike {
   type: 'chunk' | 'asset'
@@ -102,9 +113,18 @@ export function websitePrerender(): Plugin {
         }
 
         const relativeHtmlPath = relative(outDir, htmlFile).replace(/\\/g, '/')
+        const pagePath = pagePathFromOutputFile(relativeHtmlPath)
+
+        // This late pass regenerates mirrors from the final HTML, so it has to
+        // honour the same exclusions or it would recreate what the adapter skipped.
+        if (isMarkdownPageExcluded(pagePath, MARKDOWN_EXCLUDED_PAGES)) {
+          continue
+        }
+
+
         const markdown = generatePageMarkdown({
           html: nextHtml,
-          pagePath: pagePathFromOutputFile(relativeHtmlPath),
+          pagePath,
         })
 
         if (markdown) {

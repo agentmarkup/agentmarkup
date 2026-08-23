@@ -12,6 +12,7 @@ import {
   generateLlmsTxtDiscoveryLink,
   generateMarkdownAlternateLink,
   generatePageMarkdown,
+  isMarkdownPageExcluded,
   resolveMarkdownCanonicalUrl,
   generateJsonLdTags,
   generateLlmsTxt,
@@ -103,6 +104,7 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
           if (
             isFeatureEnabled(config.markdownPages) &&
             pagePath &&
+            !isMarkdownPageExcluded(pagePath, config.markdownPages?.exclude) &&
             !hasMarkdownAlternateLink(nextHtml)
           ) {
             nextHtml = injectHeadContent(
@@ -113,7 +115,8 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
 
           if (
             isFeatureEnabled(config.markdownPages) &&
-            !config.validation?.disabled
+            !config.validation?.disabled &&
+            !isMarkdownPageExcluded(pagePath, config.markdownPages?.exclude)
           ) {
             validationResults.push(...validateMarkdownAlternateLink(nextHtml, pagePath));
           }
@@ -171,6 +174,17 @@ export function agentmarkup(config: AgentMarkupConfig): AstroIntegration {
 
           for (const htmlFile of htmlFiles) {
             const relativeHtmlPath = relative(outDir, htmlFile).replace(/\\/g, '/');
+            const pagePathForExclusion = pagePathFromOutputFile(outDir, htmlFile);
+
+            if (
+              isMarkdownPageExcluded(
+                pagePathForExclusion,
+                config.markdownPages?.exclude
+              )
+            ) {
+              continue;
+            }
+
             const markdownFileName = markdownFileNameFromHtmlFile(relativeHtmlPath);
             const outputMarkdownPath = join(outDir, markdownFileName);
             const html = finalHtmlByFile.get(htmlFile) ?? await readFile(htmlFile, 'utf8');

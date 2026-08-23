@@ -47,25 +47,12 @@ function Support() {
         </section>
 
         <section>
-          <h2>Security issues</h2>
+          <h2>Security issues and direct contact</h2>
           <p>
-            Do not open a public issue for a security vulnerability. Email{' '}
-            <a href="mailto:hello@cochinescu.com">hello@cochinescu.com</a> and
-            follow the reporting guidance in the{' '}
-            <a href="https://github.com/agentmarkup/agentmarkup/blob/main/SECURITY.md" target="_blank" rel="noopener noreferrer">
-              security policy
-            </a>
-            .
-          </p>
-        </section>
-
-
-        <section>
-          <h2>General contact</h2>
-          <p>
-            For questions that do not belong in GitHub issues or the security
-            reporting process, email{' '}
-            <a href="mailto:hello@animafelix.com">hello@animafelix.com</a>.
+            Do not open a public issue for a security vulnerability. Security
+            reports, general questions and business questions all have their
+            own addresses, listed on the{' '}
+            <a href="/contact/">contact page</a>.
           </p>
         </section>
       </article>

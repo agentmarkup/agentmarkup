@@ -21,9 +21,11 @@
     ],
     "schemaTypes": [
       "Answer",
+      "ContactPoint",
       "FAQPage",
       "Offer",
       "Organization",
+      "PostalAddress",
       "Question",
       "SoftwareApplication",
       "WebSite"
@@ -63,8 +65,10 @@
     "sectionIds": [],
     "schemaTypes": [
       "Answer",
+      "ContactPoint",
       "FAQPage",
       "Organization",
+      "PostalAddress",
       "Question",
       "WebPage",
       "WebSite"
@@ -92,8 +96,10 @@
     "sectionIds": [],
     "schemaTypes": [
       "Answer",
+      "ContactPoint",
       "FAQPage",
       "Organization",
+      "PostalAddress",
       "Question",
       "WebPage",
       "WebSite"
@@ -129,9 +135,11 @@
     ],
     "schemaTypes": [
       "CollectionPage",
+      "ContactPoint",
       "ItemList",
       "ListItem",
       "Organization",
+      "PostalAddress",
       "WebSite"
     ],
     "internalLinks": [
@@ -178,8 +186,10 @@
     "sectionIds": [],
     "schemaTypes": [
       "Answer",
+      "ContactPoint",
       "FAQPage",
       "Organization",
+      "PostalAddress",
       "Question",
       "WebPage",
       "WebSite"
@@ -213,8 +223,10 @@
     "sectionIds": [],
     "schemaTypes": [
       "Answer",
+      "ContactPoint",
       "FAQPage",
       "Organization",
+      "PostalAddress",
       "Question",
       "WebPage",
       "WebSite"
@@ -248,8 +260,10 @@
     "sectionIds": [],
     "schemaTypes": [
       "Answer",
+      "ContactPoint",
       "FAQPage",
       "Organization",
+      "PostalAddress",
       "Question",
       "WebPage",
       "WebSite"
@@ -284,8 +298,10 @@
     "sectionIds": [],
     "schemaTypes": [
       "Answer",
+      "ContactPoint",
       "FAQPage",
       "Organization",
+      "PostalAddress",
       "Question",
       "WebPage",
       "WebSite"
@@ -318,7 +334,9 @@
     "sectionIds": [],
     "schemaTypes": [
       "CollectionPage",
+      "ContactPoint",
       "Organization",
+      "PostalAddress",
       "WebSite"
     ],
     "internalLinks": [
@@ -363,8 +381,10 @@
     "sectionIds": [],
     "schemaTypes": [
       "Article",
+      "ContactPoint",
       "Organization",
       "Person",
+      "PostalAddress",
       "WebSite"
     ],
     "internalLinks": [
@@ -401,8 +421,10 @@
     "sectionIds": [],
     "schemaTypes": [
       "Article",
+      "ContactPoint",
       "Organization",
       "Person",
+      "PostalAddress",
       "WebSite"
     ],
     "internalLinks": [
@@ -441,8 +463,10 @@
     "sectionIds": [],
     "schemaTypes": [
       "Article",
+      "ContactPoint",
       "Organization",
       "Person",
+      "PostalAddress",
       "WebSite"
     ],
     "internalLinks": [
@@ -480,8 +504,10 @@
     "sectionIds": [],
     "schemaTypes": [
       "Article",
+      "ContactPoint",
       "Organization",
       "Person",
+      "PostalAddress",
       "WebSite"
     ],
     "internalLinks": [
@@ -523,8 +549,10 @@
     "sectionIds": [],
     "schemaTypes": [
       "Article",
+      "ContactPoint",
       "Organization",
       "Person",
+      "PostalAddress",
       "WebSite"
     ],
     "internalLinks": [
@@ -564,8 +592,10 @@
     "sectionIds": [],
     "schemaTypes": [
       "Article",
+      "ContactPoint",
       "Organization",
       "Person",
+      "PostalAddress",
       "WebSite"
     ],
     "internalLinks": [
@@ -607,8 +637,10 @@
     "sectionIds": [],
     "schemaTypes": [
       "Article",
+      "ContactPoint",
       "Organization",
       "Person",
+      "PostalAddress",
       "WebSite"
     ],
     "internalLinks": [
@@ -647,8 +679,10 @@
     "sectionIds": [],
     "schemaTypes": [
       "Article",
+      "ContactPoint",
       "Organization",
       "Person",
+      "PostalAddress",
       "WebSite"
     ],
     "internalLinks": [
@@ -687,8 +721,10 @@
     "sectionIds": [],
     "schemaTypes": [
       "Article",
+      "ContactPoint",
       "Organization",
       "Person",
+      "PostalAddress",
       "WebSite"
     ],
     "internalLinks": [
@@ -727,8 +763,10 @@
     "sectionIds": [],
     "schemaTypes": [
       "Article",
+      "ContactPoint",
       "Organization",
       "Person",
+      "PostalAddress",
       "WebSite"
     ],
     "internalLinks": [
@@ -769,8 +807,10 @@
     "sectionIds": [],
     "schemaTypes": [
       "Article",
+      "ContactPoint",
       "Organization",
       "Person",
+      "PostalAddress",
       "WebSite"
     ],
     "internalLinks": [
@@ -810,8 +850,10 @@
     "sectionIds": [],
     "schemaTypes": [
       "Article",
+      "ContactPoint",
       "Organization",
       "Person",
+      "PostalAddress",
       "WebSite"
     ],
     "internalLinks": [
@@ -849,8 +891,10 @@
     "sectionIds": [],
     "schemaTypes": [
       "Article",
+      "ContactPoint",
       "Organization",
       "Person",
+      "PostalAddress",
       "WebSite"
     ],
     "internalLinks": [
@@ -891,8 +935,10 @@
     "sectionIds": [],
     "schemaTypes": [
       "Article",
+      "ContactPoint",
       "Organization",
       "Person",
+      "PostalAddress",
       "WebSite"
     ],
     "internalLinks": [
@@ -926,8 +972,10 @@
     ],
     "sectionIds": [],
     "schemaTypes": [
+      "ContactPoint",
       "Organization",
       "Person",
+      "PostalAddress",
       "ProfilePage",
       "WebSite"
     ],
@@ -967,7 +1015,9 @@
     ],
     "sectionIds": [],
     "schemaTypes": [
+      "ContactPoint",
       "Organization",
+      "PostalAddress",
       "WebPage",
       "WebSite"
     ],
@@ -1004,7 +1054,9 @@
     ],
     "sectionIds": [],
     "schemaTypes": [
+      "ContactPoint",
       "Organization",
+      "PostalAddress",
       "WebPage",
       "WebSite"
     ],
@@ -1019,7 +1071,7 @@
   {
     "route": "/support/",
     "title": "Support - agentmarkup",
-    "description": "Support for agentmarkup, including documentation, GitHub issues, security reporting, and general contact details.",
+    "description": "Support for agentmarkup: start with the documentation, report bugs and feature requests as GitHub issues, and find the right address for security reports.",
     "canonical": "https://agentmarkup.dev/support/",
     "robots": "index,follow",
     "h1": [
@@ -1029,21 +1081,89 @@
       "Start with the documentation",
       "Claude Code plugin",
       "Bugs and feature requests",
-      "Security issues",
-      "General contact"
+      "Security issues and direct contact"
     ],
     "sectionIds": [],
     "schemaTypes": [
-      "ContactPage",
+      "ContactPoint",
       "Organization",
+      "PostalAddress",
+      "WebPage",
       "WebSite"
     ],
     "internalLinks": [
+      "/contact/",
       "/docs/ai-crawlers/",
       "/docs/audit/",
       "/docs/json-ld/",
       "/docs/llms-txt/",
       "/learn/"
+    ],
+    "prerendered": true,
+    "rawH1Count": 1
+  },
+  {
+    "route": "/about/",
+    "title": "About agentmarkup - who builds it and why",
+    "description": "agentmarkup is open-source, MIT-licensed build-time tooling for machine-readable websites, built and maintained by Sebastian Cochinescu at Anima Felix. What it does, what it deliberately does not do, and what ships today.",
+    "canonical": "https://agentmarkup.dev/about/",
+    "robots": "index,follow",
+    "h1": [
+      "About agentmarkup"
+    ],
+    "h2": [
+      "Why it exists",
+      "What it is, and what it is not",
+      "What ships today",
+      "Who maintains it"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "AboutPage",
+      "ContactPoint",
+      "Organization",
+      "Person",
+      "PostalAddress",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/authors/sebastian-cochinescu/",
+      "/contact/",
+      "/license/"
+    ],
+    "prerendered": true,
+    "rawH1Count": 1
+  },
+  {
+    "route": "/contact/",
+    "title": "Contact agentmarkup - bugs, security reports and business questions",
+    "description": "How to reach the agentmarkup maintainer: GitHub issues for bugs and feature requests, a dedicated address for security reports, and email for general and business questions.",
+    "canonical": "https://agentmarkup.dev/contact/",
+    "robots": "index,follow",
+    "h1": [
+      "Contact agentmarkup"
+    ],
+    "h2": [
+      "Bugs, feature requests and questions about the packages",
+      "Security reports",
+      "General and business contact",
+      "The website checker and security scan",
+      "What this is not"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "ContactPage",
+      "ContactPoint",
+      "Organization",
+      "PostalAddress",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/checker/",
+      "/privacy/",
+      "/security-scan/",
+      "/support/",
+      "/terms/"
     ],
     "prerendered": true,
     "rawH1Count": 1
@@ -1072,7 +1192,9 @@
     ],
     "sectionIds": [],
     "schemaTypes": [
+      "ContactPoint",
       "Organization",
+      "PostalAddress",
       "WebPage",
       "WebSite"
     ],

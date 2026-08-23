@@ -176,4 +176,52 @@ describe('@agentmarkup/nuxt processStaticOutput (re-export parity)', () => {
     expect(result.mode).toBe('generate');
     expect(existsSync(join(publicDir, 'llms.txt'))).toBe(true);
   });
+
+  it('does not generate a mirror for an excluded page', async () => {
+    const publicDir = await createPublicDir({
+      'index.html': page('Home'),
+      '404.html': page('Not found'),
+    });
+
+    await processStaticOutput(
+      { ...CONFIG, markdownPages: { enabled: true, exclude: ['/404'] } },
+      { outDir: publicDir, mode: 'generate' }
+    );
+
+    expect(existsSync(join(publicDir, 'index.md'))).toBe(true);
+    expect(existsSync(join(publicDir, '404.md'))).toBe(false);
+  });
+
+  it('check mode does not report missing mirrors when every page is excluded', async () => {
+    const hasMarkdownWarning = (results: { message: string }[]): boolean =>
+      results.some((issue) => issue.message.includes('markdown mirrors'));
+
+    // No .md files on disk, and every HTML page excluded: zero mirrors is correct.
+    const allExcluded = await processStaticOutput(
+      { ...CONFIG, markdownPages: { enabled: true, exclude: ['/', '/404'] } },
+      {
+        outDir: await createPublicDir({
+          'index.html': page('Home'),
+          '404.html': page('Not found'),
+        }),
+        mode: 'check',
+      }
+    );
+
+    expect(hasMarkdownWarning(allExcluded.validationResults)).toBe(false);
+
+    // Control: no .md files and a page that was NOT excluded is still a real finding.
+    const noneExcluded = await processStaticOutput(
+      { ...CONFIG, markdownPages: { enabled: true, exclude: ['/404'] } },
+      {
+        outDir: await createPublicDir({
+          'index.html': page('Home'),
+          '404.html': page('Not found'),
+        }),
+        mode: 'check',
+      }
+    );
+
+    expect(hasMarkdownWarning(noneExcluded.validationResults)).toBe(true);
+  });
 });

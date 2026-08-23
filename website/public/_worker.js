@@ -95,7 +95,7 @@ export default {
 
     if (url.pathname === '/api/check') {
       if (!['GET', 'POST'].includes(request.method)) {
-        return json({ error: 'Method not allowed.' }, 405);
+        return jsonError('method_not_allowed', 'Method not allowed. Use GET or POST.', 405);
       }
 
       return handleCheckRequest(request, url, env, Date.now());
@@ -106,14 +106,14 @@ export default {
       // behalf, so it must not be triggerable by a cross-site GET (e.g. an
       // <img> or link) that would bypass the on-page authorization gate.
       if (request.method !== 'POST') {
-        return json({ error: 'Method not allowed. Use POST.' }, 405);
+        return jsonError('method_not_allowed', 'Method not allowed. Use POST.', 405);
       }
       // Reject cross-site browser requests to prevent CSRF-style scans that
       // consume a visitor's shared rate-limit budget. Non-browser clients omit
       // Sec-Fetch-Site and are not a CSRF vector.
       const fetchSite = request.headers.get('sec-fetch-site');
       if (fetchSite === 'cross-site' || fetchSite === 'same-site') {
-        return json({ error: 'Cross-site requests are not allowed.' }, 403);
+        return jsonError('cross_site_forbidden', 'Cross-site requests are not allowed.', 403);
       }
 
       return handleSecurityScanRequest(request, url, env, Date.now());
@@ -256,13 +256,11 @@ async function handleCheckRequest(request, url, env, checkStartTime) {
 
     return json(responseBody, 200);
   } catch (error) {
-    return json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Enter a public http:// or https:// website URL.',
-      },
+    return jsonError(
+      'invalid_request',
+      error instanceof Error
+        ? error.message
+        : 'Enter a public http:// or https:// website URL.',
       400
     );
   }
@@ -413,13 +411,11 @@ async function handleSecurityScanRequest(request, url, env, checkStartTime) {
 
     return json(responseBody, 200);
   } catch (error) {
-    return json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Enter a public http:// or https:// website URL.',
-      },
+    return jsonError(
+      'invalid_request',
+      error instanceof Error
+        ? error.message
+        : 'Enter a public http:// or https:// website URL.',
       400
     );
   }
@@ -561,16 +557,12 @@ async function applyCheckerProtection(
         ...metadata,
         remainingChecks: 0,
       },
-      response: json(
-        {
-          error:
-            'Too many checker or security scan requests came from this IP recently.',
-          retryAfterSeconds,
-        },
+      response: jsonError(
+        'rate_limited',
+        'Too many checker or security scan requests came from this IP recently.',
         429,
-        {
-          'retry-after': String(retryAfterSeconds),
-        }
+        { retryAfterSeconds },
+        { 'retry-after': String(retryAfterSeconds) }
       ),
     };
   }
@@ -581,16 +573,16 @@ async function applyCheckerProtection(
     if (!verified.ok) {
       return {
         metadata,
-        response: json(
+        response: jsonError(
+          'verification_required',
+          verified.error ??
+            'Additional verification is required before running more checks from this IP.',
+          403,
           {
-            error:
-              verified.error ??
-              'Additional verification is required before running more checks from this IP.',
             turnstileRequired: true,
             turnstileSiteKey: turnstileConfig.siteKey,
             retryAfterSeconds: null,
-          },
-          403
+          }
         ),
       };
     }
@@ -1793,6 +1785,15 @@ function clampInteger(value, min, max, fallback) {
   return Math.min(Math.max(value, min), max);
 }
 
+/**
+ * Structured error envelope for the JSON API. `code` is a stable machine-readable
+ * slug an agent can branch on; `error` stays the human-readable message the UI
+ * already renders, so adding this is additive for existing clients.
+ */
+function jsonError(code, message, status, extra = {}, extraHeaders = {}) {
+  return json({ error: message, code, ...extra }, status, extraHeaders);
+}
+
 function json(body, status, extraHeaders = {}) {
   return new Response(JSON.stringify(body), {
     status,
@@ -1807,7 +1808,25 @@ function json(body, status, extraHeaders = {}) {
 
 async function serveAssetWithSecurityHeaders(request, env) {
   const asset = await env.ASSETS.fetch(request);
-  const headers = new Headers(asset.headers);
+
+  // Pages only returns 404 here because the build emits a real `404.html`.
+  // Without that file the assets binding falls back to `index.html` with a 200,
+  // which is a soft-404: an agent probing paths concludes every path exists.
+  if (asset.status === 404) {
+    return buildNotFoundResponse(request, asset);
+  }
+
+  return withSecurityHeaders(
+    new Response(asset.body, {
+      status: asset.status,
+      statusText: asset.statusText,
+      headers: new Headers(asset.headers),
+    })
+  );
+}
+
+function withSecurityHeaders(response) {
+  const headers = new Headers(response.headers);
 
   for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
     if (!headers.has(name)) {
@@ -1815,9 +1834,147 @@ async function serveAssetWithSecurityHeaders(request, env) {
     }
   }
 
-  return new Response(asset.body, {
-    status: asset.status,
-    statusText: asset.statusText,
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
     headers,
   });
+}
+
+/**
+ * Serves the not-found response, negotiated on Accept: a short markdown body
+ * for clients that explicitly rank markdown or plain text above HTML, and the
+ * prerendered 404 page for everyone else. Both carry `Vary: Accept` so a shared
+ * cache cannot hand one variant to a client that asked for the other.
+ */
+function buildNotFoundResponse(request, asset) {
+  const negotiatedType = negotiateTextType(request.headers.get('accept'));
+
+  if (negotiatedType) {
+    const body =
+      request.method === 'HEAD'
+        ? null
+        : buildNotFoundMarkdown(new URL(request.url).origin);
+
+    return withSecurityHeaders(
+      new Response(body, {
+        status: 404,
+        headers: {
+          // Echo the type the client actually asked for: a client that accepts
+          // text/plain but not text/markdown must not be handed text/markdown.
+          'content-type': `${negotiatedType}; charset=utf-8`,
+          'cache-control': 'no-store',
+          vary: 'Accept, Accept-Encoding',
+        },
+      })
+    );
+  }
+
+  const headers = new Headers(asset.headers);
+  headers.set('vary', mergeVaryAccept(headers.get('vary')));
+
+  return withSecurityHeaders(
+    new Response(asset.body, {
+      status: 404,
+      statusText: asset.statusText,
+      headers,
+    })
+  );
+}
+
+function buildNotFoundMarkdown(origin) {
+  return [
+    '# 404 Not Found',
+    '',
+    `This path does not exist on ${origin}.`,
+    '',
+    'This is a real HTTP 404. Paths that do not exist here never answer 200, so',
+    'a missing resource can be told apart from an existing one.',
+    '',
+    '## Machine-readable entry points',
+    '',
+    `- Site manifest, including when to use this site: ${origin}/llms.txt`,
+    `- Same manifest with page content inlined: ${origin}/llms-full.txt`,
+    `- Every indexable URL: ${origin}/sitemap.xml`,
+    `- Crawler rules, including AI crawler directives: ${origin}/robots.txt`,
+    `- Documentation index: ${origin}/learn/`,
+    '',
+    'Every indexable content page has a markdown mirror at the same path with a',
+    `\`.md\` extension, for example ${origin}/learn.md. This 404 page does not.`,
+    '',
+  ].join('\n');
+}
+
+/**
+ * Returns the plain-text media type to answer with when the Accept header
+ * explicitly ranks one above HTML, or null to serve the HTML page.
+ *
+ * Wildcards are ignored on purpose: a bare catch-all Accept (curl and most
+ * non-browser clients send one) should still get the HTML page, so only a
+ * client that actually asked for a text type gets one. `q=0` means "not
+ * acceptable" per RFC 9110, so those entries are dropped rather than ranked,
+ * and the winning type is echoed back verbatim so a client that accepts
+ * text/plain but not text/markdown is never handed text/markdown. A tie goes
+ * to HTML, which is what a browser's `text/html,...` header expresses.
+ */
+function negotiateTextType(accept) {
+  if (!accept) {
+    return null;
+  }
+
+  const textTypes = new Set(['text/markdown', 'text/x-markdown', 'text/plain']);
+  const htmlTypes = new Set(['text/html', 'application/xhtml+xml']);
+  let bestTextType = null;
+  let bestTextQuality = 0;
+  let htmlQuality = 0;
+
+  for (const rawEntry of accept.split(',')) {
+    const [rawType, ...parameters] = rawEntry.split(';');
+    const type = rawType.trim().toLowerCase();
+    if (!textTypes.has(type) && !htmlTypes.has(type)) {
+      continue;
+    }
+
+    let quality = 1;
+    for (const parameter of parameters) {
+      const [name, value] = parameter.split('=');
+      if (name?.trim().toLowerCase() === 'q') {
+        const parsed = Number.parseFloat(value ?? '');
+        quality = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), 1) : 0;
+      }
+    }
+
+    if (quality <= 0) {
+      continue;
+    }
+
+    if (textTypes.has(type)) {
+      if (quality > bestTextQuality) {
+        bestTextQuality = quality;
+        bestTextType = type;
+      }
+    } else {
+      htmlQuality = Math.max(htmlQuality, quality);
+    }
+  }
+
+  return bestTextType && bestTextQuality > htmlQuality ? bestTextType : null;
+}
+
+/** Adds `Accept` to an existing Vary header without duplicating it. */
+function mergeVaryAccept(existing) {
+  const values = (existing ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  if (values.some((value) => value === '*')) {
+    return '*';
+  }
+
+  if (!values.some((value) => value.toLowerCase() === 'accept')) {
+    values.unshift('Accept');
+  }
+
+  return values.join(', ');
 }

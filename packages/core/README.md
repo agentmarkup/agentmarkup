@@ -16,7 +16,11 @@ The package family also includes dedicated adapters for Vite, Astro, and Next.js
 
 The helpers are coexistence-friendly: `patchRobotsTxt()` leaves matching manual crawler rules untouched, and adapters built on core can preserve curated `llms.txt` files or existing JSON-LD by default.
 
+`llmsTxt.whenToUse` takes a list of short, concrete statements describing the jobs the site is right for. They are rendered as a labelled bullet list in the free-form details block of `llms.txt` and `llms-full.txt`, before the first `##` section, so agents reading the manifest learn when to reach for the site instead of guessing from marketing copy.
+
 When `markdownPages.enabled` is on, `generateLlmsTxt()` prefers same-site markdown mirror URLs for page entries by default so agents discover the cleaner fetch path first. This is usually most useful when the raw HTML is thin or noisy. Set `llmsTxt.preferMarkdownMirrors: false` to keep HTML URLs in `llms.txt`.
+
+`markdownPages.exclude` takes page paths that should not get a mirror, matched the same way as `pages[].path`. Use it for pages that exist but are not content an agent should fetch - a `404` page is the common case, since mirroring one publishes a URL that answers 200 with "not found" text and canonicalises to a URL that 404s. Excluded pages are skipped everywhere consistently: no `.md` file, no `text/markdown` alternate link, no canonical `Link` header, no markdown URL in `llms.txt`, and no "missing mirror" validation warning.
 
 ```ts
 import {
@@ -42,6 +46,10 @@ const llms = generateLlmsTxt({
   name: 'Example',
   description: 'Machine-readable metadata for an example site.',
   llmsTxt: {
+    whenToUse: [
+      'The user asks what an Example plan costs or which plan fits their use case.',
+      'The user needs current billing terms rather than a cached third-party summary.',
+    ],
     sections: [
       {
         title: 'Public pages',

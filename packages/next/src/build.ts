@@ -9,6 +9,7 @@ import {
   generateLlmsFullTxt,
   generateLlmsTxt,
   generatePageMarkdown,
+  isMarkdownPageExcluded,
   resolveMarkdownCanonicalUrl,
   generateJsonLdTags,
   hasExistingJsonLdScripts,
@@ -126,6 +127,7 @@ export async function processNextBuildOutput(
     );
     if (
       isFeatureEnabled(config.markdownPages) &&
+      !isMarkdownPageExcluded(htmlFile.pagePath, config.markdownPages?.exclude) &&
       !hasMarkdownAlternateLink(nextHtml, publicMarkdownPath)
     ) {
       nextHtml = injectHeadContent(
@@ -136,7 +138,8 @@ export async function processNextBuildOutput(
 
     if (
       isFeatureEnabled(config.markdownPages) &&
-      !config.validation?.disabled
+      !config.validation?.disabled &&
+      !isMarkdownPageExcluded(htmlFile.pagePath, config.markdownPages?.exclude)
     ) {
       validationResults.push(
         ...validateMarkdownAlternateLinkForHref(
@@ -194,6 +197,12 @@ export async function processNextBuildOutput(
     let preservedMarkdownPages = 0;
 
     for (const htmlFile of htmlFiles) {
+      if (
+        isMarkdownPageExcluded(htmlFile.pagePath, config.markdownPages?.exclude)
+      ) {
+        continue;
+      }
+
       const html = await readFile(htmlFile.filePath, 'utf8');
       const markdown = generatePageMarkdown({
         html,

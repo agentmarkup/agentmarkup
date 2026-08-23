@@ -1,4 +1,4 @@
-import { markdownHrefForPagePath } from '../html.js';
+import { isMarkdownPageExcluded, markdownHrefForPagePath } from '../html.js';
 import type {
   AgentMarkupConfig,
   ResolvedLlmsTxtEntry,
@@ -28,6 +28,8 @@ export function generateLlmsTxt(config: AgentMarkupConfig): string | null {
     lines.push('');
   }
 
+  pushWhenToUse(lines, config);
+
   for (const section of sections) {
     lines.push(`## ${collapseInline(section.title)}`);
     lines.push('');
@@ -48,6 +50,31 @@ export function generateLlmsTxt(config: AgentMarkupConfig): string | null {
  */
 function collapseInline(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Renders the optional "when to use" guidance into the free-form details block
+ * of llms.txt. Items are collapsed to single lines so a multi-line string
+ * cannot escape its list item, and the block is skipped entirely when every
+ * configured item is blank.
+ */
+function pushWhenToUse(lines: string[], config: AgentMarkupConfig): void {
+  const items = (config.llmsTxt?.whenToUse ?? [])
+    .map((item) => collapseInline(item))
+    .filter((item) => item.length > 0);
+
+  if (items.length === 0) {
+    return;
+  }
+
+  lines.push(`**When to use ${collapseInline(config.name)}:**`);
+  lines.push('');
+
+  for (const item of items) {
+    lines.push(`- ${item}`);
+  }
+
+  lines.push('');
 }
 
 /** Escapes Markdown link-label delimiters so a `]` in a title cannot close the label early. */
@@ -106,6 +133,8 @@ export function generateLlmsFullTxt(
     lines.push(config.llmsTxt.instructions);
     lines.push('');
   }
+
+  pushWhenToUse(lines, config);
 
   lines.push(
     'This optional agentmarkup context file expands the published llms.txt manifest with inline same-site markdown content when those mirrors are available.'
@@ -193,8 +222,17 @@ function resolveLlmsTxtEntry(
   const canonicalUrl = resolveUrl(config.site, entry.url);
   const sameSite = isSameSiteUrl(config.site, canonicalUrl);
   const htmlLike = isHtmlLikeRoute(new URL(canonicalUrl).pathname);
+  // A page listed in `markdownPages.exclude` never gets a mirror written, so
+  // advertising one here would put a link to a file that does not exist into
+  // llms.txt (and into llms-full.txt's "Preferred fetch" line).
+  const excludedFromMirrors = isMarkdownPageExcluded(
+    new URL(canonicalUrl).pathname,
+    config.markdownPages?.exclude
+  );
   const markdownUrl =
-    sameSite && htmlLike ? rewriteUrlToMarkdownMirror(config.site, canonicalUrl) : null;
+    sameSite && htmlLike && !excludedFromMirrors
+      ? rewriteUrlToMarkdownMirror(config.site, canonicalUrl)
+      : null;
   const url =
     markdownUrl && shouldPreferMarkdownMirror(config, canonicalUrl)
       ? markdownUrl

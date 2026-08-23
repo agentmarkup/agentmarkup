@@ -510,6 +510,55 @@ describe('agentmarkup integration', () => {
     expect(llmsTxt).toContain('# Existing');
   });
 
+  it('skips markdown mirrors, alternate links and canonical headers for excluded pages', async () => {
+    const page = (title: string, heading: string) =>
+      [
+        '<!doctype html>',
+        '<html lang="en">',
+        '  <head>',
+        '    <meta charset="UTF-8" />',
+        `    <title>${title}</title>`,
+        '  </head>',
+        '  <body>',
+        `    <main><h1>${heading}</h1><p>Readable body copy for markdown output.</p></main>`,
+        '    <script type="module" src="/src/main.js"></script>',
+        '  </body>',
+        '</html>',
+      ].join('\n');
+
+    const root = await createFixture({
+      'src/main.js': 'console.log("agentmarkup markdown exclude fixture");\n',
+      'index.html': page('Home', 'Home'),
+      '404.html': page('Not found', 'Not found'),
+    });
+
+    await buildFixture(
+      root,
+      {
+        site: 'https://example.com',
+        name: 'Example',
+        markdownPages: {
+          enabled: true,
+          exclude: ['/404'],
+        },
+      },
+      ['index.html', '404.html']
+    );
+
+    const headers = await readDistFile(root, '_headers');
+    const notFoundHtml = await readDistFile(root, '404.html');
+    const homeHtml = await readDistFile(root, 'index.html');
+
+    await expect(readDistFile(root, 'index.md')).resolves.toContain('# Home');
+    await expect(readDistFile(root, '404.md')).rejects.toThrow();
+
+    expect(headers).toContain('/index.md');
+    expect(headers).not.toContain('/404.md');
+
+    expect(homeHtml).toContain('href="/index.md"');
+    expect(notFoundHtml).not.toContain('text/markdown');
+  });
+
   it('emits markdown canonical headers even without Content-Signal enabled', async () => {
     const root = await createFixture({
       'src/main.js': 'console.log("agentmarkup markdown headers fixture");\n',

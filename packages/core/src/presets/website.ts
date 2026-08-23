@@ -48,6 +48,20 @@ export function buildOrganization(config: OrganizationSchema): JsonLdBase {
     schema.description = config.description;
   }
 
+  if (config.contactPoint && config.contactPoint.length > 0) {
+    schema.contactPoint = config.contactPoint.map((point) => ({
+      '@type': 'ContactPoint',
+      ...point,
+    }));
+  }
+
+  if (config.address) {
+    schema.address = {
+      '@type': 'PostalAddress',
+      ...config.address,
+    };
+  }
+
   if (config.sameAs) {
     schema.sameAs = config.sameAs;
   }

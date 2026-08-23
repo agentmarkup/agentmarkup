@@ -41,9 +41,9 @@ describe('TOC slugging', () => {
 })
 
 describe('route and content preservation manifest', () => {
-  it('covers every one of the 28 public routes exactly once', () => {
-    expect(manifest).toHaveLength(28)
-    expect(new Set(manifest.map((entry) => entry.route)).size).toBe(28)
+  it('covers every one of the 30 public routes exactly once', () => {
+    expect(manifest).toHaveLength(30)
+    expect(new Set(manifest.map((entry) => entry.route)).size).toBe(30)
   })
 
   for (const entry of manifest) {

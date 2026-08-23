@@ -3,7 +3,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { agentmarkup } from '@agentmarkup/vite'
 
-import { websitePrerender } from './prerender-plugin'
+import { MARKDOWN_EXCLUDED_PAGES, websitePrerender } from './prerender-plugin'
 import { author, blogPosts } from './src/data/editorial'
 import { aiCrawlersFaqs, auditFaqs, checkerFaqs, homeFaqs, jsonLdFaqs, llmsTxtFaqs, securityScanFaqs } from './src/data/page-faqs'
 
@@ -12,6 +12,35 @@ const authorSchema = {
   name: author.name,
   url: `${siteUrl}${author.profilePath}`,
 }
+
+// Preset shape: `@type` is added by the organization preset in @agentmarkup/core.
+const organizationAddress = {
+  streetAddress: 'Ion Mihalache 166',
+  addressLocality: 'Bucharest',
+  addressCountry: 'RO',
+}
+
+const organizationContactPoints = [
+  {
+    contactType: 'technical support',
+    email: 'hello@animafelix.com',
+    url: `${siteUrl}/contact/`,
+    availableLanguage: ['English'],
+  },
+  {
+    contactType: 'security',
+    email: 'hello@cochinescu.com',
+    url: `${siteUrl}/contact/`,
+    availableLanguage: ['English'],
+  },
+]
+
+// The /contact/ page uses a hand-written schema, so it needs the explicit types.
+const contactPointsJsonLd = organizationContactPoints.map((point) => ({
+  '@type': 'ContactPoint',
+  ...point,
+}))
+const addressJsonLd = { '@type': 'PostalAddress', ...organizationAddress }
 
 const articlePages = blogPosts.map((post) => ({
   path: `/blog/${post.slug}/`,
@@ -156,10 +185,47 @@ const informationalPages = [
     path: '/support/',
     schemas: [
       {
-        '@type': 'ContactPage',
+        '@type': 'WebPage',
         name: 'Support - agentmarkup',
         url: `${siteUrl}/support/`,
-        description: 'Support for agentmarkup, including documentation, GitHub issues, security reporting, and general contact details.',
+        description: 'Support for agentmarkup: start with the documentation, report bugs and feature requests as GitHub issues, and find the right address for security reports.',
+      },
+    ],
+  },
+  {
+    path: '/about/',
+    schemas: [
+      {
+        '@type': 'AboutPage',
+        name: 'About agentmarkup',
+        url: `${siteUrl}/about/`,
+        description: 'What agentmarkup is, why it exists, what it deliberately does not do, and who maintains it.',
+        mainEntity: {
+          '@type': 'Organization',
+          name: 'agentmarkup',
+          url: siteUrl,
+          // authorSchema is the bare { name, url } shape the article preset wraps
+          // in a Person; a hand-written schema has to supply the type itself.
+          founder: { '@type': 'Person', ...authorSchema },
+        },
+      },
+    ],
+  },
+  {
+    path: '/contact/',
+    schemas: [
+      {
+        '@type': 'ContactPage',
+        name: 'Contact agentmarkup',
+        url: `${siteUrl}/contact/`,
+        description: 'How to reach the agentmarkup maintainer for bugs and feature requests, security reports, and general or business questions.',
+        mainEntity: {
+          '@type': 'Organization',
+          name: 'agentmarkup',
+          url: siteUrl,
+          contactPoint: contactPointsJsonLd,
+          address: addressJsonLd,
+        },
       },
     ],
   },
@@ -215,7 +281,10 @@ export default defineConfig({
         'license': resolve(__dirname, 'license/index.html'),
         'terms': resolve(__dirname, 'terms/index.html'),
         'support': resolve(__dirname, 'support/index.html'),
+        'about': resolve(__dirname, 'about/index.html'),
+        'contact': resolve(__dirname, 'contact/index.html'),
         'privacy': resolve(__dirname, 'privacy/index.html'),
+        'not-found': resolve(__dirname, '404.html'),
         'prerender-main': resolve(__dirname, 'src/main.tsx'),
         'prerender-checker': resolve(__dirname, 'src/entries/checker.tsx'),
         'prerender-security-scan': resolve(__dirname, 'src/entries/security-scan.tsx'),
@@ -243,7 +312,10 @@ export default defineConfig({
         'prerender-license': resolve(__dirname, 'src/entries/license.tsx'),
         'prerender-terms': resolve(__dirname, 'src/entries/terms.tsx'),
         'prerender-support': resolve(__dirname, 'src/entries/support.tsx'),
+        'prerender-about': resolve(__dirname, 'src/entries/about.tsx'),
+        'prerender-contact': resolve(__dirname, 'src/entries/contact.tsx'),
         'prerender-privacy': resolve(__dirname, 'src/entries/privacy.tsx'),
+        'prerender-not-found': resolve(__dirname, 'src/entries/not-found.tsx'),
       },
     },
   },
@@ -256,11 +328,21 @@ export default defineConfig({
 
       llmsTxt: {
         instructions: 'agentmarkup is an open-source package family for Vite, Astro, Next.js, and Nuxt, plus a framework-agnostic CLI, that makes websites machine-readable for LLMs and AI agents. It generates llms.txt, optional llms-full.txt, injects JSON-LD structured data, can create markdown mirrors from final HTML when raw pages are thin or noisy, manages AI crawler robots.txt directives, and validates everything at build time.',
+        whenToUse: [
+          'Someone asks whether a specific public website is readable by AI crawlers and agents. Use the website checker at /checker/, or run `npx @agentmarkup/audit <url>` to fetch that URL as each major AI crawler and diff the result against a browser fetch.',
+          'Someone needs llms.txt, llms-full.txt, JSON-LD, markdown mirrors, AI crawler robots.txt rules, or Content-Signal headers generated for their own site. Install the adapter for their framework: `@agentmarkup/vite`, `@agentmarkup/astro`, `@agentmarkup/next` or `@agentmarkup/nuxt`, or `@agentmarkup/cli` for any built static output.',
+          'Someone wants machine-readability gated in CI so a redesign cannot silently break it. `agentmarkup check ./dist` from `@agentmarkup/cli` and `npx @agentmarkup/audit <url>` both exit non-zero on error-level findings.',
+          'Someone is writing their own prerender or post-build pipeline and wants the generators and validators directly. Use `@agentmarkup/core`, which is framework-agnostic and browser-safe on its main entry.',
+          'Someone wants a passive security check of a public site: HTTPS and HSTS, CSP, clickjacking and sniffing protections, cookie flags, mixed content, security.txt, and SPF, DMARC and DNSSEC records. Use the security scan at /security-scan/.',
+          'Do not use agentmarkup for a readiness score, a letter grade, or a ranking guarantee. Validation here is deterministic: missing required fields are errors, missing recommended fields are warnings, and no score is produced. Do not point the checker or the scan at a site the user does not own or is not authorized to test.',
+        ],
         sections: [
           {
             title: 'Documentation',
             entries: [
-              { title: 'Support', url: `${siteUrl}/support/`, description: 'Documentation links, issue reporting, security reporting, and general contact details' },
+              { title: 'About agentmarkup', url: `${siteUrl}/about/`, description: 'What agentmarkup is, why it exists, what it deliberately does not do, and who maintains it' },
+              { title: 'Contact', url: `${siteUrl}/contact/`, description: 'Bugs and feature requests via GitHub issues, a dedicated address for security reports, and email for general and business questions' },
+              { title: 'Support', url: `${siteUrl}/support/`, description: 'Documentation first, then GitHub issues for bugs and feature requests, and where to send security reports' },
               { title: 'GitHub Repository', url: 'https://github.com/agentmarkup/agentmarkup', description: 'Source code, issues, and contributing guide' },
               { title: 'AgentMarkup Agent Skill', url: 'https://github.com/agentmarkup/agentmarkup/tree/main/skills/agentmarkup', description: 'Public agent skill for installing AgentMarkup, configuring preferences, auditing output, and implementing fixes' },
               { title: 'Vite Package', url: 'https://www.npmjs.com/package/@agentmarkup/vite', description: 'Install with pnpm add -D @agentmarkup/vite' },
@@ -321,6 +403,7 @@ export default defineConfig({
 
       markdownPages: {
         enabled: true,
+        exclude: MARKDOWN_EXCLUDED_PAGES,
       },
 
       contentSignalHeaders: {
@@ -340,6 +423,8 @@ export default defineConfig({
           url: siteUrl,
           logo: `${siteUrl}/apple-touch-icon.png`,
           description: 'Open-source tooling for machine-readable websites, agent-friendly markup, llms manifests, optional markdown mirrors, and build-time validation.',
+          contactPoint: organizationContactPoints,
+          address: organizationAddress,
           sameAs: [
             'https://github.com/agentmarkup/agentmarkup',
             'https://www.npmjs.com/package/@agentmarkup/vite',
