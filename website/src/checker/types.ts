@@ -38,6 +38,7 @@ export interface SiteCheckResponse {
   sitemap: RemoteResource | null;
   sitemapUrl: string | null;
   sitemapSource: 'robots' | 'default' | null;
+  notFoundProbe?: RemoteResource | null;
   samplePage: RemoteResource | null;
   samplePageMarkdown: RemoteResource | null;
   cache?: CheckerCacheStatus;

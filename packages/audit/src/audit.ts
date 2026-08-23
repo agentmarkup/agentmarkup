@@ -8,6 +8,7 @@ import {
   analyzeMachineReadable,
   analyzeMarkdown,
   analyzeMetadata,
+  analyzeNotFoundHandling,
   analyzeRobots,
   analyzeSitemap,
   isXmlSitemap,
@@ -92,6 +93,10 @@ function notFetched(url: string): FetchResult {
  * crawler user-agent, plus robots.txt and llms.txt, then runs the analyzers.
  * `fetchedAt` is injected by the caller so the core stays deterministic/testable.
  */
+/** A path no real route should claim, used to observe not-found handling. */
+const SOFT_404_PROBE_PATH =
+  '/agentmarkup-probe-404-does-not-exist-9f3a2c';
+
 export async function audit(
   targetUrl: string,
   options: AuditOptions & { fetchedAt: string }
@@ -152,6 +157,16 @@ export async function audit(
     }
   }
 
+  // One extra request, to a path no real site would route. The suffix is fixed
+  // rather than random so a run is reproducible and cacheable; it is long and
+  // specific enough that a collision with a real route is not a real risk.
+  const notFoundProbe = await doFetch(`${origin}${SOFT_404_PROBE_PATH}`, {
+    userAgent: BROWSER_CONTROL.ua,
+    timeoutMs,
+    readBody: true,
+    maxBytes: 1024 * 1024,
+  });
+
   const mirrorUrl = markdownMirrorUrl(control.finalUrl || targetUrl);
   const mirror = mirrorUrl
     ? await doFetch(mirrorUrl, {
@@ -170,6 +185,7 @@ export async function audit(
     ...analyzeMarkdown(control, mirror),
     ...analyzeSitemap(sitemap, robots),
     ...analyzeMetadata(control),
+    ...analyzeNotFoundHandling(control, notFoundProbe),
   ];
 
   const counts = countByLevel(findings);

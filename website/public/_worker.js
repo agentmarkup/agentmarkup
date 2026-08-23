@@ -38,6 +38,9 @@ const CHECKS_SCHEMA_STATEMENTS = [
     ON checker_cache (expires_at)`,
 ];
 
+/** A path no real route should claim, used to observe not-found handling. */
+const SOFT_404_PROBE_PATH = '/agentmarkup-probe-404-does-not-exist-9f3a2c';
+
 const FETCH_TIMEOUT_MS = 10_000;
 const MAX_RESPONSE_BYTES = 5 * 1024 * 1024;
 const MAX_REDIRECTS = 5;
@@ -199,6 +202,13 @@ async function handleCheckRequest(request, url, env, checkStartTime) {
       sitemapSource = 'default';
     }
 
+    // One extra request to a path no real route should claim, so the report can
+    // tell a real 404 from a soft-404 that makes every path look like it exists.
+    const notFoundProbe = await fetchText(
+      new URL(SOFT_404_PROBE_PATH, targetUrl).toString(),
+      checkStartTime
+    );
+
     const sitemap = sitemapUrl ? await fetchText(sitemapUrl, checkStartTime) : null;
     const payload = {
       targetUrl,
@@ -212,6 +222,7 @@ async function handleCheckRequest(request, url, env, checkStartTime) {
       sitemap,
       sitemapUrl,
       sitemapSource,
+      notFoundProbe,
       samplePage,
       samplePageMarkdown,
       cache: {

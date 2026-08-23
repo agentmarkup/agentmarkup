@@ -8,6 +8,7 @@ import {
 } from '@agentmarkup/core';
 import { CRAWLER_AGENTS } from '../agents.js';
 import type { AuditFinding, AuditLevel } from '../findings.js';
+import { finding } from '../findings.js';
 import type { FetchResult } from '../net.js';
 
 function levelFromSeverity(severity: ValidationResult['severity']): AuditLevel {
@@ -431,6 +432,117 @@ export function analyzeSitemap(
 }
 
 /** Core head metadata (title / description / canonical) crawlers use to attribute a page. */
+/**
+ * Normalises HTML for a body-similarity comparison: drops the head, scripts,
+ * styles, tags, and runs of whitespace, so two renders of the same SPA shell
+ * compare equal even when a nonce, a hashed asset name, or a timestamp differs.
+ */
+function normalizeBodyForComparison(html: string): string {
+  return html
+    .replace(/<head\b[\s\S]*?<\/head>/gi, ' ')
+    .replace(/<script\b[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style\b[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+/**
+ * Detects a soft-404: a path that cannot exist answering 200 instead of 404.
+ *
+ * This is the check that matters most for an agent, because it is the one that
+ * silently corrupts every other conclusion. When unknown paths return 200, an
+ * agent probing for `/openapi.json`, `/api/docs` or `/about` is told all of
+ * them exist, and it has no way to tell a real resource from a fabricated one.
+ *
+ * Deliberately conservative. A single failed request proves nothing: a timeout,
+ * a WAF challenge, or a rate limit is not a soft-404, so anything that is not a
+ * completed 2xx is left alone. A 200 whose body matches the homepage is an SPA
+ * fallback and reported as an error; a 200 with a different body is reported as
+ * a warning, because a custom "not found" page served with the wrong status is
+ * still a soft-404 but the evidence is weaker.
+ */
+export function analyzeNotFoundHandling(
+  control: FetchResult,
+  probe: FetchResult
+): AuditFinding[] {
+  // The probe is only interpretable against a homepage that actually loaded.
+  if (control.error || !control.body || (control.status ?? 0) >= 400) {
+    return [];
+  }
+
+  if (probe.error || probe.status === null) {
+    return [
+      finding({
+        code: 'notfound.unknown',
+        level: 'warn',
+        title: 'Could not determine how missing paths are handled',
+        detail:
+          'The request for a path that should not exist did not complete, so it is unknown whether this site returns a real 404. A timeout or a block is not evidence of a soft-404.',
+        evidence: probe.error ?? 'no status',
+      }),
+    ];
+  }
+
+  if (probe.status === 404 || probe.status === 410) {
+    return [
+      finding({
+        code: 'notfound.ok',
+        level: 'pass',
+        title: 'Missing paths return a real 404',
+        detail:
+          'A path that does not exist answered with a real not-found status, so an agent can tell a missing resource from a real one.',
+        evidence: `GET ${probe.requestedUrl} -> ${probe.status}`,
+      }),
+    ];
+  }
+
+  if (probe.status >= 300 || probe.status < 200) {
+    return [
+      finding({
+        code: 'notfound.non-404',
+        level: 'warn',
+        title: `Missing paths answer ${probe.status}, not 404`,
+        detail:
+          'A path that does not exist did not return 404 or 410. Agents use the status code to decide whether a resource exists, so anything else is ambiguous.',
+        evidence: `GET ${probe.requestedUrl} -> ${probe.status}`,
+        fix: 'Return 404 (or 410) for unknown paths.',
+      }),
+    ];
+  }
+
+  const sameAsHomepage =
+    probe.body !== null &&
+    normalizeBodyForComparison(probe.body) === normalizeBodyForComparison(control.body);
+
+  if (sameAsHomepage) {
+    return [
+      finding({
+        code: 'notfound.soft-404',
+        level: 'error',
+        title: 'Soft-404: every path appears to exist',
+        detail:
+          'A path that cannot exist returned 200 with the same body as the homepage. Agents probing for resources will conclude that every path on this site exists, which makes every other discovery result unreliable.',
+        evidence: `GET ${probe.requestedUrl} -> ${probe.status}, body identical to the homepage`,
+        fix: 'Return a real 404 for unknown paths. On static hosts this usually means emitting a 404.html; the platform then serves it with a 404 status instead of falling back to index.html. Pair it with markdownPages.exclude so the 404 page does not get a markdown mirror.',
+      }),
+    ];
+  }
+
+  return [
+    finding({
+      code: 'notfound.soft-404-custom',
+      level: 'warn',
+      title: 'Missing paths return 200, not 404',
+      detail:
+        'A path that cannot exist returned 200. The body differs from the homepage, so this looks like a custom not-found page served with the wrong status. Agents read the status code, so it still reads as "this resource exists".',
+      evidence: `GET ${probe.requestedUrl} -> ${probe.status}, body differs from the homepage`,
+      fix: 'Serve the same not-found page with a 404 status rather than 200.',
+    }),
+  ];
+}
+
 export function analyzeMetadata(control: FetchResult): AuditFinding[] {
   if (control.error || (control.status ?? 0) >= 400 || !control.body) {
     return [];

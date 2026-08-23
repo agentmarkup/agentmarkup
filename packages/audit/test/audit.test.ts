@@ -38,6 +38,10 @@ describe('audit orchestrator', () => {
       if (url.endsWith('/llms.txt')) {
         return ok(url, '# Example\n\n## Docs\n\n- [Guide](https://example.com/g)\n');
       }
+      // A well-configured site returns a real 404 for a path that cannot exist.
+      if (url.includes('/agentmarkup-probe-404-does-not-exist-')) {
+        return notFound(url);
+      }
       return ok(url, GOOD_HTML);
     };
 
@@ -51,6 +55,45 @@ describe('audit orchestrator', () => {
     expect(report.findings.find((f) => f.code === 'crawler.accessible')).toBeDefined();
     expect(report.findings.find((f) => f.code === 'js.server-rendered')).toBeDefined();
     expect(report.fetchedAt).toBe('2026-07-02T00:00:00.000Z');
+  });
+
+  it('reports a soft-404 when a nonexistent path returns the homepage with 200', async () => {
+    const fetchImpl = async (url: string): Promise<FetchResult> => {
+      if (url.endsWith('/robots.txt')) return ok(url, 'User-agent: *\nAllow: /\n');
+      if (url.endsWith('/llms.txt')) return notFound(url);
+      // The SPA fallback: every unknown path serves the homepage shell with 200.
+      return ok(url, GOOD_HTML);
+    };
+
+    const report = await audit('https://example.com', {
+      fetchImpl,
+      fetchedAt: '2026-07-02T00:00:00.000Z',
+    });
+
+    const soft404 = report.findings.find((f) => f.code === 'notfound.soft-404');
+    expect(soft404).toBeDefined();
+    expect(soft404?.level).toBe('error');
+    expect(report.summary.worst).toBe('error');
+  });
+
+  it('warns rather than erroring when the not-found probe cannot complete', async () => {
+    const fetchImpl = async (url: string): Promise<FetchResult> => {
+      if (url.endsWith('/robots.txt')) return ok(url, 'User-agent: *\nAllow: /\n');
+      if (url.endsWith('/llms.txt')) return notFound(url);
+      if (url.includes('/agentmarkup-probe-404-does-not-exist-')) {
+        return { ...notFound(url), status: null, error: 'timeout' };
+      }
+      return ok(url, GOOD_HTML);
+    };
+
+    const report = await audit('https://example.com', {
+      fetchImpl,
+      fetchedAt: '2026-07-02T00:00:00.000Z',
+    });
+
+    // A timeout or a block is not evidence of a soft-404.
+    expect(report.findings.find((f) => f.code === 'notfound.soft-404')).toBeUndefined();
+    expect(report.findings.find((f) => f.code === 'notfound.unknown')?.level).toBe('warn');
   });
 
   it('surfaces provable errors: robots block + empty JS shell', async () => {

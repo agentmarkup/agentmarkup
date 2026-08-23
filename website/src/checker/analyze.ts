@@ -42,6 +42,8 @@ const AGENTMARKUP = {
     'agentmarkup can still add markdown mirrors for cleaner LLM fetches, but this page already serves meaningful raw HTML.',
   crawlers:
     'agentmarkup can patch robots.txt with explicit AI crawler directives and emit Content-Signal headers.',
+  notFound:
+    'agentmarkup cannot fix this for you: the status code for an unknown path is decided by your host or framework, not by your build output. On static hosts it usually means emitting a 404.html so the platform stops falling back to index.html.',
   thinHtml:
     'agentmarkup can add llms.txt, JSON-LD, crawler rules, and markdown mirrors, but thin raw HTML still needs a prerender or other final-HTML step.',
   sitemap:
@@ -62,6 +64,7 @@ export function analyzeSiteCheck(result: SiteCheckResponse): SiteAnalysis {
   const items: AuditItem[] = [];
 
   analyzeHomepage(result, items);
+  auditNotFoundHandling(items, result.homepage, result.notFoundProbe);
   analyzeMarkdown(result, items);
   analyzeLlmsTxt(result.llmsTxt, items);
   analyzeRobotsTxt(result.robotsTxt, items);
@@ -918,6 +921,93 @@ function countByLevel(items: AuditItem[]): Record<AuditLevel, number> {
     },
     { error: 0, warning: 0, pass: 0 }
   );
+}
+
+/**
+ * Normalises HTML for a body-similarity comparison: drops head, scripts, styles,
+ * tags and whitespace runs, so two renders of the same shell compare equal even
+ * when a nonce or a hashed asset name differs.
+ */
+function normalizeBodyForComparison(html: string): string {
+  return html
+    .replace(/<head\b[\s\S]*?<\/head>/gi, ' ')
+    .replace(/<script\b[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style\b[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+/**
+ * Reports how the site answers a path that cannot exist. A soft-404 tells an
+ * agent that every path exists, which quietly invalidates every other discovery
+ * result, so it is reported as an error when the evidence is unambiguous.
+ * A probe that never completed is an unknown state, not a finding.
+ */
+export function auditNotFoundHandling(
+  items: AuditItem[],
+  homepage: RemoteResource,
+  probe: RemoteResource | null | undefined
+): void {
+  if (!probe) {
+    return;
+  }
+
+  if (probe.error || probe.status <= 0) {
+    push(items, {
+      level: 'warning',
+      title: 'Could not check how missing paths are handled',
+      detail:
+        'The request for a path that should not exist did not complete, so it is unknown whether this site returns a real 404. A timeout or a block is not evidence of a problem.',
+      action: 'Retry the check, or confirm by hand that an unknown path returns 404.',
+      agentmarkupHelp: AGENTMARKUP.notFound,
+    });
+    return;
+  }
+
+  if (probe.status === 404 || probe.status === 410) {
+    push(items, {
+      level: 'pass',
+      title: 'Missing paths return a real 404',
+      detail: `A path that does not exist answered HTTP ${probe.status}, so an agent can tell a missing resource from a real one.`,
+      action: 'No change needed.',
+      agentmarkupHelp: AGENTMARKUP.notFound,
+    });
+    return;
+  }
+
+  if (probe.status < 200 || probe.status >= 300) {
+    push(items, {
+      level: 'warning',
+      title: `Missing paths answer HTTP ${probe.status}, not 404`,
+      detail:
+        'A path that does not exist did not return 404 or 410. Agents use the status code to decide whether a resource exists, so anything else is ambiguous.',
+      action: 'Return 404 (or 410) for unknown paths.',
+      agentmarkupHelp: AGENTMARKUP.notFound,
+    });
+    return;
+  }
+
+  const sameAsHomepage =
+    Boolean(probe.body) &&
+    Boolean(homepage.body) &&
+    normalizeBodyForComparison(probe.body as string) ===
+      normalizeBodyForComparison(homepage.body as string);
+
+  push(items, {
+    level: sameAsHomepage ? 'error' : 'warning',
+    title: sameAsHomepage
+      ? 'Soft-404: every path appears to exist'
+      : 'Missing paths return HTTP 200, not 404',
+    detail: sameAsHomepage
+      ? 'A path that cannot exist returned HTTP 200 with the same body as the homepage. Agents probing for resources will conclude that every path on this site exists, which makes every other result on this page unreliable.'
+      : 'A path that cannot exist returned HTTP 200. The body differs from the homepage, so this looks like a custom not-found page served with the wrong status. Agents read the status code, so it still reads as "this resource exists".',
+    action: sameAsHomepage
+      ? 'Return a real 404 for unknown paths. On static hosts this usually means emitting a 404.html, so the platform stops falling back to index.html.'
+      : 'Serve the same not-found page with a 404 status rather than 200.',
+    agentmarkupHelp: AGENTMARKUP.notFound,
+  });
 }
 
 function push(items: AuditItem[], item: AuditItem): void {
