@@ -115,6 +115,11 @@
     "heading": "We ran 500 of America's biggest companies through an AI-crawler audit"
   },
   {
+    "route": "/blog/agentmarkup-plugin-chatgpt-codex-claude-code/",
+    "source": "src/pages/BlogPost17.tsx",
+    "heading": "agentmarkup is now a plugin for ChatGPT, Codex and Claude Code"
+  },
+  {
     "route": "/blog/soft-404-ai-discoverability-tools/",
     "source": "src/pages/BlogPost15.tsx",
     "heading": "agentmarkup.dev served a soft-404. Our own tooling missed it."

@@ -44,6 +44,16 @@ export const editorialLabels = {
 
 export const blogPosts: BlogPostMeta[] = [
   {
+    slug: 'agentmarkup-plugin-chatgpt-codex-claude-code',
+    title: 'agentmarkup is now a plugin for ChatGPT, Codex and Claude Code',
+    description: 'The agentmarkup plugin is now published for ChatGPT and Codex, with a guided workflow for installing, building and validating machine-readable website output.',
+    date: '2026-08-23',
+    readingTime: '8 min read',
+    audience: 'technical',
+    topic: 'implementation',
+    level: 'beginner',
+  },
+  {
     slug: 'soft-404-ai-discoverability-tools',
     title: 'agentmarkup.dev served a soft-404. Our own tooling missed it.',
     description: 'A snapshot of two Claude plugin catalogs found 23 entries near AI discoverability, almost all auditing or scoring. agentmarkup instead emits the artifacts at build time and can gate CI.',

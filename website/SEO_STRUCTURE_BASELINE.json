@@ -327,7 +327,7 @@
       "Blog"
     ],
     "h2": [
-      "agentmarkup.dev served a soft-404. Our own tooling missed it.",
+      "agentmarkup is now a plugin for ChatGPT, Codex and Claude Code",
       "AI visibility and research",
       "Implementation guides",
       "Machine-readable foundations"
@@ -343,6 +343,7 @@
     "internalLinks": [
       "/authors/sebastian-cochinescu/",
       "/blog/agentmarkup-cli-any-static-site/",
+      "/blog/agentmarkup-plugin-chatgpt-codex-claude-code/",
       "/blog/ai-crawler-audit-500-companies/",
       "/blog/ai-crawlers-2026/",
       "/blog/audit-ai-crawler-access/",
@@ -560,9 +561,9 @@
     "internalLinks": [
       "/authors/sebastian-cochinescu/",
       "/blog/",
+      "/blog/agentmarkup-plugin-chatgpt-codex-claude-code/",
       "/blog/ai-crawlers-2026/",
       "/blog/brand-awareness-ai/",
-      "/blog/soft-404-ai-discoverability-tools/",
       "/blog/website-checker/",
       "/blog/what-is-geo/",
       "/blog/why-llms-txt-matters/"
@@ -603,9 +604,9 @@
     "internalLinks": [
       "/authors/sebastian-cochinescu/",
       "/blog/",
+      "/blog/agentmarkup-plugin-chatgpt-codex-claude-code/",
       "/blog/ecommerce-llm-optimization/",
       "/blog/markdown-mirrors/",
-      "/blog/soft-404-ai-discoverability-tools/",
       "/blog/website-checker/",
       "/blog/what-is-geo/",
       "/blog/why-llms-txt-matters/"
@@ -648,7 +649,7 @@
     "internalLinks": [
       "/authors/sebastian-cochinescu/",
       "/blog/",
-      "/blog/agentmarkup-cli-any-static-site/",
+      "/blog/agentmarkup-plugin-chatgpt-codex-claude-code/",
       "/blog/brand-awareness-ai/",
       "/blog/nuxt-llms-txt-json-ld/",
       "/blog/soft-404-ai-discoverability-tools/",
@@ -775,7 +776,7 @@
       "/authors/sebastian-cochinescu/",
       "/blog/",
       "/blog/agentmarkup-cli-any-static-site/",
-      "/blog/markdown-mirrors/",
+      "/blog/agentmarkup-plugin-chatgpt-codex-claude-code/",
       "/blog/nuxt-llms-txt-json-ld/",
       "/blog/soft-404-ai-discoverability-tools/",
       "/blog/website-checker/",
@@ -819,8 +820,8 @@
       "/authors/sebastian-cochinescu/",
       "/blog/",
       "/blog/agentmarkup-cli-any-static-site/",
+      "/blog/agentmarkup-plugin-chatgpt-codex-claude-code/",
       "/blog/audit-ai-crawler-access/",
-      "/blog/markdown-mirrors/",
       "/blog/nextjs-llms-txt-json-ld/",
       "/blog/soft-404-ai-discoverability-tools/",
       "/blog/website-checker/",
@@ -861,12 +862,12 @@
     "internalLinks": [
       "/authors/sebastian-cochinescu/",
       "/blog/",
+      "/blog/agentmarkup-plugin-chatgpt-codex-claude-code/",
       "/blog/markdown-mirrors/",
       "/blog/nextjs-llms-txt-json-ld/",
       "/blog/nuxt-llms-txt-json-ld/",
       "/blog/soft-404-ai-discoverability-tools/",
       "/blog/website-checker/",
-      "/blog/when-markdown-mirrors-help/",
       "/docs/ai-crawlers/",
       "/docs/json-ld/",
       "/docs/llms-txt/"
@@ -902,11 +903,11 @@
     "internalLinks": [
       "/authors/sebastian-cochinescu/",
       "/blog/",
+      "/blog/agentmarkup-plugin-chatgpt-codex-claude-code/",
       "/blog/ai-crawler-audit-500-companies/",
       "/blog/ai-crawlers-2026/",
       "/blog/markdown-mirrors/",
       "/blog/nuxt-llms-txt-json-ld/",
-      "/blog/soft-404-ai-discoverability-tools/",
       "/blog/website-checker/",
       "/checker/",
       "/docs/ai-crawlers/",
@@ -961,6 +962,44 @@
     "rawH1Count": 1
   },
   {
+    "route": "/blog/agentmarkup-plugin-chatgpt-codex-claude-code/",
+    "title": "agentmarkup is now a plugin for ChatGPT, Codex and Claude Code - agentmarkup",
+    "description": "The agentmarkup plugin is now published for ChatGPT and Codex, with a guided workflow for installing, building and validating machine-readable website output.",
+    "canonical": "https://agentmarkup.dev/blog/agentmarkup-plugin-chatgpt-codex-claude-code/",
+    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+    "h1": [
+      "agentmarkup is now a plugin for ChatGPT, Codex and Claude Code"
+    ],
+    "h2": [
+      "Available now in OpenAI's Plugin Directory",
+      "What the plugin actually does",
+      "The packages behind the workflow",
+      "Why I built it",
+      "What it will not claim",
+      "More from the blog"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "Article",
+      "ContactPoint",
+      "Organization",
+      "Person",
+      "PostalAddress",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/authors/sebastian-cochinescu/",
+      "/blog/",
+      "/blog/agentmarkup-cli-any-static-site/",
+      "/blog/nextjs-llms-txt-json-ld/",
+      "/blog/nuxt-llms-txt-json-ld/",
+      "/blog/soft-404-ai-discoverability-tools/",
+      "/blog/website-checker/"
+    ],
+    "prerendered": true,
+    "rawH1Count": 1
+  },
+  {
     "route": "/blog/soft-404-ai-discoverability-tools/",
     "title": "agentmarkup.dev served a soft-404. Our own tooling missed it. - agentmarkup",
     "description": "A review of 2,567 Claude plugins found 23 near AI discoverability, almost all auditing or scoring. agentmarkup instead emits the artifacts at build time and can gate CI.",
@@ -991,6 +1030,7 @@
       "/authors/sebastian-cochinescu/",
       "/blog/",
       "/blog/agentmarkup-cli-any-static-site/",
+      "/blog/agentmarkup-plugin-chatgpt-codex-claude-code/",
       "/blog/ai-crawler-audit-500-companies/",
       "/blog/nextjs-llms-txt-json-ld/",
       "/blog/nuxt-llms-txt-json-ld/",
@@ -1023,6 +1063,7 @@
     ],
     "internalLinks": [
       "/blog/agentmarkup-cli-any-static-site/",
+      "/blog/agentmarkup-plugin-chatgpt-codex-claude-code/",
       "/blog/ai-crawler-audit-500-companies/",
       "/blog/ai-crawlers-2026/",
       "/blog/audit-ai-crawler-access/",
