@@ -226,7 +226,11 @@ function resolveLlmsTxtEntry(
   // advertising one here would put a link to a file that does not exist into
   // llms.txt (and into llms-full.txt's "Preferred fetch" line).
   const excludedFromMirrors = isMarkdownPageExcluded(
-    new URL(canonicalUrl).pathname,
+    // Adapters match `exclude` against the output-relative page path, so strip
+    // any base path in `config.site` first. Otherwise a site of
+    // "https://example.com/docs" compares "/docs/404" against "/404", silently
+    // no-ops, and llms.txt advertises a mirror no adapter writes.
+    pagePathRelativeToSite(config.site, canonicalUrl),
     config.markdownPages?.exclude
   );
   const markdownUrl =
@@ -248,6 +252,27 @@ function resolveLlmsTxtEntry(
     sameSite,
     htmlLike,
   };
+}
+
+/** Strips the base path of `config.site` from a resolved same-site URL. */
+function pagePathRelativeToSite(siteUrl: string, resolvedUrl: string): string {
+  try {
+    const site = new URL(siteUrl);
+    const url = new URL(resolvedUrl);
+
+    if (url.origin !== site.origin) {
+      return url.pathname;
+    }
+
+    const base = site.pathname.replace(/\/$/, '');
+    if (base && (url.pathname === base || url.pathname.startsWith(`${base}/`))) {
+      return url.pathname.slice(base.length) || '/';
+    }
+
+    return url.pathname;
+  } catch {
+    return resolvedUrl;
+  }
 }
 
 function resolveLlmsFullContent(

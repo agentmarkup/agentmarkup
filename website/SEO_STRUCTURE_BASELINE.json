@@ -1146,6 +1146,52 @@
     "rawH1Count": 1
   },
   {
+    "route": "/developers/",
+    "title": "Developer resources - agentmarkup packages, API, and machine-readable files",
+    "description": "agentmarkup developer resources: npm packages for Vite, Astro, Next.js and Nuxt, the OpenAPI 3.1 spec for the public checker and security-scan endpoints, llms.txt, markdown mirrors, and the agent skill.",
+    "canonical": "https://agentmarkup.dev/developers/",
+    "robots": "index,follow",
+    "h1": [
+      "agentmarkup developer resources"
+    ],
+    "h2": [
+      "Install a package",
+      "API reference",
+      "Machine-readable files",
+      "Agent integrations",
+      "Source and support"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "ContactPoint",
+      "Organization",
+      "PostalAddress",
+      "WebPage",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/checker/",
+      "/contact/",
+      "/developers.md",
+      "/docs/ai-crawlers/",
+      "/docs/audit/",
+      "/docs/json-ld/",
+      "/docs/llms-txt/",
+      "/learn/",
+      "/llms-full.txt",
+      "/llms.txt",
+      "/openapi.json",
+      "/privacy/",
+      "/robots.txt",
+      "/security-scan/",
+      "/sitemap.xml",
+      "/support/",
+      "/terms/"
+    ],
+    "prerendered": true,
+    "rawH1Count": 1
+  },
+  {
     "route": "/about/",
     "title": "About agentmarkup - who builds it and why",
     "description": "agentmarkup is open-source, MIT-licensed build-time tooling for machine-readable websites, built and maintained by Sebastian Cochinescu at Anima Felix. What it does, what it deliberately does not do, and what ships today.",

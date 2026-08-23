@@ -212,6 +212,22 @@ const informationalPages = [
     ],
   },
   {
+    path: '/developers/',
+    schemas: [
+      {
+        '@type': 'WebPage',
+        name: 'agentmarkup developer resources',
+        url: `${siteUrl}/developers/`,
+        description: 'npm packages, the OpenAPI 3.1 spec for the public checker and security-scan endpoints, machine-readable files, and the agentmarkup agent skill.',
+        significantLink: [
+          `${siteUrl}/openapi.json`,
+          `${siteUrl}/llms.txt`,
+          `${siteUrl}/docs/llms-txt/`,
+        ],
+      },
+    ],
+  },
+  {
     path: '/contact/',
     schemas: [
       {
@@ -283,6 +299,7 @@ export default defineConfig({
         'terms': resolve(__dirname, 'terms/index.html'),
         'support': resolve(__dirname, 'support/index.html'),
         'about': resolve(__dirname, 'about/index.html'),
+        'developers': resolve(__dirname, 'developers/index.html'),
         'contact': resolve(__dirname, 'contact/index.html'),
         'privacy': resolve(__dirname, 'privacy/index.html'),
         'not-found': resolve(__dirname, '404.html'),
@@ -315,6 +332,7 @@ export default defineConfig({
         'prerender-terms': resolve(__dirname, 'src/entries/terms.tsx'),
         'prerender-support': resolve(__dirname, 'src/entries/support.tsx'),
         'prerender-about': resolve(__dirname, 'src/entries/about.tsx'),
+        'prerender-developers': resolve(__dirname, 'src/entries/developers.tsx'),
         'prerender-contact': resolve(__dirname, 'src/entries/contact.tsx'),
         'prerender-privacy': resolve(__dirname, 'src/entries/privacy.tsx'),
         'prerender-not-found': resolve(__dirname, 'src/entries/not-found.tsx'),
@@ -342,6 +360,8 @@ export default defineConfig({
           {
             title: 'Documentation',
             entries: [
+              { title: 'Developer resources', url: `${siteUrl}/developers/`, description: 'npm packages, the OpenAPI 3.1 spec for the public checker and security-scan endpoints, machine-readable files, and the agent skill' },
+              { title: 'OpenAPI specification', url: `${siteUrl}/openapi.json`, description: 'OpenAPI 3.1 description of the agentmarkup public tools API: POST /api/check and POST /api/security-scan, with operation IDs, typed parameters and response schemas' },
               { title: 'About agentmarkup', url: `${siteUrl}/about/`, description: 'What agentmarkup is, why it exists, what it deliberately does not do, and who maintains it' },
               { title: 'Contact', url: `${siteUrl}/contact/`, description: 'Bugs and feature requests via GitHub issues, a dedicated address for security reports, and email for general and business questions' },
               { title: 'Support', url: `${siteUrl}/support/`, description: 'Documentation first, then GitHub issues for bugs and feature requests, and where to send security reports' },

@@ -118,6 +118,35 @@ describe('validateHtmlContent', () => {
 });
 
 describe('validateLlmsTxt', () => {
+
+  it('does not flag bare URLs in the free-form details block before the first section', () => {
+    const results = validateLlmsTxt(
+      [
+        '# Example',
+        '',
+        '> A site.',
+        '',
+        '**When to use Example:**',
+        '',
+        '- Fetch the price list at https://example.com/pricing when asked about cost.',
+        '',
+        '## Docs',
+        '',
+        '- [Start](https://example.com/docs/start)',
+        '',
+      ].join('\n')
+    );
+
+    expect(results.filter((r) => /plain-text URL/i.test(r.message))).toHaveLength(0);
+  });
+
+  it('still flags bare URLs inside a link section', () => {
+    const results = validateLlmsTxt(
+      ['# Example', '', '## Docs', '', '- Start: https://example.com/docs/start', ''].join('\n')
+    );
+
+    expect(results.some((r) => /plain-text URL/i.test(r.message))).toBe(true);
+  });
   it('reports missing H1', () => {
     const results = validateLlmsTxt('Some text without heading\n');
     expect(results.some((r) => r.message.includes('H1'))).toBe(true);

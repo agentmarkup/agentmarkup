@@ -183,7 +183,11 @@ async function runGenerate(
       );
     }
 
-    if (isFeatureEnabled(config.markdownPages) && !config.validation?.disabled) {
+    if (
+      isFeatureEnabled(config.markdownPages) &&
+      !config.validation?.disabled &&
+      !isMarkdownPageExcluded(pagePath, config.markdownPages?.exclude)
+    ) {
       validationResults.push(...validateMarkdownAlternateLink(nextHtml, pagePath));
     }
 

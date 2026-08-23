@@ -27,6 +27,7 @@
   { "route": "/license/", "source": "src/pages/License.tsx", "heading": "MIT License" },
   { "route": "/terms/", "source": "src/pages/Terms.tsx", "heading": "Terms of Service" },
   { "route": "/support/", "source": "src/pages/Support.tsx", "heading": "Support" },
+  { "route": "/developers/", "source": "src/pages/Developers.tsx", "heading": "agentmarkup developer resources" },
   { "route": "/about/", "source": "src/pages/About.tsx", "heading": "About agentmarkup" },
   { "route": "/contact/", "source": "src/pages/Contact.tsx", "heading": "Contact agentmarkup" },
   { "route": "/privacy/", "source": "src/pages/Privacy.tsx", "heading": "Privacy Policy" }

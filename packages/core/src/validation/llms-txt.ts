@@ -26,8 +26,18 @@ export function validateLlmsTxt(content: string): ValidationResult[] {
 
   let markdownLinkCount = 0;
   let bareUrlListLineCount = 0;
+  // Everything before the first `## ` heading is the free-form details block,
+  // which the llms.txt spec leaves as arbitrary Markdown. The bare-URL rule
+  // exists for the link-list sections, so applying it to the details block
+  // would flag prose (for example `llmsTxt.whenToUse` guidance) that is not a
+  // link list at all.
+  let inLinkSection = false;
 
   for (const line of lines) {
+    if (line.startsWith('## ')) {
+      inLinkSection = true;
+    }
+
     // Link labels may contain backslash-escaped brackets (e.g. "[A \[b\] title]"),
     // which is valid CommonMark, so the label group accepts escaped characters.
     const linkPattern = /\[((?:\\.|[^\]\\])*)\]\(([^)]*)\)/g;
@@ -54,7 +64,8 @@ export function validateLlmsTxt(content: string): ValidationResult[] {
     // a plain-text link the llms.txt spec (and tools like Google Lighthouse's
     // agentic-browsing audit) will not recognize as a link. Per-line regexes
     // keep URL checks independent across lines.
-    const isListItem = /^\s*(?:[-*+]|\d+[.)])\s+/.test(line);
+    const isListItem =
+      inLinkSection && /^\s*(?:[-*+]|\d+[.)])\s+/.test(line);
     const lineWithoutMarkdownLinks = line.replace(
       /\[(?:\\.|[^\]\\])*\]\([^)]*\)/g,
       ''

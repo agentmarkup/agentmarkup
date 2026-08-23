@@ -192,6 +192,24 @@ describe('@agentmarkup/nuxt processStaticOutput (re-export parity)', () => {
     expect(existsSync(join(publicDir, '404.md'))).toBe(false);
   });
 
+  it('generate mode does not warn about a missing alternate link on an excluded page', async () => {
+    const publicDir = await createPublicDir({
+      'index.html': page('Home'),
+      '404.html': page('Not found'),
+    });
+
+    const result = await processStaticOutput(
+      { ...CONFIG, markdownPages: { enabled: true, exclude: ['/404'] } },
+      { outDir: publicDir, mode: 'generate' }
+    );
+
+    const alternateLinkWarnings = result.validationResults.filter((issue) =>
+      /markdown alternate link/i.test(issue.message)
+    );
+
+    expect(alternateLinkWarnings.map((issue) => issue.path)).not.toContain('/404');
+  });
+
   it('check mode does not report missing mirrors when every page is excluded', async () => {
     const hasMarkdownWarning = (results: { message: string }[]): boolean =>
       results.some((issue) => issue.message.includes('markdown mirrors'));

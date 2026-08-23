@@ -4,20 +4,57 @@ import { describe, expect, it } from 'vitest'
 // @ts-expect-error - the deployed Pages worker is plain JS with no type declarations
 import worker from '../public/_worker.js'
 
+/** Mirrors that exist in the stubbed output, matching real generated pages. */
+const KNOWN_MIRRORS = new Set(['/index.md', '/learn.md'])
+
 const NOT_FOUND_HTML =
   '<!doctype html><html><head><title>Page not found - agentmarkup</title></head><body><h1>Page not found</h1></body></html>'
 
 function makeEnv(status = 404, body = NOT_FOUND_HTML) {
   return {
     ASSETS: {
-      fetch: async () =>
-        new Response(status === 404 ? body : 'asset body', {
+      fetch: async (input: Request | string) => {
+        const url = new URL(typeof input === 'string' ? input : input.url)
+
+        // Stand in for the generated markdown mirrors. Only pages that exist have
+        // one, so an unknown path must still 404 here exactly as ASSETS would.
+        if (KNOWN_MIRRORS.has(url.pathname)) {
+          return new Response(`# Mirror of ${url.pathname}`, {
+            status: 200,
+            headers: {
+              'content-type': 'text/markdown; charset=utf-8',
+              vary: 'Accept-Encoding',
+            },
+          })
+        }
+
+        return new Response(status === 404 ? body : 'asset body', {
           status,
           headers: {
             'content-type': 'text/html; charset=utf-8',
             vary: 'Accept-Encoding',
           },
-        }),
+        })
+      },
+    },
+  }
+}
+
+/** An origin with no markdown mirrors, to exercise the HTML fallback. */
+function makeEnvWithoutMirrors() {
+  return {
+    ASSETS: {
+      fetch: async (input: Request | string) => {
+        const url = new URL(typeof input === 'string' ? input : input.url)
+        if (url.pathname.endsWith('.md')) {
+          return new Response('not found', { status: 404 })
+        }
+
+        return new Response('asset body', {
+          status: 200,
+          headers: { 'content-type': 'text/html; charset=utf-8', vary: 'Accept-Encoding' },
+        })
+      },
     },
   }
 }
@@ -155,9 +192,81 @@ describe('worker not-found handling', () => {
     const response = await worker.fetch(request('/'), makeEnv(200))
 
     expect(response.status).toBe(200)
-    expect(response.headers.get('vary')).toBe('Accept-Encoding')
+    // A negotiable HTML route must declare Vary: Accept, or a shared cache can
+    // hand the HTML to an agent that asked for markdown.
+    expect(response.headers.get('vary')).toBe('Accept, Accept-Encoding')
     expect(response.headers.get('strict-transport-security')).toBe('max-age=31536000')
     expect(await response.text()).toBe('asset body')
+  })
+})
+
+describe('worker markdown content negotiation', () => {
+  it('serves the markdown mirror at the page URL when markdown is requested', async () => {
+    const response = await worker.fetch(
+      request('/learn/', { headers: { accept: 'text/markdown' } }),
+      makeEnv()
+    )
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toBe('text/markdown; charset=utf-8')
+    expect(response.headers.get('vary')).toBe('Accept, Accept-Encoding')
+    expect(response.headers.get('link')).toBe(
+      '<https://agentmarkup.dev/learn/>; rel="canonical"'
+    )
+    expect(await response.text()).toBe('# Mirror of /learn.md')
+  })
+
+  it('maps the site root to /index.md', async () => {
+    const response = await worker.fetch(
+      request('/', { headers: { accept: 'text/markdown' } }),
+      makeEnv()
+    )
+
+    expect(await response.text()).toBe('# Mirror of /index.md')
+  })
+
+  it('keeps serving HTML for a browser Accept header', async () => {
+    const response = await worker.fetch(
+      request('/learn/', {
+        headers: { accept: 'text/html,application/xhtml+xml,*/*;q=0.8' },
+      }),
+      makeEnv()
+    )
+
+    expect(response.headers.get('content-type')).toContain('text/html')
+    expect(response.headers.get('vary')).toBe('Accept, Accept-Encoding')
+  })
+
+  it('never negotiates API routes or files that already have an extension', async () => {
+    for (const path of ['/api/check', '/openapi.json', '/llms.txt']) {
+      const response = await worker.fetch(
+        request(path, { headers: { accept: 'text/markdown' } }),
+        makeEnv(200)
+      )
+
+      expect(response.headers.get('content-type')).not.toContain('text/markdown')
+    }
+  })
+
+  it('falls back to HTML when the page has no markdown mirror', async () => {
+    const response = await worker.fetch(
+      request('/learn/', { headers: { accept: 'text/markdown' } }),
+      makeEnvWithoutMirrors()
+    )
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toContain('text/html')
+    expect(await response.text()).toBe('asset body')
+  })
+
+  it('sends no body for a HEAD request that negotiated a mirror', async () => {
+    const response = await worker.fetch(
+      request('/learn/', { method: 'HEAD', headers: { accept: 'text/markdown' } }),
+      makeEnv()
+    )
+
+    expect(response.status).toBe(200)
+    expect(response.body).toBeNull()
   })
 })
 

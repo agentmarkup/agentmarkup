@@ -21,6 +21,9 @@ dist/
 # Scratch / smoke-test scaffolds
 tmp/
 
+# Generated plugin-directory archives
+*.zip
+
 # Internal docs
 /AGENTS.md
 /CLAUDE.md

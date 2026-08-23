@@ -1807,6 +1807,34 @@ function json(body, status, extraHeaders = {}) {
 }
 
 async function serveAssetWithSecurityHeaders(request, env) {
+  // acceptmarkdown.com content negotiation: every HTML page here already has a
+  // generated `.md` mirror, so a client that explicitly asks for markdown gets
+  // the mirror at the same URL. `Vary: Accept` goes on BOTH variants, otherwise
+  // a shared cache can hand the HTML to an agent that asked for markdown.
+  const negotiatedType = negotiateTextType(request.headers.get('accept'));
+  const mirrorPath = markdownMirrorPath(new URL(request.url).pathname);
+
+  if (negotiatedType && mirrorPath && ['GET', 'HEAD'].includes(request.method)) {
+    const mirrorUrl = new URL(request.url);
+    mirrorUrl.pathname = mirrorPath;
+    const mirror = await env.ASSETS.fetch(new Request(mirrorUrl, request));
+
+    if (mirror.status === 200) {
+      const headers = new Headers(mirror.headers);
+      headers.set('content-type', `${negotiatedType}; charset=utf-8`);
+      headers.set('vary', mergeVaryAccept(headers.get('vary')));
+      // Keep the HTML route as the indexed URL even though this response is markdown.
+      headers.set('link', `<${new URL(request.url).origin}${new URL(request.url).pathname}>; rel="canonical"`);
+
+      return withSecurityHeaders(
+        new Response(request.method === 'HEAD' ? null : mirror.body, {
+          status: 200,
+          headers,
+        })
+      );
+    }
+  }
+
   const asset = await env.ASSETS.fetch(request);
 
   // Pages only returns 404 here because the build emits a real `404.html`.
@@ -1816,13 +1844,43 @@ async function serveAssetWithSecurityHeaders(request, env) {
     return buildNotFoundResponse(request, asset);
   }
 
+  const headers = new Headers(asset.headers);
+  if (mirrorPath) {
+    headers.set('vary', mergeVaryAccept(headers.get('vary')));
+  }
+
   return withSecurityHeaders(
     new Response(asset.body, {
       status: asset.status,
       statusText: asset.statusText,
-      headers: new Headers(asset.headers),
+      headers,
     })
   );
+}
+
+/**
+ * Maps an HTML route to its generated markdown mirror, mirroring
+ * `markdownHrefForPagePath` in @agentmarkup/core. Returns null for anything
+ * that is not an extensionless HTML route, so assets and API paths are
+ * never negotiated.
+ */
+function markdownMirrorPath(pathname) {
+  if (/^\/api\//i.test(pathname)) {
+    return null;
+  }
+
+  if (pathname === '' || pathname === '/') {
+    return '/index.md';
+  }
+
+  const trimmed = pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
+  const lastSegment = trimmed.split('/').pop() ?? '';
+
+  if (lastSegment.includes('.')) {
+    return null;
+  }
+
+  return `${trimmed}.md`;
 }
 
 function withSecurityHeaders(response) {
