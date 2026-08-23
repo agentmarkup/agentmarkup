@@ -193,11 +193,10 @@ function Soft404DiscoverabilityTools() {
           </p>
           <CodeBlock code={claudeInstall} />
           <p>
-            The current build-time release is <strong>0.6.0</strong> across{' '}
-            <code>core</code>, <code>vite</code>, <code>astro</code>,{' '}
-            <code>next</code>, <code>nuxt</code>, and <code>cli</code>. The live
-            crawler package, <code>@agentmarkup/audit</code>, is{' '}
-            <strong>0.2.3</strong>.
+            The build-time packages are <code>@agentmarkup/core</code>,{' '}
+            <code>vite</code>, <code>astro</code>, <code>next</code>,{' '}
+            <code>nuxt</code>, and <code>cli</code>. The live crawler package
+            is <code>@agentmarkup/audit</code>. Current versions are on npm.
           </p>
           <p>
             Before a live audit, the plugin names the target origin and asks the
