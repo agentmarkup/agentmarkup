@@ -12,8 +12,10 @@ Ask only for preferences that cannot be discovered from the repo. Use these defa
 ## Common Defaults
 
 - `llmsTxt`: Enable when the user wants AgentMarkup installed. Include a small first section of important same-site public pages.
+- `llmsTxt.whenToUse`: Add a short list of concrete jobs the site is right for, and how an agent should call it. Write specific tasks, not marketing copy, and include what the site is NOT for. Skip it only when the user cannot say what their site is for.
 - `llmsFullTxt`: Leave disabled unless the user wants a richer agent companion file or the site has useful markdown mirrors to inline.
 - `markdownPages`: Enable when raw HTML is thin, noisy, or client-rendered. Treat as optional when HTML is already substantial.
+- `markdownPages.exclude`: List pages that exist but are not agent-fetchable content. A `404` page is the standard entry: mirroring one publishes a URL that answers 200 with "not found" text. Add it whenever the build emits a `404.html`.
 - `contentSignalHeaders`: Ask for policy. If the user wants broad discoverability, use `aiTrain: 'yes'`, `search: 'yes'`, and `aiInput: 'yes'`; otherwise encode their choices exactly.
 - `globalSchemas`: Prefer `webSite` and `organization` for a homepage baseline when enough information exists.
 - `pages`: Add page-level schemas only for pages whose content supports the schema, such as `article`, `faqPage`, `product`, or `offer`.

@@ -34,6 +34,21 @@ Check:
 
 Fix with AgentMarkup when possible: discovery link, JSON-LD, markdown alternate links. Fix directly in the app when the issue is canonical URL, description, language, H1, noindex, or thin final HTML.
 
+## Missing-path behavior (soft-404)
+
+No AgentMarkup package checks this yet, so check it by hand. Request a path that certainly does not exist and read the status code:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" https://example.com/a-path-that-does-not-exist
+```
+
+- `404` or `410`: correct.
+- `200`: a **soft-404**, and an error-level finding. Every path on the site appears to exist, so an agent probing for `/openapi.json`, `/api/docs` or `/about` concludes all of them are real. Confirm by comparing the body against the homepage: an SPA fallback returns the homepage shell.
+
+Common cause on static hosts: the platform falls back to `index.html` when the build output has no `404.html`. On Cloudflare Pages, emitting a real `404.html` is sufficient - the assets binding then answers 404 on its own. Pair it with `markdownPages.exclude: ['/404']` so the 404 page does not get a markdown mirror, which would republish the same problem at `/404.md`.
+
+Do not report this from a single failed fetch. A timeout or a WAF block is not a soft-404.
+
 ## `llms.txt`
 
 Check:

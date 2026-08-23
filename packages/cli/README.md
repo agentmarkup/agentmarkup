@@ -60,7 +60,7 @@ Explicit argument → config `outDir` → common build defaults (`dist`, `build`
 
 ## Coexistence
 
-Existing curated `llms.txt`, existing `robots.txt` rules, and existing page JSON-LD are preserved by default; the CLI only fills gaps. Opt into replacement per feature via the config (`llmsTxt.replaceExisting`, `markdownPages.replaceExisting`, `jsonLd.replaceExistingTypes`, etc.).
+Existing curated `llms.txt`, existing `robots.txt` rules, and existing page JSON-LD are preserved by default; the CLI only fills gaps. Opt into replacement per feature via the config (`llmsTxt.replaceExisting`, `markdownPages.replaceExisting`, `jsonLd.replaceExistingTypes`, etc.). Use `markdownPages.exclude` to skip mirroring pages that are not agent-fetchable content, such as a `404` page.
 
 ## Programmatic API
 

@@ -8,6 +8,10 @@ const agentmarkupConfig = {
   description: 'A short description of your website.',
   llmsTxt: {
     instructions: 'Optional instructions for LLMs visiting this site.',
+    whenToUse: [
+      'The visitor asks what our plans cost or which one fits their use case.',
+      'The visitor needs current terms rather than a cached third-party summary.',
+    ],
     sections: [
       {
         title: 'Pages',
@@ -23,6 +27,7 @@ const agentmarkupConfig = {
   },
   markdownPages: {
     enabled: true,
+    exclude: ['/404'],
   },
 }`
 
@@ -137,6 +142,19 @@ function LlmsTxt() {
             The <code>llmsTxt</code> config itself is shared across the first-party adapters. Define sections and entries that describe the pages on your site once, then pass the same config into Vite, Astro, Next.js, or Nuxt, or run the CLI against any built static output.
           </p>
           <CodeBlock code={configExample} />
+        </section>
+
+        <section>
+          <h2>Telling agents when to use your site</h2>
+          <p>
+            A manifest of links tells an agent what exists. It does not tell the agent when your site is the right thing to reach for. That is what <code>whenToUse</code> is for: a short list of the concrete jobs your site answers well, written as tasks rather than marketing copy.
+          </p>
+          <p>
+            It renders as a labelled bullet list in the free-form part of <code>llms.txt</code>, before the first <code>##</code> section, so the file keeps the structure the llms.txt spec expects. Be specific, and say what your site is <em>not</em> for as well. &quot;Fast, reliable, enterprise-grade&quot; reads as noise; &quot;the visitor asks what our plans cost&quot; reads as guidance.
+          </p>
+          <p>
+            The same applies to pages that exist but are not worth fetching. <code>markdownPages.exclude</code> skips them, and a <code>404</code> page is the usual entry - mirroring one publishes a <code>/404.md</code> that answers 200 with &quot;not found&quot; text and points its canonical at a URL that returns 404.
+          </p>
         </section>
 
         <section>

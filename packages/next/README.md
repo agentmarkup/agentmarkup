@@ -114,7 +114,7 @@ By default, the Next adapter coexists with existing machine-readable assets. If 
 
 Important: `@agentmarkup/next` is a final-output adapter. It works best where Next emits build-time HTML that can be patched or post-processed. If a route is fully dynamic SSR and Next does not emit an HTML file for it during build, use the re-exported `@agentmarkup/core` helpers directly inside your layout or page code for that route.
 
-Markdown mirrors are optional. They are usually most useful for thin, noisy, or client-rendered HTML where the raw page is a weak fetch target for agents. The generated `.md` files stay directly fetchable for agents, while their server headers or `_headers` entries point search engines back at the HTML page as canonical.
+Markdown mirrors are optional. They are usually most useful for thin, noisy, or client-rendered HTML where the raw page is a weak fetch target for agents. Use `markdownPages.exclude` for pages that exist but are not content an agent should fetch: mirroring a `404` page publishes a `/404.md` that answers 200 with "not found" text and canonicalises to a URL that 404s. Excluded pages get no `.md` file, no `text/markdown` alternate link, no canonical `Link` header, no markdown URL in `llms.txt`, and no "missing mirror" warning. The generated `.md` files stay directly fetchable for agents, while their server headers or `_headers` entries point search engines back at the HTML page as canonical.
 
 When markdown mirrors are enabled, same-site page entries in `llms.txt` automatically point at the generated `.md` mirrors by default. Set `llmsTxt.preferMarkdownMirrors: false` if you want `llms.txt` to keep linking to HTML routes instead.
 

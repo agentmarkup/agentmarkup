@@ -176,6 +176,7 @@
       "What is llms.txt?",
       "Why generate llms.txt at build time?",
       "Configuration",
+      "Telling agents when to use your site",
       "Framework wrappers",
       "Generated output",
       "Optional llms-full.txt",
