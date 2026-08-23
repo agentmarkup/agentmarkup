@@ -46,6 +46,18 @@ function Soft404DiscoverabilityTools() {
             My own tooling did not catch my own mistake. That is a known gap,
             and I intend to close it.
           </p>
+          <p className="post-update">
+            <strong>Update, later the same day:</strong> the gap is closed. Both
+            surfaces now make one deliberate request to a path that should not
+            exist and compare the response against the homepage. A 404 or 410
+            passes; a 200 whose body matches the homepage is an error, because
+            every path then appears to exist; a 200 with a different body is a
+            warning; and a probe that never completes reports that the check
+            could not be made rather than asserting a defect, because a timeout
+            and a soft-404 are not the same thing. It shipped in{' '}
+            <code>@agentmarkup/audit</code> 0.2.5 and is live in the hosted
+            checker.
+          </p>
           <p>
             The honest output is a
             specific limitation, a reproducible case, and a check that still

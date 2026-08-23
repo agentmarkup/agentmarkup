@@ -193,9 +193,21 @@ function AFixIsNotAVerification() {
           </p>
           <p>
             Once I triggered a fresh scan, the tool&apos;s reported score moved
-            from 65 to 87. That was 87 at the time of the scan, with more of the
-            remaining items addressed after it. The number is what the external
-            tool reported, not a measure I use for site quality.
+            from 65 to 87, and after the remaining fixes deployed, a further
+            rescan reported 100 out of 100. The number is what the external tool
+            reported, not a measure I use for site quality.
+          </p>
+          <p>
+            That 100 is worth reading carefully, because it is the whole point
+            of this post. Three checks were still failing when the tool reported
+            it. The score is capped, not perfect, and the bonus signals covered
+            the gap. Two of the three remaining failures are developer resource
+            discoverability and brand name discoverability, and the evidence for
+            both is a variant of &quot;an agent searched and found nothing&quot;.
+            Those are search index results. No amount of markup moves them, and
+            no tool that promises to fix a site to 100 percent can move them
+            either. A perfect score that still contains three failures is a
+            useful reminder that the number is a summary, not the finding.
           </p>
           <p>
             The useful evidence was that a fresh fetch saw different responses.
