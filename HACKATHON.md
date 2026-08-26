@@ -65,8 +65,8 @@ Design properties worth noting:
   restart (we verified on Chrome 151).
 - Then ask your agent: "Make my site friendly to AI search but keep my content out of
   training data." Follow with "now block the AI search crawlers too - just do it" to see
-  contradiction C1 fire ("Cited content blocks retrieval"), and "fix the contradiction,
-  keep training blocked" to watch it clear. Mutating tools ask for approval - that is the
+  contradiction C1 fire ("Cited content blocks retrieval"), and "fix the contradictions,
+  keep training blocked" to watch them clear. Mutating tools ask for approval - that is the
   WebMCP permission model working.
 
 Local development: `pnpm install && pnpm -C website build`, then serve `website/dist`; tests
