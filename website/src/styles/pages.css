@@ -927,6 +927,10 @@
   .studio-grid,
   .studio-review-grid { grid-template-columns: 1fr; }
   .studio-panel-wide { grid-column: auto; }
+  /* Stacked order: contract, then findings, then the tall artifacts panel,
+     so validation changes stay visible right below the controls. */
+  .studio-grid > .studio-panel-surface:nth-child(2) { order: 3; }
+  .studio-grid > .studio-panel-wide { order: 2; }
 }
 
 @media (max-width: 47.99rem) {
