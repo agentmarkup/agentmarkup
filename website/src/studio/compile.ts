@@ -296,7 +296,7 @@ function buildGlobalSchemas(draft: StudioDraft): SchemaConfig[] {
   }
 
   const organization = draft.identity.organization;
-  if (organization) {
+  if (organization && (organization.name.trim() || organization.url.trim())) {
     const schema: OrganizationSchema = {
       preset: 'organization',
       name: organization.name,

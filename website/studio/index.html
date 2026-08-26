@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      (function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.style.backgroundColor=t==='light'?'#fffefc':'#10121a';document.documentElement.style.colorScheme=t})()
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agent Surface Studio - agentmarkup</title>
+    <meta
+      name="description"
+      content="Configure, inspect, and compile a coherent machine-readable website surface with visible agent tools, deterministic findings, and install-ready agentmarkup artifacts."
+    />
+    <meta name="keywords" content="WebMCP, agent surface studio, agentmarkup config, llms.txt, AI crawler policy, Content-Signal, Agent Card, machine-readable website" />
+    <meta name="author" content="Sebastian Cochinescu" />
+    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
+    <link rel="preload" href="/fonts/manrope-latin-variable.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/source-serif-4-latin-variable.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="canonical" href="https://agentmarkup.dev/studio/" />
+    <meta property="og:title" content="Agent Surface Studio - agentmarkup" />
+    <meta property="og:description" content="Let an agent configure your machine-readable website surface while you review every change, artifact, validation, and contradiction." />
+    <meta property="og:url" content="https://agentmarkup.dev/studio/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="agentmarkup" />
+    <meta property="og:image" content="https://agentmarkup.dev/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM-readable site summary" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/entries/studio.tsx"></script>
+  </body>
+</html>

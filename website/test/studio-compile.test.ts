@@ -172,6 +172,37 @@ describe('compileDraft', () => {
     expect(compiled.configMjs).not.toMatch(/\baiCrawlers\s*:/);
   });
 
+  it('omits an organization when its name and URL are both blank', () => {
+    const draft = createDraft();
+    draft.identity.organization = {
+      name: '   ',
+      url: '\t',
+    };
+
+    const compiled = compileDraft(draft);
+
+    expect(compiled.jsonLd).toHaveLength(1);
+    expect(compiled.jsonLd).not.toEqual(
+      expect.arrayContaining([expect.stringContaining('"@type": "Organization"')])
+    );
+    expect(compiled.configMjs).not.toContain('"preset": "organization"');
+  });
+
+  it.each([
+    { name: '', url: 'https://example.com/about' },
+    { name: 'Example Labs', url: '' },
+  ])('emits an organization when only one identity field is blank', (organization) => {
+    const draft = createDraft();
+    draft.identity.organization = organization;
+
+    const compiled = compileDraft(draft);
+
+    expect(compiled.jsonLd).toEqual(
+      expect.arrayContaining([expect.stringContaining('"@type": "Organization"')])
+    );
+    expect(compiled.configMjs).toContain('"preset": "organization"');
+  });
+
   it('emits an Agent Card only when its enabled config is valid', () => {
     const enabled = createFullDraft();
     const valid = compileDraft(enabled);
