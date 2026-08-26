@@ -1005,3 +1005,7 @@
   margin: 0 0 0.5rem;
   font-size: 0.92rem;
 }
+
+.studio-how-steps > li { line-height: 1.55; }
+
+.studio-how-steps .studio-starter-prompt { margin-block: 0.6rem; }

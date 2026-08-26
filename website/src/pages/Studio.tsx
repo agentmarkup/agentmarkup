@@ -362,7 +362,7 @@ function StudioStarter({
   );
 }
 
-function StudioHandoff() {
+function PromptCopy({ prompt, idPrefix }: { prompt: string; idPrefix: string }) {
   const promptRef = useRef<HTMLElement>(null);
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'selected'>(
     'idle'
@@ -370,14 +370,14 @@ function StudioHandoff() {
 
   const copyPrompt = async () => {
     try {
-      await navigator.clipboard.writeText(HANDOFF_PROMPT);
+      await navigator.clipboard.writeText(prompt);
       setCopyState('copied');
     } catch {
-      const prompt = promptRef.current;
+      const promptNode = promptRef.current;
       const selection = window.getSelection();
-      if (prompt && selection) {
+      if (promptNode && selection) {
         const range = document.createRange();
-        range.selectNodeContents(prompt);
+        range.selectNodeContents(promptNode);
         selection.removeAllRanges();
         selection.addRange(range);
       }
@@ -386,21 +386,16 @@ function StudioHandoff() {
   };
 
   return (
-    <div className="studio-handoff">
-      <p id="studio-handoff-title">
-        Downloaded? Paste this back to your agent and it finishes the install:
-      </p>
-      <div className="studio-starter-prompt">
-        <code id="studio-handoff-prompt" ref={promptRef}>{HANDOFF_PROMPT}</code>
-        <button
-          className="button button-secondary studio-compact-button"
-          type="button"
-          aria-describedby="studio-handoff-prompt"
-          onClick={() => void copyPrompt()}
-        >
-          {copyState === 'copied' ? 'Copied' : copyState === 'selected' ? 'Selected' : 'Copy prompt'}
-        </button>
-      </div>
+    <div className="studio-starter-prompt">
+      <code id={`${idPrefix}-prompt`} ref={promptRef}>{prompt}</code>
+      <button
+        className="button button-secondary studio-compact-button"
+        type="button"
+        aria-describedby={`${idPrefix}-prompt`}
+        onClick={() => void copyPrompt()}
+      >
+        {copyState === 'copied' ? 'Copied' : copyState === 'selected' ? 'Selected' : 'Copy prompt'}
+      </button>
     </div>
   );
 }
@@ -819,8 +814,6 @@ function Studio() {
                 a preview of exactly what your build will generate from it.
               </p>
 
-              <StudioHandoff />
-
               <div
                 className="studio-tabs"
                 role="tablist"
@@ -883,11 +876,32 @@ function Studio() {
         <section className="studio-how" aria-labelledby="studio-how-title">
           <h2 id="studio-how-title">How it works</h2>
           <ol className="studio-how-steps">
-            <li>Open this page in an agent browser: ChatGPT&apos;s in-app browser, or Chrome with WebMCP enabled.</li>
-            <li>Optional: inspect your site to import its current state as a starting point.</li>
-            <li>Tell the agent the policy you want, or edit the contract by hand.</li>
-            <li>Review the findings. Undo anything you disagree with; the agent cannot undo.</li>
-            <li>Download agentmarkup.config.mjs and install it your way: add the one-line adapter from the Adapter setup tab, or run <code>npx @agentmarkup/cli generate</code> over your built output, or hand the file to your coding agent - the agentmarkup plugin for Claude Code and Codex wires it up for you. Then deploy as usual.</li>
+            <li>
+              <strong>Tell your agent what you want.</strong> Open this page in
+              ChatGPT&apos;s in-app browser or Chrome with WebMCP enabled, then
+              describe your policy in plain language. For example:
+              <PromptCopy idPrefix="studio-how-start" prompt={STARTER_PROMPT} />
+            </li>
+            <li>
+              <strong>Watch and review.</strong> Every agent change flashes in
+              the contract, lands in the activity log, and is checked by
+              deterministic rules. Undo anything you disagree with.
+            </li>
+            <li>
+              <strong>Install with one file.</strong>{' '}
+              <button
+                className="button button-primary studio-compact-button"
+                type="button"
+                onClick={downloadConfig}
+              >
+                Download config
+              </button>{' '}
+              then paste this back to your agent and it finishes the install:
+              <PromptCopy idPrefix="studio-how-handoff" prompt={HANDOFF_PROMPT} />
+              Prefer to do it yourself? Put the file at your site repo root, add
+              the one-line adapter from the Adapter setup tab, and deploy as
+              usual.
+            </li>
           </ol>
         </section>
           </GlassSurface>
