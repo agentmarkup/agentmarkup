@@ -8,6 +8,7 @@ import type {
 import { analyzeSiteCheck } from '../src/checker/analyze';
 import { inspectSite } from '../src/studio/import-check';
 
+const MAX_RESPONSE_SIZE = 6 * 1024 * 1024;
 const RAW_PAGE_TEXT = 'PRIVATE RAW HOMEPAGE COPY MUST NOT LEAK';
 const HOMEPAGE_HTML = `<!doctype html>
 <html lang="en">
@@ -267,6 +268,40 @@ describe('inspectSite', () => {
 
     expect(result).toMatchObject({ ok: false, errorCode: 'fetch_failed' });
     expect(result).not.toHaveProperty('findings');
+  });
+
+  it('rejects an oversized content-length without reading or parsing the body', async () => {
+    const response = new Response('{"invalid":', {
+      status: 200,
+      headers: { 'content-length': String(MAX_RESPONSE_SIZE + 1) },
+    });
+    const textSpy = vi.spyOn(response, 'text');
+    const jsonSpy = vi.spyOn(response, 'json');
+    const fetchImpl = vi.fn<typeof fetch>(async () => response);
+
+    const result = await inspectSite('https://example.com', fetchImpl);
+
+    expect(result).toEqual({
+      ok: false,
+      errorCode: 'response_too_large',
+      summaryText: 'The site checker response was too large to inspect safely.',
+    });
+    expect(textSpy).not.toHaveBeenCalled();
+    expect(jsonSpy).not.toHaveBeenCalled();
+  });
+
+  it('rejects an oversized response body before parsing it', async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async () =>
+      new Response('x'.repeat(MAX_RESPONSE_SIZE + 1), { status: 200 })
+    );
+
+    const result = await inspectSite('https://example.com', fetchImpl);
+
+    expect(result).toEqual({
+      ok: false,
+      errorCode: 'response_too_large',
+      summaryText: 'The site checker response was too large to inspect safely.',
+    });
   });
 
   it('returns timeout for an AbortError', async () => {

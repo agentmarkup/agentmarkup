@@ -894,6 +894,7 @@
 .studio-source-agent { color: var(--brand-cyan); }
 .studio-empty-copy { margin: var(--space-4) 0 0; font-size: 0.84rem; }
 .studio-page .contextual-faq { margin-top: var(--space-16); }
+.studio-artifact-empty { margin: 0; padding: clamp(var(--space-6), 4vw, var(--space-10)); border: 1px dashed var(--border-default); border-radius: var(--radius-sm); color: var(--text-secondary); background: color-mix(in srgb, var(--surface-secondary) 78%, transparent); line-height: 1.7; }
 
 @keyframes studio-agent-flash-even {
   0% { background: color-mix(in srgb, var(--brand-cyan) 24%, transparent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-cyan) 58%, transparent); }

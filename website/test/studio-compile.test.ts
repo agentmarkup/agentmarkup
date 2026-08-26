@@ -157,6 +157,36 @@ describe('compileDraft', () => {
     expect(compileDraft(draft)).toEqual(compileDraft(draft));
   });
 
+  it('does not expose draft sections or crawlers by reference', () => {
+    const draft = createFullDraft();
+    const config = toAgentMarkupConfig(draft);
+    const sections = config.llmsTxt?.sections;
+    const crawlers = config.aiCrawlers;
+
+    expect(sections).toBeDefined();
+    expect(crawlers).toBeDefined();
+    expect(sections).not.toBe(draft.content.llmsSections);
+    expect(sections?.[0]).not.toBe(draft.content.llmsSections[0]);
+    expect(sections?.[0]?.entries).not.toBe(
+      draft.content.llmsSections[0]?.entries
+    );
+    expect(sections?.[0]?.entries[0]).not.toBe(
+      draft.content.llmsSections[0]?.entries[0]
+    );
+    expect(crawlers).not.toBe(draft.access.crawlers);
+
+    if (!sections?.[0]?.entries[0] || !crawlers) {
+      throw new Error('Missing compiled sections or crawlers');
+    }
+    sections[0].title = 'Changed section';
+    sections[0].entries[0].title = 'Changed entry';
+    crawlers.GPTBot = 'allow';
+
+    expect(draft.content.llmsSections[0]?.title).toBe('Guides');
+    expect(draft.content.llmsSections[0]?.entries[0]?.title).toBe('Studio guide');
+    expect(draft.access.crawlers.GPTBot).toBe('disallow');
+  });
+
   it('omits disabled and empty features', () => {
     const draft = createDraft();
     const config = toAgentMarkupConfig(draft);

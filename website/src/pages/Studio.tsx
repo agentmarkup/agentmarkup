@@ -440,7 +440,7 @@ function Studio() {
     } catch {
       setInspectOutcome({
         ok: false,
-        errorCode: 'fetch_failed',
+        errorCode: 'apply_failed',
         summaryText: 'The inspection result could not be applied. Try again.',
       });
     } finally {
@@ -575,7 +575,13 @@ function Studio() {
                 role="tabpanel"
                 aria-labelledby={`studio-artifact-tab-${selectedArtifact.id}`}
               >
-                <CodeBlock code={selectedArtifact.code} maxHeight="42rem" />
+                {selectedArtifact.code.trim() === '' ? (
+                  <p className="studio-artifact-empty">
+                    Artifacts appear here as the contract fills in. Set your site URL and name to generate the first files.
+                  </p>
+                ) : (
+                  <CodeBlock code={selectedArtifact.code} maxHeight="42rem" />
+                )}
               </div>
             </section>
           </GlassSurface>
@@ -591,8 +597,8 @@ function Studio() {
                   <h2 id="studio-findings-title">FINDINGS + ACTIVITY</h2>
                 </div>
                 <div className="studio-finding-counts" aria-label="Finding counts">
-                  <span><strong>{errorCount}</strong> errors</span>
-                  <span><strong>{warningCount}</strong> warnings</span>
+                  <span><strong>{errorCount}</strong> {errorCount === 1 ? 'error' : 'errors'}</span>
+                  <span><strong>{warningCount}</strong> {warningCount === 1 ? 'warning' : 'warnings'}</span>
                 </div>
               </div>
 
@@ -600,7 +606,11 @@ function Studio() {
                 <div className="studio-findings-list">
                   <section aria-labelledby="studio-validation-title">
                     <h3 id="studio-validation-title">Validation</h3>
-                    {compiled.validations.length > 0 ? (
+                    {pristine ? (
+                      <p className="studio-empty-state">
+                        Set your site URL to begin. Findings appear as the draft changes.
+                      </p>
+                    ) : compiled.validations.length > 0 ? (
                       <ul>
                         {compiled.validations.map((finding, index) => (
                           <li key={`${finding.severity}-${finding.message}-${index}`}>

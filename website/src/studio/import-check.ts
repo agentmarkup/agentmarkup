@@ -10,6 +10,7 @@ import { LIMITS } from './types';
 import type { InspectSiteOutcome, StudioDraft } from './types';
 
 const CHECK_TIMEOUT_MS = 30_000;
+const MAX_RESPONSE_SIZE = 6 * 1024 * 1024;
 const SUMMARY_LIMIT = 1_200;
 const FINDINGS_LIMIT = 10;
 const FINDING_TITLE_LIMIT = 80;
@@ -44,7 +45,36 @@ export async function inspectSite(
       body: JSON.stringify({ url: normalizedUrl }),
       signal: controller.signal,
     });
-    const payload: unknown = await response.json().catch(() => null);
+
+    const declaredContentLength = Number(
+      response.headers?.get('content-length')
+    );
+    if (
+      Number.isFinite(declaredContentLength) &&
+      declaredContentLength > MAX_RESPONSE_SIZE
+    ) {
+      return responseTooLarge();
+    }
+
+    const responseText =
+      typeof response.text === 'function'
+        ? await response.text().catch(() => null)
+        : await response
+            .json()
+            .then((value) => JSON.stringify(value) ?? null)
+            .catch(() => null);
+    if (responseText !== null && responseText.length > MAX_RESPONSE_SIZE) {
+      return responseTooLarge();
+    }
+
+    let payload: unknown = null;
+    if (responseText !== null) {
+      try {
+        payload = JSON.parse(responseText);
+      } catch {
+        // Preserve status-specific handling for non-JSON error responses.
+      }
+    }
     const checkerError = parseCheckerError(payload);
 
     if (checkerError?.turnstileRequired === true) {
@@ -227,6 +257,13 @@ function failure(errorCode: string, summaryText: string): InspectSiteOutcome {
     errorCode,
     summaryText: summaryText.slice(0, SUMMARY_LIMIT),
   };
+}
+
+function responseTooLarge(): InspectSiteOutcome {
+  return failure(
+    'response_too_large',
+    'The site checker response was too large to inspect safely.'
+  );
 }
 
 function parseCheckerError(value: unknown): CheckerErrorResponse | null {

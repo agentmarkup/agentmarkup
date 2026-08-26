@@ -312,7 +312,7 @@ function applyAccessPatch(
   const appliedKeys: string[] = [];
   let groupsApplied = false;
   let crawlersApplied = false;
-  let droppedCrawlers = 0;
+  const droppedCrawlerNames = new Set<string>();
 
   const applyCrawlerDirective = (
     crawler: string,
@@ -322,7 +322,7 @@ function applyAccessPatch(
       !Object.hasOwn(crawlers, crawler) &&
       Object.keys(crawlers).length >= LIMITS.crawlersMax
     ) {
-      droppedCrawlers += 1;
+      droppedCrawlerNames.add(crawler);
       return false;
     }
 
@@ -330,7 +330,33 @@ function applyAccessPatch(
     return true;
   };
 
-  if (isRecord(value.groups)) {
+  const crawlerEntries = isRecord(value.crawlers)
+    ? Object.entries(value.crawlers).filter(([crawler]) => (
+        crawler.length > 0 &&
+        !isUnsafeObjectKey(crawler) &&
+        !hasAsciiControlCharacter(crawler) &&
+        crawler.length <= LIMITS.crawlerNameMax
+      ))
+    : [];
+  const deletedCrawlerNames = new Set(
+    crawlerEntries
+      .filter(([, directive]) => directive === null)
+      .map(([crawler]) => crawler)
+  );
+
+  for (const crawler of deletedCrawlerNames) {
+    if (Object.hasOwn(crawlers, crawler)) {
+      delete crawlers[crawler];
+      crawlersApplied = true;
+    }
+  }
+
+  const existingCrawlerNames = new Set(Object.keys(crawlers));
+  const applyGroupDirectives = (existingKeys: boolean): void => {
+    if (!isRecord(value.groups)) {
+      return;
+    }
+
     for (const groupName of Object.keys(CRAWLER_GROUPS) as Array<keyof typeof CRAWLER_GROUPS>) {
       const directive = value.groups[groupName];
       if (!isCrawlerDirective(directive)) {
@@ -338,31 +364,35 @@ function applyAccessPatch(
       }
 
       for (const crawler of CRAWLER_GROUPS[groupName]) {
+        if (
+          deletedCrawlerNames.has(crawler) ||
+          existingCrawlerNames.has(crawler) !== existingKeys
+        ) {
+          continue;
+        }
         groupsApplied = applyCrawlerDirective(crawler, directive) || groupsApplied;
       }
     }
-  }
+  };
 
-  if (isRecord(value.crawlers)) {
-    for (const [crawler, directive] of Object.entries(value.crawlers)) {
+  const applyExplicitDirectives = (existingKeys: boolean): void => {
+    for (const [crawler, directive] of crawlerEntries) {
       if (
-        isUnsafeObjectKey(crawler) ||
-        hasAsciiControlCharacter(crawler) ||
-        crawler.length > LIMITS.crawlerNameMax
+        directive === null ||
+        !isCrawlerDirective(directive) ||
+        existingCrawlerNames.has(crawler) !== existingKeys
       ) {
         continue;
       }
 
-      if (directive === null) {
-        if (Object.hasOwn(crawlers, crawler)) {
-          delete crawlers[crawler];
-          crawlersApplied = true;
-        }
-      } else if (isCrawlerDirective(directive)) {
-        crawlersApplied = applyCrawlerDirective(crawler, directive) || crawlersApplied;
-      }
+      crawlersApplied = applyCrawlerDirective(crawler, directive) || crawlersApplied;
     }
-  }
+  };
+
+  applyGroupDirectives(true);
+  applyExplicitDirectives(true);
+  applyGroupDirectives(false);
+  applyExplicitDirectives(false);
 
   if (groupsApplied) {
     appliedKeys.push('groups');
@@ -377,7 +407,11 @@ function applyAccessPatch(
   }
 
   if (appliedKeys.length === 0) {
-    return { value: current, appliedKeys, droppedCrawlers };
+    return {
+      value: current,
+      appliedKeys,
+      droppedCrawlers: droppedCrawlerNames.size,
+    };
   }
 
   return {
@@ -386,6 +420,7 @@ function applyAccessPatch(
         Object.entries(crawlers)
           .filter(
             ([crawler]) =>
+              crawler.length > 0 &&
               !isUnsafeObjectKey(crawler) &&
               !hasAsciiControlCharacter(crawler) &&
               crawler.length <= LIMITS.crawlerNameMax
@@ -394,7 +429,7 @@ function applyAccessPatch(
       contentSignal: { ...current.contentSignal, ...contentSignalPatch },
     },
     appliedKeys,
-    droppedCrawlers,
+    droppedCrawlers: droppedCrawlerNames.size,
   };
 }
 
@@ -701,9 +736,11 @@ function sanitizeSkillSecurity(
     }
 
     const entries = Object.entries(requirement)
+      .filter(([scheme]) => !isUnsafeObjectKey(scheme))
       .slice(0, LIMITS.skillTagsMax)
       .flatMap(([scheme, scopes]) => {
-        if (isUnsafeObjectKey(scheme)) {
+        const sanitizedScheme = truncate(scheme, LIMITS.shortText);
+        if (isUnsafeObjectKey(sanitizedScheme)) {
           return [];
         }
         const sanitizedScopes = sanitizeStringArray(
@@ -713,7 +750,7 @@ function sanitizeSkillSecurity(
         );
         return sanitizedScopes === undefined
           ? []
-          : [[truncate(scheme, LIMITS.shortText), sanitizedScopes] as const];
+          : [[sanitizedScheme, sanitizedScopes] as const];
       });
 
     return [Object.fromEntries(entries)];
@@ -741,7 +778,7 @@ function sanitizeStringOrArray(
   if (typeof value === 'string') {
     return truncate(value, maxLength);
   }
-  return sanitizeStringArray(value, undefined, maxLength);
+  return sanitizeStringArray(value, LIMITS.sameAsMax, maxLength);
 }
 
 function sanitizeStringArray(

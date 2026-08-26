@@ -61,6 +61,14 @@ function blurInput(input: HTMLInputElement | HTMLTextAreaElement): void {
   input.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
 }
 
+async function commitInputValue(
+  input: HTMLInputElement,
+  value: string
+): Promise<void> {
+  await act(async () => setInputValue(input, value));
+  await act(async () => blurInput(input));
+}
+
 function findButton(container: HTMLElement, label: string): HTMLButtonElement {
   const button = [...container.querySelectorAll('button')].find(
     (candidate) => candidate.textContent?.trim() === label
@@ -153,6 +161,63 @@ describe('Agent Surface Studio page', () => {
     await act(async () => root?.render(createElement(Studio)));
     await flushReact();
   }
+
+  it('shows neutral empty and validation states until the draft changes', async () => {
+    await renderStudio();
+
+    const artifactPanel = container.querySelector<HTMLElement>(
+      '#studio-artifact-panel'
+    );
+    const validationSection = container.querySelector<HTMLElement>(
+      '[aria-labelledby="studio-validation-title"]'
+    );
+    const findingCounts = container.querySelector<HTMLElement>(
+      '.studio-finding-counts'
+    );
+    const siteInput = container.querySelector<HTMLInputElement>('#studio-site');
+    if (!artifactPanel || !validationSection || !findingCounts || !siteInput) {
+      throw new Error('Missing initial Studio output');
+    }
+
+    expect(artifactPanel.querySelector('.studio-artifact-empty')?.textContent).toBe(
+      'Artifacts appear here as the contract fills in. Set your site URL and name to generate the first files.'
+    );
+    expect(artifactPanel.querySelector('.code-block')).toBeNull();
+    expect(validationSection.textContent).toContain(
+      'Set your site URL to begin. Findings appear as the draft changes.'
+    );
+    expect(validationSection.textContent).not.toContain('Invalid config.site');
+    expect(validationSection.querySelector('ul')).toBeNull();
+    expect(findingCounts.textContent).toContain('1 error');
+    expect(findingCounts.textContent).not.toContain('1 errors');
+    expect(findingCounts.textContent).toContain('0 warnings');
+
+    await commitInputValue(siteInput, 'ftp://example.com');
+
+    expect(validationSection.textContent).not.toContain(
+      'Set your site URL to begin. Findings appear as the draft changes.'
+    );
+    expect(validationSection.textContent).toContain('Invalid config.site');
+    expect(validationSection.querySelector('ul')).not.toBeNull();
+    expect(findingCounts.textContent).toContain('1 error');
+    expect(findingCounts.textContent).not.toContain('1 errors');
+    expect(findingCounts.textContent).toContain('0 warnings');
+
+    await commitInputValue(siteInput, 'example.com');
+    expect(validationSection.textContent).toContain('No validation findings.');
+
+    const mirrorsToggle = container.querySelector<HTMLInputElement>(
+      '#studio-markdown-mirrors'
+    );
+    if (!mirrorsToggle) {
+      throw new Error('Missing markdown mirrors toggle');
+    }
+    await act(async () => mirrorsToggle.click());
+
+    expect(findingCounts.textContent).toContain('0 errors');
+    expect(findingCounts.textContent).toContain('1 warning');
+    expect(findingCounts.textContent).not.toContain('1 warnings');
+  });
 
   it('keeps committed human and agent edits visible, undoable, and unload-protected', async () => {
     await renderStudio();
@@ -377,12 +442,8 @@ describe('Agent Surface Studio page', () => {
       throw new Error('Missing inspection controls');
     }
 
-    await act(async () => {
-      setInputValue(nameInput, 'Existing draft');
-      blurInput(nameInput);
-      setInputValue(inspectInput, 'example.com');
-      blurInput(inspectInput);
-    });
+    await commitInputValue(nameInput, 'Existing draft');
+    await commitInputValue(inspectInput, 'example.com');
 
     await clickButton(container, 'Inspect site');
     await flushReact();
@@ -416,18 +477,12 @@ describe('Agent Surface Studio page', () => {
       throw new Error('Missing inspection controls');
     }
 
-    await act(async () => {
-      setInputValue(inspectInput, 'example.com');
-      blurInput(inspectInput);
-    });
+    await commitInputValue(inspectInput, 'example.com');
     await clickButton(container, 'Inspect site');
     expect(findButton(container, 'Inspecting...').disabled).toBe(true);
 
-    await act(async () => {
-      setInputValue(nameInput, 'Edited while inspecting');
-      blurInput(nameInput);
-      resolvePayload?.(payload);
-    });
+    await commitInputValue(nameInput, 'Edited while inspecting');
+    await act(async () => resolvePayload?.(payload));
     await flushReact();
 
     expect(confirm).toHaveBeenCalledTimes(1);
@@ -453,12 +508,8 @@ describe('Agent Surface Studio page', () => {
       throw new Error('Missing inspection controls');
     }
 
-    await act(async () => {
-      setInputValue(nameInput, 'Existing draft');
-      blurInput(nameInput);
-      setInputValue(inspectInput, 'example.com');
-      blurInput(inspectInput);
-    });
+    await commitInputValue(nameInput, 'Existing draft');
+    await commitInputValue(inspectInput, 'example.com');
     await clickButton(container, 'Inspect site');
     await flushReact();
 

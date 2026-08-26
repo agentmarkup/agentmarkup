@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import StudioAgentTools from '../src/studio/StudioAgentTools';
+import { studioReducer } from '../src/studio/model';
 import {
   STUDIO_TOOLS,
   boundedResult,
@@ -121,9 +122,12 @@ function fakeDeps(options: {
   config?: string;
   inspectSite?: StudioToolDeps['inspectSite'];
 } = {}) {
-  const dispatch = vi.fn<(action: StudioAction) => void>();
+  let state = options.state ?? stateFor();
+  const dispatch = vi.fn<(action: StudioAction) => void>((action) => {
+    state = studioReducer(state, action);
+  });
   const deps: StudioToolDeps = {
-    getState: () => options.state ?? stateFor(),
+    getState: () => state,
     dispatch,
     compile: () => options.compiled ?? compiled(),
     detect: () => options.contradictions ?? [],
@@ -390,7 +394,7 @@ describe('write tool validation and dispatch', () => {
         organization: { name: 'Example Org', url: 'https://example.org' },
       },
       actionType: 'SET_IDENTITY',
-      confirmation: 'Applied site identity fields',
+      confirmation: 'Agent set site identity',
     },
     {
       name: 'set_access_policy',
@@ -400,7 +404,7 @@ describe('write tool validation and dispatch', () => {
         contentSignal: { aiTrain: 'no', search: 'yes' },
       },
       actionType: 'SET_ACCESS_POLICY',
-      confirmation: 'Applied access policy fields',
+      confirmation: 'Agent set access policy',
     },
     {
       name: 'curate_agent_pages',
@@ -414,7 +418,7 @@ describe('write tool validation and dispatch', () => {
         markdownMirrors: { enabled: true, exclude: ['/private'] },
       },
       actionType: 'CURATE_PAGES',
-      confirmation: 'Applied content fields',
+      confirmation: 'Agent curated pages',
     },
     {
       name: 'configure_agent_card',
@@ -453,6 +457,9 @@ describe('write tool validation and dispatch', () => {
         source: 'agent',
         payload: args,
       });
+      const reducerSummary = deps.getState().log.at(-1)?.summary;
+      expect(reducerSummary).toBeDefined();
+      expect(resultText(result).startsWith(reducerSummary ?? '\0')).toBe(true);
       expect(resultText(result)).toContain(confirmation);
     }
   );
@@ -585,6 +592,32 @@ describe('write tool validation and dispatch', () => {
         : undefined
     ).toEqual(security);
   });
+
+  it('returns the reducer drop note when a crawler addition exceeds the cap', async () => {
+    const crawlers = Object.fromEntries(
+      Array.from(
+        { length: LIMITS.crawlersMax },
+        (_, index) => [`Crawler-${index}`, 'allow'] as const
+      )
+    );
+    const state = stateFor({
+      ...baseDraft(),
+      access: {
+        ...baseDraft().access,
+        crawlers,
+      },
+    });
+    const { deps } = fakeDeps({ state });
+    const { mc } = await registerWith(deps);
+
+    const result = await mc.executeTool('set_access_policy', JSON.stringify({
+      crawlers: { NewBot: 'allow' },
+    }));
+
+    expect(resultText(result)).toBe(
+      'Agent made no valid changes. (1 crawler(s) dropped at the cap)'
+    );
+  });
 });
 
 describe('bounded read tool results', () => {
@@ -684,10 +717,26 @@ describe('bounded read tool results', () => {
     expect(largeText).not.toContain(fragment);
     expect(largeText).not.toContain('[truncated');
   });
+
+  it('reports only an exception kind when tool execution fails', async () => {
+    const privateMessage = 'private checker internals';
+    const { deps } = fakeDeps();
+    deps.compile = () => {
+      throw new TypeError(privateMessage);
+    };
+    const { mc } = await registerWith(deps);
+
+    const result = await mc.executeTool('compile_agent_surface', '{}');
+
+    expect(resultText(result)).toBe(
+      'Failed: {"error":"tool_execution_failed","kind":"TypeError"}'
+    );
+    expect(resultText(result)).not.toContain(privateMessage);
+  });
 });
 
 describe('inspect_site', () => {
-  it('falls back to bounded summary text when structured findings are absent', async () => {
+  it('returns an empty findings list without checker summary text', async () => {
     const patch: InspectSiteOutcome['draftPatch'] = {
       identity: {
         site: 'https://checked.example',
@@ -714,8 +763,8 @@ describe('inspect_site', () => {
       payload: patch,
       sourceUrl: 'https://checked.example',
     });
-    expect(text).toHaveLength(1500);
-    expect(text).toContain('[truncated to fit the WebMCP result limit]');
+    expect(JSON.parse(text)).toEqual({ findings: [], imported: true });
+    expect(text).not.toContain('Imported structured findings');
   });
 
   it('returns compact structured findings and whether a patch was imported', async () => {
@@ -746,13 +795,12 @@ describe('inspect_site', () => {
       JSON.stringify({ url: 'checked.example' })
     ));
     const parsed = JSON.parse(text) as {
-      summary: string;
       findings: Array<{ level: string; title: string }>;
       imported: boolean;
     };
 
     expect(text.length).toBeLessThanOrEqual(1500);
-    expect(parsed.summary).not.toContain('\n');
+    expect(parsed).not.toHaveProperty('summary');
     expect(parsed.findings).toHaveLength(10);
     expect(parsed.findings.every(({ level, title }) => (
       level.length <= 16 && title.length <= 64 && !title.includes('\n')

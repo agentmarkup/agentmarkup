@@ -481,7 +481,7 @@ function buildToolDescriptors(deps: StudioToolDeps): ModelContextToolDescriptor[
           source: 'agent',
           payload: parsed.value,
         });
-        return boundedResult(`Applied site identity fields: ${Object.keys(parsed.value).join(', ')}.`);
+        return reducerSummaryResult(deps);
       }),
     },
     {
@@ -496,7 +496,7 @@ function buildToolDescriptors(deps: StudioToolDeps): ModelContextToolDescriptor[
           source: 'agent',
           payload: parsed.value,
         });
-        return boundedResult(`Applied access policy fields: ${Object.keys(parsed.value).join(', ')}.`);
+        return reducerSummaryResult(deps);
       }),
     },
     {
@@ -511,7 +511,7 @@ function buildToolDescriptors(deps: StudioToolDeps): ModelContextToolDescriptor[
           source: 'agent',
           payload: parsed.value,
         });
-        return boundedResult(`Applied content fields: ${Object.keys(parsed.value).join(', ')}.`);
+        return reducerSummaryResult(deps);
       }),
     },
     {
@@ -534,14 +534,14 @@ function buildToolDescriptors(deps: StudioToolDeps): ModelContextToolDescriptor[
           payload: parsed.value,
         });
 
-        const fields = Object.keys(parsed.value).join(', ');
+        const summary = latestReducerSummary(deps);
         if (!prospectiveDraft.agentCard.enabled) {
-          return boundedResult(`Agent Card disabled. Applied fields: ${fields}.`);
+          return boundedResult(`${summary} Agent Card disabled.`);
         }
         if (problems.length > 0) {
-          return boundedResult(`Agent Card updated but invalid. Missing or invalid: ${problems.join('; ')}.`);
+          return boundedResult(`${summary} Agent Card updated but invalid. Missing or invalid: ${problems.join('; ')}.`);
         }
-        return boundedResult(`Agent Card updated and valid. Applied fields: ${fields}.`);
+        return boundedResult(`${summary} Agent Card updated and valid.`);
       }),
     },
     {
@@ -600,11 +600,7 @@ function buildToolDescriptors(deps: StudioToolDeps): ModelContextToolDescriptor[
           });
         }
 
-        if (outcome.findings !== undefined) {
-          return inspectResult(outcome);
-        }
-
-        return boundedResult(outcome.summaryText);
+        return inspectResult(outcome);
       }),
     },
   ];
@@ -729,7 +725,6 @@ function compileResult(
 
 function inspectResult(outcome: InspectSiteOutcome): ToolResult {
   return boundedResult(JSON.stringify({
-    summary: compactOneLine(outcome.summaryText, 240),
     findings: (outcome.findings ?? []).slice(0, 10).map(({ level, title }) => ({
       level: compactOneLine(level, 16),
       title: compactOneLine(title, 64),
@@ -1236,10 +1231,18 @@ function safelyExecute(
     } catch (error) {
       return boundedResult(`Failed: ${JSON.stringify({
         error: 'tool_execution_failed',
-        reason: error instanceof Error ? error.message : String(error),
+        kind: error instanceof Error ? error.constructor.name : 'Unknown',
       })}`);
     }
   };
+}
+
+function reducerSummaryResult(deps: StudioToolDeps): ToolResult {
+  return boundedResult(latestReducerSummary(deps));
+}
+
+function latestReducerSummary(deps: StudioToolDeps): string {
+  return deps.getState().log.at(-1)?.summary ?? 'No reducer summary was recorded.';
 }
 
 function rejected(reason: string): ToolResult {

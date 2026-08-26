@@ -52,7 +52,10 @@ export function toAgentMarkupConfig(draft: StudioDraft): AgentMarkupConfig {
     draft.content.whenToUse.length > 0
   ) {
     config.llmsTxt = {
-      sections: draft.content.llmsSections,
+      sections: draft.content.llmsSections.map((section) => ({
+        ...section,
+        entries: section.entries.map((entry) => ({ ...entry })),
+      })),
       whenToUse: draft.content.whenToUse,
     };
   }
@@ -69,7 +72,7 @@ export function toAgentMarkupConfig(draft: StudioDraft): AgentMarkupConfig {
   }
 
   if (Object.keys(draft.access.crawlers).length > 0) {
-    config.aiCrawlers = draft.access.crawlers;
+    config.aiCrawlers = { ...draft.access.crawlers };
   }
 
   if (draft.agentCard.enabled) {

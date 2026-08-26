@@ -5,7 +5,7 @@ import {
   initialStudioDraft,
   studioReducer,
 } from '../src/studio/model';
-import { LIMITS } from '../src/studio/types';
+import { CRAWLER_GROUPS, LIMITS } from '../src/studio/types';
 import type { StudioAction, StudioState } from '../src/studio/types';
 
 function setName(state: StudioState, name: string, source: 'agent' | 'human' = 'human') {
@@ -348,6 +348,34 @@ describe('studioReducer boundaries', () => {
     )).toBe(false);
   });
 
+  it('caps contact point string arrays at the shared boundary', () => {
+    const values = Array.from(
+      { length: LIMITS.sameAsMax + 1 },
+      (_, index) => `value-${index}`
+    );
+    const state = studioReducer(createInitialState(), {
+      type: 'SET_IDENTITY',
+      source: 'human',
+      payload: {
+        organization: {
+          name: 'Example LLC',
+          url: 'https://example.com',
+          contactPoint: [{
+            contactType: 'support',
+            areaServed: values,
+            availableLanguage: values,
+          }],
+        },
+      },
+    });
+
+    const saved = state.draft.identity.organization?.contactPoint?.[0];
+    expect(saved?.areaServed).toHaveLength(LIMITS.sameAsMax);
+    expect(saved?.availableLanguage).toHaveLength(LIMITS.sameAsMax);
+    expect(saved?.areaServed).not.toContain(`value-${LIMITS.sameAsMax}`);
+    expect(saved?.availableLanguage).not.toContain(`value-${LIMITS.sameAsMax}`);
+  });
+
   it('caps agent skill tags at the configured boundary', () => {
     const tags = Array.from(
       { length: LIMITS.skillTagsMax + 1 },
@@ -489,6 +517,37 @@ describe('studioReducer boundaries', () => {
     expect(Object.hasOwn(saved ?? {}, '__proto__')).toBe(false);
   });
 
+  it('filters unsafe security schemes before applying the scheme cap', () => {
+    const legitimateSchemes = Array.from(
+      { length: LIMITS.skillTagsMax },
+      (_, index) => [`oauth-${index}`, [`scope-${index}`]] as const
+    );
+    const security = [Object.fromEntries([
+      ['__proto__', ['admin']],
+      ['prototype', ['admin']],
+      ['constructor', ['admin']],
+      ...legitimateSchemes,
+    ])];
+    const state = studioReducer(createInitialState(), {
+      type: 'SET_AGENT_CARD',
+      source: 'agent',
+      payload: {
+        skills: [{
+          id: 'search',
+          name: 'Search',
+          description: 'Searches.',
+          tags: [],
+          security,
+        }],
+      },
+    });
+
+    const saved = state.draft.agentCard.skills?.[0]?.security?.[0] ?? {};
+    expect(Object.keys(saved)).toEqual(
+      legitimateSchemes.map(([scheme]) => scheme)
+    );
+  });
+
   it('caps crawler keys by insertion order at the configured boundary', () => {
     const crawlers = Object.fromEntries(
       Array.from(
@@ -533,6 +592,68 @@ describe('studioReducer boundaries', () => {
     expect(updated.log.at(-1)?.summary).not.toContain('dropped at the cap');
   });
 
+  it.each([
+    ['addition first', [['NewBot', 'allow'], ['Crawler-0', null]]],
+    ['deletion first', [['Crawler-0', null], ['NewBot', 'allow']]],
+  ] as const)('applies a mixed add and delete at the cap with %s', (_, entries) => {
+    const crawlers = Object.fromEntries(
+      Array.from(
+        { length: LIMITS.crawlersMax },
+        (_, index) => [`Crawler-${index}`, 'allow'] as const
+      )
+    );
+    const atCap = studioReducer(createInitialState(), {
+      type: 'SET_ACCESS_POLICY',
+      source: 'human',
+      payload: { crawlers },
+    });
+    const updated = studioReducer(atCap, {
+      type: 'SET_ACCESS_POLICY',
+      source: 'agent',
+      payload: {
+        crawlers: Object.fromEntries(entries) as Record<string, 'allow' | null>,
+      },
+    });
+
+    expect(updated.draft.access.crawlers['Crawler-0']).toBeUndefined();
+    expect(updated.draft.access.crawlers.NewBot).toBe('allow');
+    expect(Object.keys(updated.draft.access.crawlers)).toHaveLength(LIMITS.crawlersMax);
+    expect(updated.log.at(-1)?.summary).not.toContain('dropped at the cap');
+  });
+
+  it.each([
+    ['addition first', [['NewBot', 'allow'], ['Crawler-0', null]]],
+    ['deletion first', [['Crawler-0', null], ['NewBot', 'allow']]],
+  ] as const)('imports a mixed add and delete at the cap with %s', (_, entries) => {
+    const crawlers = Object.fromEntries(
+      Array.from(
+        { length: LIMITS.crawlersMax },
+        (_, index) => [`Crawler-${index}`, 'allow'] as const
+      )
+    );
+    const atCap = studioReducer(createInitialState(), {
+      type: 'SET_ACCESS_POLICY',
+      source: 'human',
+      payload: { crawlers },
+    });
+    const updated = studioReducer(atCap, {
+      type: 'IMPORT_FROM_CHECK',
+      source: 'agent',
+      sourceUrl: 'https://checked.example',
+      payload: {
+        access: {
+          crawlers: Object.fromEntries(entries) as Record<string, 'allow' | null>,
+          contentSignal: atCap.draft.access.contentSignal,
+        },
+      },
+    } as unknown as StudioAction);
+
+    expect(updated.draft.access.crawlers['Crawler-0']).toBeUndefined();
+    expect(updated.draft.access.crawlers.NewBot).toBe('allow');
+    expect(Object.keys(updated.draft.access.crawlers)).toHaveLength(LIMITS.crawlersMax);
+    expect(updated.log.at(-1)?.summary).not.toContain('dropped at the cap');
+  });
+
   it('drops a new crawler without claiming success when the map is at the cap', () => {
     const crawlers = Object.fromEntries(
       Array.from(
@@ -554,6 +675,32 @@ describe('studioReducer boundaries', () => {
     expect(dropped.draft.access.crawlers.NewBot).toBeUndefined();
     expect(dropped.log.at(-1)?.summary).toBe(
       'Agent made no valid changes. (1 crawler(s) dropped at the cap)'
+    );
+  });
+
+  it('counts a crawler dropped through both a group and an override once', () => {
+    const crawlers = Object.fromEntries(
+      Array.from(
+        { length: LIMITS.crawlersMax },
+        (_, index) => [`Crawler-${index}`, 'allow'] as const
+      )
+    );
+    const atCap = studioReducer(createInitialState(), {
+      type: 'SET_ACCESS_POLICY',
+      source: 'human',
+      payload: { crawlers },
+    });
+    const dropped = studioReducer(atCap, {
+      type: 'SET_ACCESS_POLICY',
+      source: 'agent',
+      payload: {
+        groups: { train: 'allow' },
+        crawlers: { GPTBot: 'allow' },
+      },
+    });
+
+    expect(dropped.log.at(-1)?.summary).toContain(
+      `(${CRAWLER_GROUPS.train.length} crawler(s) dropped at the cap)`
     );
   });
 
@@ -612,6 +759,33 @@ describe('studioReducer boundaries', () => {
 
     expect(state.draft.access.crawlers).toEqual({ SafeBot: 'allow' });
     expect(Object.hasOwn(state.draft.access.crawlers, 'Poisoned\nBot')).toBe(false);
+  });
+
+  it('rejects empty crawler names and filters an existing empty key', () => {
+    const clean = studioReducer(createInitialState(), {
+      type: 'SET_ACCESS_POLICY',
+      source: 'agent',
+      payload: { crawlers: { '': 'disallow', SafeBot: 'allow' } },
+    });
+    const seeded = createInitialState();
+    const withEmptyKey: StudioState = {
+      ...seeded,
+      draft: {
+        ...seeded.draft,
+        access: {
+          ...seeded.draft.access,
+          crawlers: { '': 'allow' },
+        },
+      },
+    };
+    const filtered = studioReducer(withEmptyKey, {
+      type: 'SET_ACCESS_POLICY',
+      source: 'human',
+      payload: { contentSignal: { search: 'no' } },
+    });
+
+    expect(clean.draft.access.crawlers).toEqual({ SafeBot: 'allow' });
+    expect(Object.hasOwn(filtered.draft.access.crawlers, '')).toBe(false);
   });
 
   it('ignores invalid-shaped fields without throwing', () => {
