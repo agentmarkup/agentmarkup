@@ -965,3 +965,13 @@
   .studio-section-disclosure > summary { align-items: flex-start; }
   .studio-disclosure-status { max-width: 55%; }
 }
+
+.studio-artifact-output .code-block pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: hidden;
+}
+
+.studio-artifact-output .code-block .line-numbers {
+  display: none;
+}
