@@ -396,6 +396,13 @@ function PromptCopy({ prompt, idPrefix }: { prompt: string; idPrefix: string }) 
       >
         {copyState === 'copied' ? 'Copied' : copyState === 'selected' ? 'Selected' : 'Copy prompt'}
       </button>
+      <span className="sr-only" role="status">
+        {copyState === 'copied'
+          ? 'Prompt copied to clipboard.'
+          : copyState === 'selected'
+            ? 'Prompt selected. Copy it with your keyboard or browser menu.'
+            : ''}
+      </span>
     </div>
   );
 }
@@ -621,11 +628,16 @@ function Studio() {
 
   const selectedArtifact =
     artifactTabs.find((tab) => tab.id === activeArtifact) ?? artifactTabs[0];
+  const wasConnectedRef = useRef(false);
   useEffect(() => {
     if (agentStatus === 'unknown') {
       return;
     }
-    setConnectOpen(!(agentStatus.supported && agentStatus.registered.length > 0));
+    const connected = agentStatus.supported && agentStatus.registered.length > 0;
+    if (connected && !wasConnectedRef.current) {
+      setConnectOpen(false);
+    }
+    wasConnectedRef.current = connected;
   }, [agentStatus]);
 
   const openArtifact = (id: ArtifactKey) => {
@@ -750,6 +762,7 @@ function Studio() {
 
         <details
           className="studio-connect"
+          aria-labelledby="studio-connect-title"
           open={connectOpen}
           onToggle={(event) => setConnectOpen(event.currentTarget.open)}
         >
@@ -794,9 +807,9 @@ function Studio() {
               </button>{' '}
               then paste this back to your agent and it finishes the install:
               <PromptCopy idPrefix="studio-how-handoff" prompt={HANDOFF_PROMPT} />
-              Prefer to do it yourself? Put the file at your site repo root, add
-              the one-line adapter from the Adapter setup tab, and deploy as
-              usual.
+              Prefer to do it yourself? Put the file at your site repo root, install
+              the matching @agentmarkup adapter package, add the one-line setup
+              from the Adapter setup tab, and deploy as usual.
             </li>
           </ol>
         </section>

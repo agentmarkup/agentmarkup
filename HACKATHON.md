@@ -42,15 +42,16 @@ The page registers eight tools via `document.modelContext.registerTool` (with a
 | `configure_agent_card` | write | Optional A2A Agent Card |
 | `compile_agent_surface` | read-only | Deterministic compile, validations, contradictions |
 | `export_build_plan` | read-only | The ready-to-install `agentmarkup.config.mjs` |
-| `inspect_site` | read | Imports a bounded starting point from our checker API |
+| `inspect_site` | read + apply | Imports a bounded starting point from our checker API |
 
 Design properties worth noting:
 
 - Tool results are authored by the state reducer, so the agent reads exactly what was
   applied, including anything dropped at a cap. Inputs are schema- and runtime-validated;
   outputs are bounded to the WebMCP budgets.
-- Provenance is unforgeable: every change is logged with an Agent or Human badge, and the
-  agent has no tool for undo, reset, or download - those stay human-only.
+- Provenance is enforced by the tool layer: every change is logged with an Agent or Human
+  badge as recorded at dispatch, and the agent has no tool for undo, reset, or download -
+  those stay human-only.
 - The exported config file is rendered through JSON-only serialization and covered by a
   regression test that imports the rendered file and asserts hostile values stay inert.
 - `inspect_site` forwards only structured `{level, title}` findings, never remote page text.

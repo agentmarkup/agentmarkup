@@ -584,7 +584,7 @@ describe('Agent Surface Studio page', () => {
 
     expect(html).toContain('<h1>Agent Surface Studio</h1>');
     expect(html).toContain('Agent connection: checking...');
-    expect(html).toMatch(/<details class="studio-connect" open="">/);
+    expect(html).toMatch(/<details class="studio-connect"[^>]* open="">/);
 
     container.innerHTML = html;
     root = hydrateRoot(container, createElement(Studio));
