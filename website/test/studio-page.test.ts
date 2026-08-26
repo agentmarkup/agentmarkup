@@ -85,6 +85,27 @@ async function clickButton(container: HTMLElement, label: string): Promise<void>
   });
 }
 
+function getDisclosure(
+  container: HTMLElement,
+  key: 'identity' | 'access' | 'content' | 'agent-card'
+): HTMLDetailsElement {
+  const details = container.querySelector<HTMLDetailsElement>(
+    `[data-studio-disclosure="${key}"]`
+  );
+  if (!details) {
+    throw new Error(`Missing ${key} disclosure`);
+  }
+  return details;
+}
+
+async function toggleDisclosure(details: HTMLDetailsElement): Promise<void> {
+  const summary = details.querySelector('summary');
+  if (!summary) {
+    throw new Error('Missing disclosure summary');
+  }
+  await act(async () => summary.click());
+}
+
 function makeResource(
   url: string,
   overrides: Partial<RemoteResource> = {}
@@ -168,14 +189,8 @@ describe('Agent Surface Studio page', () => {
     const artifactPanel = container.querySelector<HTMLElement>(
       '#studio-artifact-panel'
     );
-    const validationSection = container.querySelector<HTMLElement>(
-      '[aria-labelledby="studio-validation-title"]'
-    );
-    const findingCounts = container.querySelector<HTMLElement>(
-      '.studio-finding-counts'
-    );
     const siteInput = container.querySelector<HTMLInputElement>('#studio-site');
-    if (!artifactPanel || !validationSection || !findingCounts || !siteInput) {
+    if (!artifactPanel || !siteInput) {
       throw new Error('Missing initial Studio output');
     }
 
@@ -183,16 +198,23 @@ describe('Agent Surface Studio page', () => {
       'Artifacts appear here as the contract fills in. Set your site URL and name to generate the first files.'
     );
     expect(artifactPanel.querySelector('.code-block')).toBeNull();
-    expect(validationSection.textContent).toContain(
+    expect(container.querySelector('.studio-review-compact')?.textContent).toContain(
       'Set your site URL to begin. Findings appear as the draft changes.'
     );
-    expect(validationSection.textContent).not.toContain('Invalid config.site');
-    expect(validationSection.querySelector('ul')).toBeNull();
-    expect(findingCounts.textContent).toContain('1 error');
-    expect(findingCounts.textContent).not.toContain('1 errors');
-    expect(findingCounts.textContent).toContain('0 warnings');
+    expect(container.textContent).not.toContain('Invalid config.site');
+    expect(container.querySelector('.studio-finding-counts')).toBeNull();
 
     await commitInputValue(siteInput, 'ftp://example.com');
+
+    const validationSection = container.querySelector<HTMLElement>(
+      '[aria-labelledby="studio-validation-title"]'
+    );
+    const findingCounts = container.querySelector<HTMLElement>(
+      '.studio-finding-counts'
+    );
+    if (!validationSection || !findingCounts) {
+      throw new Error('Missing expanded findings');
+    }
 
     expect(validationSection.textContent).not.toContain(
       'Set your site URL to begin. Findings appear as the draft changes.'
@@ -206,6 +228,8 @@ describe('Agent Surface Studio page', () => {
     await commitInputValue(siteInput, 'example.com');
     expect(validationSection.textContent).toContain('No validation findings.');
 
+    const contentDisclosure = getDisclosure(container, 'content');
+    await toggleDisclosure(contentDisclosure);
     const mirrorsToggle = container.querySelector<HTMLInputElement>(
       '#studio-markdown-mirrors'
     );
@@ -217,6 +241,226 @@ describe('Agent Surface Studio page', () => {
     expect(findingCounts.textContent).toContain('0 errors');
     expect(findingCounts.textContent).toContain('1 warning');
     expect(findingCounts.textContent).not.toContain('1 warnings');
+  });
+
+  it('starts with advanced contract sections collapsed and summarized', async () => {
+    await renderStudio();
+
+    const access = getDisclosure(container, 'access');
+    const content = getDisclosure(container, 'content');
+    const agentCard = getDisclosure(container, 'agent-card');
+
+    expect(access.open).toBe(false);
+    expect(content.open).toBe(false);
+    expect(agentCard.open).toBe(false);
+    expect(access.querySelector('summary')?.textContent).toContain('not set');
+    expect(content.querySelector('summary')?.textContent).toContain('no pages yet');
+    expect(agentCard.querySelector('summary')?.textContent).toContain('off');
+    expect(
+      container.querySelectorAll('.studio-disclosure-status[aria-live]')
+    ).toHaveLength(0);
+
+    const identityDetails = getDisclosure(container, 'identity');
+    expect(identityDetails.open).toBe(false);
+    expect(identityDetails.contains(container.querySelector('#studio-description'))).toBe(true);
+    expect(container.querySelector('#studio-site')).not.toBeNull();
+    expect(container.querySelector('#studio-name')).not.toBeNull();
+    expect(container.querySelector('.studio-inspect')).not.toBeNull();
+    expect(container.querySelector<HTMLDetailsElement>('.studio-connect')?.open).toBe(false);
+  });
+
+  it('auto-opens Access policy for the latest agent access edit', async () => {
+    await renderStudio();
+
+    const access = getDisclosure(container, 'access');
+    const accessTool = modelContext.descriptors.get('set_access_policy');
+    if (!accessTool) {
+      throw new Error('Missing set_access_policy tool');
+    }
+
+    await act(async () => {
+      await accessTool.execute({ groups: { train: 'disallow' } });
+    });
+
+    expect(access.open).toBe(true);
+    expect(access.querySelector('summary')?.textContent).toContain('training blocked');
+    expect(access.querySelector('.studio-flash legend')?.textContent).toBe(
+      'Access policy'
+    );
+    expect(container.querySelector('.studio-agent-status')?.textContent?.trim()).toBe(
+      'Agent updated Access policy.'
+    );
+    expect(
+      container.querySelectorAll('.studio-agent-status[role="status"]')
+    ).toHaveLength(1);
+
+    await act(async () => {
+      await accessTool.execute({ groups: { search: 'allow' } });
+    });
+    expect(access.querySelector('summary')?.textContent).toContain(
+      'training blocked, search allowed'
+    );
+
+    await act(async () => {
+      await accessTool.execute({
+        crawlers: {
+          'ExampleBot-1': 'disallow',
+          'ExampleBot-2': 'allow',
+          'ExampleBot-3': 'disallow',
+        },
+      });
+    });
+    expect(access.querySelector('summary')?.textContent).toContain(
+      '2 groups, 3 crawler rules'
+    );
+  });
+
+  it('keeps sequentially agent-opened sections open together', async () => {
+    await renderStudio();
+
+    const access = getDisclosure(container, 'access');
+    const content = getDisclosure(container, 'content');
+    const accessTool = modelContext.descriptors.get('set_access_policy');
+    const contentTool = modelContext.descriptors.get('curate_agent_pages');
+    if (!accessTool || !contentTool) {
+      throw new Error('Missing agent section tools');
+    }
+
+    await act(async () => {
+      await accessTool.execute({ groups: { train: 'disallow' } });
+    });
+    expect(access.open).toBe(true);
+
+    await act(async () => {
+      await contentTool.execute({
+        llmsSections: [{ title: 'Documentation', entries: [] }],
+      });
+    });
+
+    expect(access.open).toBe(true);
+    expect(content.open).toBe(true);
+    expect(container.querySelector('.studio-agent-status')?.textContent?.trim()).toBe(
+      'Agent updated Content.'
+    );
+  });
+
+  it('opens identity details for agent description edits but not name-only edits', async () => {
+    await renderStudio();
+
+    const identityDetails = getDisclosure(container, 'identity');
+    const scrollIntoView = vi.fn();
+    identityDetails.scrollIntoView = scrollIntoView;
+    const siteInput = container.querySelector<HTMLInputElement>('#studio-site');
+    const identityTool = modelContext.descriptors.get('set_site_identity');
+    if (!identityTool || !siteInput) {
+      throw new Error('Missing identity agent controls');
+    }
+
+    await act(async () => findButton(container, 'Copy').focus());
+    await act(async () => {
+      await identityTool.execute({ name: 'Agent-named site' });
+    });
+    expect(identityDetails.open).toBe(false);
+    expect(scrollIntoView).not.toHaveBeenCalled();
+    expect(container.querySelector('.studio-starter')).toBeNull();
+    expect(document.activeElement).toBe(siteInput);
+
+    await act(async () => {
+      await identityTool.execute({ description: 'A useful site description.' });
+    });
+    expect(identityDetails.open).toBe(true);
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
+    expect(container.querySelector('.studio-agent-status')?.textContent?.trim()).toBe(
+      'Agent updated Identity.'
+    );
+  });
+
+  it('keeps a user-closed disclosure closed after an unrelated agent edit', async () => {
+    await renderStudio();
+
+    const access = getDisclosure(container, 'access');
+    const accessTool = modelContext.descriptors.get('set_access_policy');
+    const identityTool = modelContext.descriptors.get('set_site_identity');
+    if (!accessTool || !identityTool) {
+      throw new Error('Missing agent edit tools');
+    }
+
+    await act(async () => {
+      await accessTool.execute({ groups: { train: 'disallow' } });
+    });
+    expect(access.open).toBe(true);
+
+    await toggleDisclosure(access);
+    expect(access.open).toBe(false);
+
+    await act(async () => {
+      await identityTool.execute({ name: 'Agent edit elsewhere' });
+    });
+    expect(access.open).toBe(false);
+
+    await act(async () => {
+      await accessTool.execute({ groups: { search: 'allow' } });
+    });
+    expect(access.open).toBe(true);
+  });
+
+  it('keeps the starter through human input, then hides it after a successful copy', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', {
+      ...navigator,
+      clipboard: { writeText },
+    });
+    await renderStudio();
+
+    const starter = container.querySelector('.studio-starter');
+    expect(starter?.textContent).toContain(
+      'Tell your agent what you want, or start below.'
+    );
+    expect(starter?.textContent).toContain(
+      'Make my site friendly to AI search but keep my content out of training data.'
+    );
+
+    const siteInput = container.querySelector<HTMLInputElement>('#studio-site');
+    const nameInput = container.querySelector<HTMLInputElement>('#studio-name');
+    if (!siteInput || !nameInput) {
+      throw new Error('Missing identity input');
+    }
+    await commitInputValue(nameInput, 'Edited site');
+    expect(container.querySelector('.studio-starter')).not.toBeNull();
+
+    const copyButton = findButton(container, 'Copy');
+    expect(copyButton.getAttribute('aria-label')).toBeNull();
+    await act(async () => copyButton.focus());
+    await clickButton(container, 'Copy');
+    await flushReact();
+    expect(writeText).toHaveBeenCalledWith(
+      'Make my site friendly to AI search but keep my content out of training data.'
+    );
+    expect(container.querySelector('.studio-starter')).toBeNull();
+    expect(document.activeElement).toBe(siteInput);
+    expect(container.querySelector('.studio-copy-status')?.textContent).toBe(
+      'Example prompt copied to clipboard.'
+    );
+  });
+
+  it('uses a compact findings state until the first draft change', async () => {
+    await renderStudio();
+
+    const compactReview = container.querySelector('.studio-review-compact');
+    expect(compactReview?.textContent).toContain('FINDINGS + ACTIVITY');
+    expect(compactReview?.textContent).toContain(
+      'Set your site URL to begin. Findings appear as the draft changes.'
+    );
+    expect(container.querySelector('.studio-review-grid')).toBeNull();
+
+    const siteInput = container.querySelector<HTMLInputElement>('#studio-site');
+    if (!siteInput) {
+      throw new Error('Missing site input');
+    }
+    await commitInputValue(siteInput, 'example.com');
+
+    expect(container.querySelector('.studio-review-compact')).toBeNull();
+    expect(container.querySelector('.studio-review-grid')).not.toBeNull();
   });
 
   it('keeps committed human and agent edits visible, undoable, and unload-protected', async () => {
@@ -244,6 +488,7 @@ describe('Agent Surface Studio page', () => {
     await act(async () => blurInput(siteInput));
     expect(container.querySelectorAll('.studio-activity-row')).toHaveLength(1);
 
+    await toggleDisclosure(getDisclosure(container, 'content'));
     await clickButton(container, 'Add section');
     const sectionInput = container.querySelector<HTMLInputElement>('#studio-section-0');
     if (!sectionInput) {
@@ -339,6 +584,7 @@ describe('Agent Surface Studio page', () => {
 
     expect(html).toContain('<h1>Agent Surface Studio</h1>');
     expect(html).toContain('Agent connection: checking...');
+    expect(html).toMatch(/<details class="studio-connect" open="">/);
 
     container.innerHTML = html;
     root = hydrateRoot(container, createElement(Studio));
@@ -348,6 +594,9 @@ describe('Agent Surface Studio page', () => {
       call.map(String).join(' ').toLowerCase().includes('hydrat')
     );
     expect(hydrationErrors).toEqual([]);
+    expect(container.querySelector<HTMLDetailsElement>('.studio-connect')?.open).toBe(
+      false
+    );
   });
 
   it('supports roving artifact tabs and keeps row focus after removing a sibling', async () => {
@@ -373,6 +622,7 @@ describe('Agent Surface Studio page', () => {
     expect(robotsTab.getAttribute('aria-selected')).toBe('true');
     expect(tabPanel.getAttribute('aria-labelledby')).toBe(robotsTab.id);
 
+    await toggleDisclosure(getDisclosure(container, 'content'));
     await clickButton(container, 'Add section');
     await clickButton(container, 'Add section');
     const sectionInputs = container.querySelectorAll<HTMLInputElement>(
@@ -395,6 +645,13 @@ describe('Agent Surface Studio page', () => {
   it('keeps textarea newlines local on Enter and commits them on blur', async () => {
     await renderStudio();
 
+    const identityDetails = container.querySelector<HTMLDetailsElement>(
+      '.studio-fieldset details.studio-disclosure'
+    );
+    if (!identityDetails) {
+      throw new Error('Missing identity details disclosure');
+    }
+    await toggleDisclosure(identityDetails);
     const description = container.querySelector<HTMLTextAreaElement>(
       '#studio-description'
     );

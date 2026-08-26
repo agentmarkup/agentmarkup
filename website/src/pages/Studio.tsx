@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useReducer,
@@ -7,6 +8,7 @@ import {
   type Dispatch,
   type InputHTMLAttributes,
   type KeyboardEvent as ReactKeyboardEvent,
+  type RefObject,
   type TextareaHTMLAttributes,
 } from 'react';
 
@@ -48,6 +50,7 @@ type AgentInterface = NonNullable<
 >[number];
 type AgentStatus = 'unknown' | StudioAgentToolsStatus;
 type GroupChoice = 'allow' | 'disallow' | 'unset';
+type DisclosureKey = 'identity' | 'access' | 'content' | 'agentCard';
 type ArtifactKey =
   | 'llms'
   | 'robots'
@@ -67,6 +70,7 @@ interface ArtifactTab {
 interface AgentFlash {
   actionType: StudioAction['type'];
   seq: number;
+  identityDetailsChanged: boolean;
 }
 
 type CommitInputProps = Omit<
@@ -76,6 +80,7 @@ type CommitInputProps = Omit<
   value: string;
   onCommit: (value: string) => void;
   normalize?: (value: string) => string;
+  inputRef?: RefObject<HTMLInputElement | null>;
 };
 
 type CommitTextareaProps = Omit<
@@ -87,6 +92,22 @@ type CommitTextareaProps = Omit<
 };
 
 const ADAPTERS: AdapterName[] = ['vite', 'astro', 'next', 'nuxt', 'cli'];
+
+const STARTER_PROMPT =
+  'Make my site friendly to AI search but keep my content out of training data.';
+
+const DISCLOSURE_ACTIONS: Record<DisclosureKey, StudioAction['type']> = {
+  identity: 'SET_IDENTITY',
+  access: 'SET_ACCESS_POLICY',
+  content: 'CURATE_PAGES',
+  agentCard: 'SET_AGENT_CARD',
+};
+
+const CRAWLER_GROUP_LABELS: Record<CrawlerGroupName, string> = {
+  train: 'training',
+  search: 'search',
+  agent: 'agent fetchers',
+};
 
 const STUDIO_FAQS = [
   {
@@ -113,6 +134,80 @@ const STUDIO_FAQS = [
 
 function isPristineDraft(draft: StudioDraft): boolean {
   return JSON.stringify(draft) === JSON.stringify(initialStudioDraft);
+}
+
+function getAccessPolicyStatus(draft: StudioDraft): string {
+  const configuredGroups = (Object.keys(CRAWLER_GROUPS) as CrawlerGroupName[])
+    .map((group) => {
+      const choice = getGroupChoice(draft, group);
+      if (choice === 'unset') {
+        return null;
+      }
+      return {
+        group,
+        status: `${CRAWLER_GROUP_LABELS[group]} ${choice === 'allow' ? 'allowed' : 'blocked'}`,
+      };
+    })
+    .filter((status): status is { group: CrawlerGroupName; status: string } =>
+      status !== null
+    );
+  const groupedCrawlers = new Set<string>(
+    configuredGroups.flatMap(({ group }) => [...CRAWLER_GROUPS[group]])
+  );
+  const extraCrawlerCount = Object.keys(draft.access.crawlers).filter(
+    (crawler) => !groupedCrawlers.has(crawler)
+  ).length;
+
+  if (configuredGroups.length > 0 && extraCrawlerCount > 0) {
+    return `${configuredGroups.length} ${configuredGroups.length === 1 ? 'group' : 'groups'}, ${extraCrawlerCount} crawler ${extraCrawlerCount === 1 ? 'rule' : 'rules'}`;
+  }
+  if (configuredGroups.length > 0) {
+    return configuredGroups.map(({ status }) => status).join(', ');
+  }
+
+  return extraCrawlerCount > 0
+    ? `${extraCrawlerCount} crawler ${extraCrawlerCount === 1 ? 'rule' : 'rules'}`
+    : 'not set';
+}
+
+function getContentStatus(draft: StudioDraft): string {
+  const sectionCount = draft.content.llmsSections.length;
+  if (sectionCount === 0) {
+    return 'no pages yet';
+  }
+  return `${sectionCount} ${sectionCount === 1 ? 'section' : 'sections'}`;
+}
+
+function getAgentCardStatus(draft: StudioDraft): string {
+  return draft.agentCard.enabled ? 'on' : 'off';
+}
+
+function getAgentDisclosureKey(agentFlash: AgentFlash): DisclosureKey | null {
+  if (agentFlash.identityDetailsChanged) {
+    return 'identity';
+  }
+
+  const match = (Object.keys(DISCLOSURE_ACTIONS) as DisclosureKey[]).find(
+    (key) => key !== 'identity' && DISCLOSURE_ACTIONS[key] === agentFlash.actionType
+  );
+  return match ?? null;
+}
+
+function getAgentSectionLabel(agentFlash: AgentFlash): string {
+  switch (agentFlash.actionType) {
+    case 'SET_IDENTITY':
+      return 'Identity';
+    case 'SET_ACCESS_POLICY':
+      return 'Access policy';
+    case 'CURATE_PAGES':
+      return 'Content';
+    case 'SET_AGENT_CARD':
+      return 'Agent card';
+    case 'IMPORT_FROM_CHECK':
+      return agentFlash.identityDetailsChanged ? 'Identity' : 'Contract';
+    default:
+      return 'Contract';
+  }
 }
 
 function getGroupChoice(
@@ -165,6 +260,7 @@ function CommitInput({
   value,
   onCommit,
   normalize,
+  inputRef,
   ...inputProps
 }: CommitInputProps) {
   const committed = useCommittedText(value, onCommit, normalize);
@@ -172,6 +268,7 @@ function CommitInput({
   return (
     <input
       {...inputProps}
+      ref={inputRef}
       value={committed.localValue}
       onChange={(event) => committed.setLocalValue(event.target.value)}
       onBlur={committed.commit}
@@ -199,6 +296,66 @@ function CommitTextarea({
       onChange={(event) => committed.setLocalValue(event.target.value)}
       onBlur={committed.commit}
     />
+  );
+}
+
+function StudioStarter({
+  containerRef,
+  onCopyOutcome,
+  onCopySuccess,
+}: {
+  containerRef: RefObject<HTMLElement | null>;
+  onCopyOutcome: (message: string) => void;
+  onCopySuccess: () => void;
+}) {
+  const promptRef = useRef<HTMLElement>(null);
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'selected'>(
+    'idle'
+  );
+
+  const copyPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(STARTER_PROMPT);
+      setCopyState('copied');
+      onCopyOutcome('Example prompt copied to clipboard.');
+      onCopySuccess();
+    } catch {
+      const prompt = promptRef.current;
+      const selection = window.getSelection();
+      if (prompt && selection) {
+        const range = document.createRange();
+        range.selectNodeContents(prompt);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+      setCopyState('selected');
+      onCopyOutcome(
+        'Example prompt selected. Copy it with your keyboard or browser menu.'
+      );
+    }
+  };
+
+  return (
+    <aside
+      className="studio-starter"
+      aria-labelledby="studio-starter-title"
+      ref={containerRef}
+    >
+      <p id="studio-starter-title">
+        Tell your agent what you want, or start below.
+      </p>
+      <div className="studio-starter-prompt">
+        <code id="studio-starter-prompt" ref={promptRef}>{STARTER_PROMPT}</code>
+        <button
+          className="button button-secondary studio-compact-button"
+          type="button"
+          aria-describedby="studio-starter-prompt"
+          onClick={() => void copyPrompt()}
+        >
+          {copyState === 'copied' ? 'Copied' : copyState === 'selected' ? 'Selected' : 'Copy'}
+        </button>
+      </div>
+    </aside>
   );
 }
 
@@ -247,8 +404,71 @@ function Studio() {
   const [inspectPending, setInspectPending] = useState(false);
   const [inspectOutcome, setInspectOutcome] =
     useState<InspectSiteOutcome | null>(null);
+  const [connectOpen, setConnectOpen] = useState(true);
+  const [agentFlash, setAgentFlash] = useState<AgentFlash | null>(null);
+  const [userOpened, setUserOpened] = useState<Record<DisclosureKey, boolean>>({
+    identity: false,
+    access: false,
+    content: false,
+    agentCard: false,
+  });
+  const [agentOpenedSeq, setAgentOpenedSeq] = useState<
+    Record<DisclosureKey, number | null>
+  >({
+    identity: null,
+    access: null,
+    content: null,
+    agentCard: null,
+  });
+  const [showStarter, setShowStarter] = useState(true);
+  const starterRef = useRef<HTMLElement>(null);
+  const siteInputRef = useRef<HTMLInputElement>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
+
+  const hideStarter = useCallback(() => {
+    if (starterRef.current?.contains(document.activeElement)) {
+      siteInputRef.current?.focus();
+    }
+    setShowStarter(false);
+  }, []);
+
+  const applyAction = useCallback((action: StudioAction) => {
+    const previousState = stateRef.current;
+    const nextState = studioReducer(previousState, action);
+    stateRef.current = nextState;
+
+    if (action.source === 'agent') {
+      const latestAgentActivity = nextState.log.at(-1);
+      const nextFlash: AgentFlash = {
+        actionType: action.type,
+        seq: latestAgentActivity?.seq ?? previousState.seq,
+        identityDetailsChanged:
+          previousState.draft.identity.description !==
+            nextState.draft.identity.description ||
+          JSON.stringify(previousState.draft.identity.organization ?? null) !==
+            JSON.stringify(nextState.draft.identity.organization ?? null),
+      };
+      const disclosureKey = getAgentDisclosureKey(nextFlash);
+
+      setAgentFlash(nextFlash);
+      if (disclosureKey) {
+        setUserOpened((current) => ({
+          ...current,
+          [disclosureKey]: true,
+        }));
+        setAgentOpenedSeq((current) => ({
+          ...current,
+          [disclosureKey]: nextFlash.seq,
+        }));
+      }
+      hideStarter();
+    } else {
+      setAgentFlash(null);
+    }
+
+    dispatch(action);
+  }, [dispatch, hideStarter]);
 
   const draft = state.draft;
   const pristine = isPristineDraft(draft);
@@ -267,16 +487,13 @@ function Studio() {
       // reducer's summary immediately after dispatching; pre-apply the pure
       // reducer to the ref so getState is never one action behind. The render
       // pass re-syncs the ref to React's own (identical) result.
-      dispatch: (action) => {
-        stateRef.current = studioReducer(stateRef.current, action);
-        dispatch(action);
-      },
+      dispatch: applyAction,
       compile: compileDraft,
       detect: detectContradictions,
       renderConfig: renderConfigMjs,
       inspectSite,
     }),
-    [dispatch]
+    [applyAction]
   );
 
   const artifactTabs = useMemo<ArtifactTab[]>(() => {
@@ -363,10 +580,12 @@ function Studio() {
 
   const selectedArtifact =
     artifactTabs.find((tab) => tab.id === activeArtifact) ?? artifactTabs[0];
-  const latestActivity = state.log.at(-1);
-  const agentFlash: AgentFlash | null = latestActivity?.source === 'agent'
-    ? { actionType: latestActivity.actionType, seq: latestActivity.seq }
-    : null;
+  useEffect(() => {
+    if (agentStatus === 'unknown') {
+      return;
+    }
+    setConnectOpen(!(agentStatus.supported && agentStatus.registered.length > 0));
+  }, [agentStatus]);
 
   const openArtifact = (id: ArtifactKey) => {
     setActiveArtifact(id);
@@ -438,7 +657,7 @@ function Studio() {
         return;
       }
 
-      dispatch({
+      applyAction({
         type: 'IMPORT_FROM_CHECK',
         source: 'human',
         payload: outcome.draftPatch,
@@ -461,7 +680,7 @@ function Studio() {
         'Reset the Studio draft? The activity log will keep a record of this action.'
       )
     ) {
-      dispatch({ type: 'RESET', source: 'human' });
+      applyAction({ type: 'RESET', source: 'human' });
     }
   };
 
@@ -488,16 +707,24 @@ function Studio() {
           </p>
         </header>
 
-        <section className="studio-connect" aria-labelledby="studio-connect-title">
-          <h2 id="studio-connect-title">How to connect an agent</h2>
-          <p>
-            ChatGPT&apos;s in-app browser opens the Studio directly. In Google
-            Chrome 149 or newer, enable{' '}
-            <code>chrome://flags/#enable-webmcp-testing</code>, restart Chrome,
-            and open this page. Compatible browsers expose the tools through{' '}
-            <code>document.modelContext</code>, with a navigator fallback.
-          </p>
-        </section>
+        <details
+          className="studio-connect"
+          open={connectOpen}
+          onToggle={(event) => setConnectOpen(event.currentTarget.open)}
+        >
+          <summary>
+            <h2 id="studio-connect-title">How to connect an agent</h2>
+          </summary>
+          <div className="studio-connect-body">
+            <p>
+              ChatGPT&apos;s in-app browser opens the Studio directly. In Google
+              Chrome 149 or newer, enable{' '}
+              <code>chrome://flags/#enable-webmcp-testing</code>, restart Chrome,
+              and open this page. Compatible browsers expose the tools through{' '}
+              <code>document.modelContext</code>, with a navigator fallback.
+            </p>
+          </div>
+        </details>
 
         <CapabilityBanner status={agentStatus} />
 
@@ -505,13 +732,23 @@ function Studio() {
           <GlassSurface className="studio-panel-surface" borderRadius={20}>
             <ContractPanel
               draft={draft}
-              dispatch={dispatch}
+              dispatch={applyAction}
               inspectUrl={inspectUrl}
               setInspectUrl={setInspectUrl}
               inspectPending={inspectPending}
               inspectOutcome={inspectOutcome}
               onInspect={runInspection}
               agentFlash={agentFlash}
+              userOpened={userOpened}
+              onDisclosureOpenChange={(key, open) => setUserOpened((current) => ({
+                ...current,
+                [key]: open,
+              }))}
+              agentOpenedSeq={agentOpenedSeq}
+              showStarter={showStarter}
+              starterRef={starterRef}
+              siteInputRef={siteInputRef}
+              onStarterCopySuccess={hideStarter}
             />
           </GlassSurface>
 
@@ -597,19 +834,36 @@ function Studio() {
             className="studio-panel-surface studio-panel-wide"
             borderRadius={20}
           >
-            <section className="studio-panel" aria-labelledby="studio-findings-title">
-              <div className="studio-panel-heading">
-                <div>
-                  <p>Deterministic review</p>
-                  <h2 id="studio-findings-title">FINDINGS + ACTIVITY</h2>
+            <section
+              className={`studio-panel${pristine && state.log.length === 0 ? ' studio-review-compact' : ''}`}
+              aria-labelledby="studio-findings-title"
+            >
+              {pristine && state.log.length === 0 ? (
+                <div className="studio-review-compact-line">
+                  <div className="studio-panel-heading">
+                    <div>
+                      <p>Deterministic review</p>
+                      <h2 id="studio-findings-title">FINDINGS + ACTIVITY</h2>
+                    </div>
+                  </div>
+                  <p className="studio-empty-state">
+                    Set your site URL to begin. Findings appear as the draft changes.
+                  </p>
                 </div>
-                <div className="studio-finding-counts" aria-label="Finding counts">
-                  <span><strong>{errorCount}</strong> {errorCount === 1 ? 'error' : 'errors'}</span>
-                  <span><strong>{warningCount}</strong> {warningCount === 1 ? 'warning' : 'warnings'}</span>
-                </div>
-              </div>
+              ) : (
+                <>
+                  <div className="studio-panel-heading">
+                    <div>
+                      <p>Deterministic review</p>
+                      <h2 id="studio-findings-title">FINDINGS + ACTIVITY</h2>
+                    </div>
+                    <div className="studio-finding-counts" aria-label="Finding counts">
+                      <span><strong>{errorCount}</strong> {errorCount === 1 ? 'error' : 'errors'}</span>
+                      <span><strong>{warningCount}</strong> {warningCount === 1 ? 'warning' : 'warnings'}</span>
+                    </div>
+                  </div>
 
-              <div className="studio-review-grid">
+                  <div className="studio-review-grid">
                 <div className="studio-findings-list">
                   <section aria-labelledby="studio-validation-title">
                     <h3 id="studio-validation-title">Validation</h3>
@@ -669,7 +923,7 @@ function Studio() {
                         type="button"
                         data-testid="studio-undo"
                         disabled={state.history.length === 0}
-                        onClick={() => dispatch({ type: 'UNDO', source: 'human' })}
+                        onClick={() => applyAction({ type: 'UNDO', source: 'human' })}
                       >
                         Undo
                       </button>
@@ -711,7 +965,9 @@ function Studio() {
                     </p>
                   )}
                 </section>
-              </div>
+                  </div>
+                </>
+              )}
             </section>
           </GlassSurface>
         </div>
@@ -770,6 +1026,13 @@ function ContractPanel({
   inspectOutcome,
   onInspect,
   agentFlash,
+  userOpened,
+  onDisclosureOpenChange,
+  agentOpenedSeq,
+  showStarter,
+  starterRef,
+  siteInputRef,
+  onStarterCopySuccess,
 }: {
   draft: StudioDraft;
   dispatch: StudioDispatch;
@@ -779,6 +1042,13 @@ function ContractPanel({
   inspectOutcome: InspectSiteOutcome | null;
   onInspect: () => Promise<void>;
   agentFlash: AgentFlash | null;
+  userOpened: Record<DisclosureKey, boolean>;
+  onDisclosureOpenChange: (key: DisclosureKey, open: boolean) => void;
+  agentOpenedSeq: Record<DisclosureKey, number | null>;
+  showStarter: boolean;
+  starterRef: RefObject<HTMLElement | null>;
+  siteInputRef: RefObject<HTMLInputElement | null>;
+  onStarterCopySuccess: () => void;
 }) {
   const setIdentity = (payload: StudioAction & { type: 'SET_IDENTITY' }) =>
     dispatch(payload);
@@ -868,6 +1138,68 @@ function ContractPanel({
 
     return `studio-fieldset studio-flash studio-flash-${agentFlash.seq % 2 === 0 ? 'even' : 'odd'}`;
   };
+  const [dismissedAgentSeq, setDismissedAgentSeq] = useState<
+    Record<DisclosureKey, number | null>
+  >({
+    identity: null,
+    access: null,
+    content: null,
+    agentCard: null,
+  });
+  const disclosureRefs = useRef<Record<DisclosureKey, HTMLDetailsElement | null>>({
+    identity: null,
+    access: null,
+    content: null,
+    agentCard: null,
+  });
+  const lastScrolledAgentSeq = useRef<Partial<Record<DisclosureKey, number>>>({});
+  const [copyOutcome, setCopyOutcome] = useState('');
+
+  useEffect(() => {
+    for (const key of Object.keys(agentOpenedSeq) as DisclosureKey[]) {
+      const agentSeq = agentOpenedSeq[key];
+      const isOpen = userOpened[key] && (
+        agentSeq === null || dismissedAgentSeq[key] !== agentSeq
+      );
+      if (
+        agentSeq === null ||
+        !isOpen ||
+        lastScrolledAgentSeq.current[key] === agentSeq
+      ) {
+        continue;
+      }
+
+      disclosureRefs.current[key]?.scrollIntoView?.({ block: 'nearest' });
+      lastScrolledAgentSeq.current[key] = agentSeq;
+    }
+  }, [agentOpenedSeq, dismissedAgentSeq, userOpened]);
+
+  const handleDisclosureToggle = (
+    key: DisclosureKey,
+    nextOpen: boolean,
+    renderedOpen: boolean
+  ) => {
+    if (nextOpen === renderedOpen) {
+      return;
+    }
+
+    onDisclosureOpenChange(key, nextOpen);
+    if (nextOpen) {
+      setDismissedAgentSeq((current) => ({ ...current, [key]: null }));
+    } else if (agentOpenedSeq[key] !== null) {
+      setDismissedAgentSeq((current) => ({
+        ...current,
+        [key]: agentOpenedSeq[key],
+      }));
+    }
+  };
+  const disclosureIsOpen = (key: DisclosureKey) => userOpened[key] && (
+    agentOpenedSeq[key] === null || dismissedAgentSeq[key] !== agentOpenedSeq[key]
+  );
+  const identityOpen = disclosureIsOpen('identity');
+  const accessOpen = disclosureIsOpen('access');
+  const contentOpen = disclosureIsOpen('content');
+  const agentCardOpen = disclosureIsOpen('agentCard');
 
   return (
     <section className="studio-panel studio-contract" aria-labelledby="studio-contract-title">
@@ -878,12 +1210,37 @@ function ContractPanel({
         </div>
       </div>
 
+      <span
+        className="sr-only studio-agent-status"
+        role="status"
+        aria-atomic="true"
+      >
+        {agentFlash ? (
+          <span key={agentFlash.seq}>
+            Agent updated {getAgentSectionLabel(agentFlash)}.
+          </span>
+        ) : null}
+      </span>
+
+      <span className="sr-only studio-copy-status" role="status">
+        {copyOutcome}
+      </span>
+
+      {showStarter ? (
+        <StudioStarter
+          containerRef={starterRef}
+          onCopyOutcome={setCopyOutcome}
+          onCopySuccess={onStarterCopySuccess}
+        />
+      ) : null}
+
       <fieldset className={fieldsetClass('SET_IDENTITY')}>
         <legend>Identity</legend>
         <label className="studio-field" htmlFor="studio-site">
           <span>Site</span>
           <CommitInput
             id="studio-site"
+            inputRef={siteInputRef}
             className="checker-input"
             type="text"
             inputMode="url"
@@ -913,51 +1270,84 @@ function ContractPanel({
             })}
           />
         </label>
-        <label className="studio-field" htmlFor="studio-description">
-          <span>Description</span>
-          <CommitTextarea
-            id="studio-description"
-            className="checker-input studio-textarea"
-            value={draft.identity.description}
-            onCommit={(description) => setIdentity({
-              type: 'SET_IDENTITY',
-              source: 'human',
-              payload: { description },
-            })}
-          />
-        </label>
-
-        <details className="studio-disclosure">
-          <summary>Organization (optional)</summary>
-          <div className="studio-disclosure-body studio-paired-fields">
-            <label className="studio-field" htmlFor="studio-organization-name">
-              <span>Organization name</span>
-              <CommitInput
-                id="studio-organization-name"
-                className="checker-input"
-                type="text"
-                value={organization.name}
-                onCommit={(name) => updateOrganization('name', name)}
+        <details
+          className="studio-disclosure"
+          data-studio-disclosure="identity"
+          open={identityOpen}
+          ref={(element) => {
+            disclosureRefs.current.identity = element;
+          }}
+          onToggle={(event) => handleDisclosureToggle(
+            'identity',
+            event.currentTarget.open,
+            identityOpen
+          )}
+        >
+          <summary>Description and organization (optional)</summary>
+          <div className="studio-disclosure-body studio-identity-details">
+            <label className="studio-field" htmlFor="studio-description">
+              <span>Description</span>
+              <CommitTextarea
+                id="studio-description"
+                className="checker-input studio-textarea"
+                value={draft.identity.description}
+                onCommit={(description) => setIdentity({
+                  type: 'SET_IDENTITY',
+                  source: 'human',
+                  payload: { description },
+                })}
               />
             </label>
-            <label className="studio-field" htmlFor="studio-organization-url">
-              <span>Organization URL</span>
-              <CommitInput
-                id="studio-organization-url"
-                className="checker-input"
-                type="text"
-                inputMode="url"
-                value={organization.url}
-                normalize={normalizeWebsiteInput}
-                onCommit={(url) => updateOrganization('url', url)}
-              />
-            </label>
+            <div className="studio-paired-fields">
+              <label className="studio-field" htmlFor="studio-organization-name">
+                <span>Organization name</span>
+                <CommitInput
+                  id="studio-organization-name"
+                  className="checker-input"
+                  type="text"
+                  value={organization.name}
+                  onCommit={(name) => updateOrganization('name', name)}
+                />
+              </label>
+              <label className="studio-field" htmlFor="studio-organization-url">
+                <span>Organization URL</span>
+                <CommitInput
+                  id="studio-organization-url"
+                  className="checker-input"
+                  type="text"
+                  inputMode="url"
+                  value={organization.url}
+                  normalize={normalizeWebsiteInput}
+                  onCommit={(url) => updateOrganization('url', url)}
+                />
+              </label>
+            </div>
           </div>
         </details>
       </fieldset>
 
+      <details
+        className="studio-disclosure studio-section-disclosure"
+        data-studio-disclosure="access"
+        open={accessOpen}
+        ref={(element) => {
+          disclosureRefs.current.access = element;
+        }}
+        onToggle={(event) => handleDisclosureToggle(
+          'access',
+          event.currentTarget.open,
+          accessOpen
+        )}
+      >
+        <summary>
+          <span>Access policy</span>
+          <span className="studio-disclosure-status">
+            {getAccessPolicyStatus(draft)}
+          </span>
+        </summary>
+        <div className="studio-disclosure-body">
       <fieldset className={fieldsetClass('SET_ACCESS_POLICY')}>
-        <legend>Access policy</legend>
+        <legend className="sr-only">Access policy</legend>
         <div className="studio-policy-list">
           {(Object.keys(CRAWLER_GROUPS) as CrawlerGroupName[]).map((group) => {
             const choice = getGroupChoice(draft, group);
@@ -1012,9 +1402,31 @@ function ContractPanel({
           ))}
         </div>
       </fieldset>
+        </div>
+      </details>
 
+      <details
+        className="studio-disclosure studio-section-disclosure"
+        data-studio-disclosure="content"
+        open={contentOpen}
+        ref={(element) => {
+          disclosureRefs.current.content = element;
+        }}
+        onToggle={(event) => handleDisclosureToggle(
+          'content',
+          event.currentTarget.open,
+          contentOpen
+        )}
+      >
+        <summary>
+          <span>Content</span>
+          <span className="studio-disclosure-status">
+            {getContentStatus(draft)}
+          </span>
+        </summary>
+        <div className="studio-disclosure-body">
       <fieldset className={fieldsetClass('CURATE_PAGES')}>
-        <legend>Content</legend>
+        <legend className="sr-only">Content</legend>
         <div className="studio-subsection-heading">
           <span>llms.txt sections</span>
           <button
@@ -1120,9 +1532,31 @@ function ContractPanel({
           />
         ) : null}
       </fieldset>
+        </div>
+      </details>
 
+      <details
+        className="studio-disclosure studio-section-disclosure"
+        data-studio-disclosure="agent-card"
+        open={agentCardOpen}
+        ref={(element) => {
+          disclosureRefs.current.agentCard = element;
+        }}
+        onToggle={(event) => handleDisclosureToggle(
+          'agentCard',
+          event.currentTarget.open,
+          agentCardOpen
+        )}
+      >
+        <summary>
+          <span>Agent card</span>
+          <span className="studio-disclosure-status">
+            {getAgentCardStatus(draft)}
+          </span>
+        </summary>
+        <div className="studio-disclosure-body">
       <fieldset className={fieldsetClass('SET_AGENT_CARD')}>
-        <legend>Agent card</legend>
+        <legend className="sr-only">Agent card</legend>
         <label className="studio-toggle" htmlFor="studio-agent-card-enabled">
           <input
             id="studio-agent-card-enabled"
@@ -1291,6 +1725,8 @@ function ContractPanel({
           </div>
         ) : null}
       </fieldset>
+        </div>
+      </details>
 
       <fieldset className="studio-fieldset studio-inspect">
         <legend>Inspect intake</legend>
