@@ -263,7 +263,14 @@ function Studio() {
   const deps = useMemo<StudioToolDeps>(
     () => ({
       getState: () => stateRef.current,
-      dispatch,
+      // React processes dispatches asynchronously, but tool results read the
+      // reducer's summary immediately after dispatching; pre-apply the pure
+      // reducer to the ref so getState is never one action behind. The render
+      // pass re-syncs the ref to React's own (identical) result.
+      dispatch: (action) => {
+        stateRef.current = studioReducer(stateRef.current, action);
+        dispatch(action);
+      },
       compile: compileDraft,
       detect: detectContradictions,
       renderConfig: renderConfigMjs,
