@@ -769,6 +769,38 @@ function Studio() {
 
         <CapabilityBanner status={agentStatus} />
 
+        <section className="studio-how" aria-labelledby="studio-how-title">
+          <h2 id="studio-how-title">How it works</h2>
+          <ol className="studio-how-steps">
+            <li>
+              <strong>Tell your agent what you want.</strong> Open this page in
+              ChatGPT&apos;s in-app browser or Chrome with WebMCP enabled, then
+              describe your policy in plain language. For example:
+              <PromptCopy idPrefix="studio-how-start" prompt={STARTER_PROMPT} />
+            </li>
+            <li>
+              <strong>Watch and review.</strong> Every agent change flashes in
+              the contract, lands in the activity log, and is checked by
+              deterministic rules. Undo anything you disagree with.
+            </li>
+            <li>
+              <strong>Install with one file.</strong>{' '}
+              <button
+                className="button button-primary studio-compact-button"
+                type="button"
+                onClick={downloadConfig}
+              >
+                Download config
+              </button>{' '}
+              then paste this back to your agent and it finishes the install:
+              <PromptCopy idPrefix="studio-how-handoff" prompt={HANDOFF_PROMPT} />
+              Prefer to do it yourself? Put the file at your site repo root, add
+              the one-line adapter from the Adapter setup tab, and deploy as
+              usual.
+            </li>
+          </ol>
+        </section>
+
         <div className="studio-grid">
           <GlassSurface className="studio-panel-surface" borderRadius={20}>
             <ContractPanel
@@ -872,38 +904,6 @@ function Studio() {
                 )}
               </div>
             </section>
-
-        <section className="studio-how" aria-labelledby="studio-how-title">
-          <h2 id="studio-how-title">How it works</h2>
-          <ol className="studio-how-steps">
-            <li>
-              <strong>Tell your agent what you want.</strong> Open this page in
-              ChatGPT&apos;s in-app browser or Chrome with WebMCP enabled, then
-              describe your policy in plain language. For example:
-              <PromptCopy idPrefix="studio-how-start" prompt={STARTER_PROMPT} />
-            </li>
-            <li>
-              <strong>Watch and review.</strong> Every agent change flashes in
-              the contract, lands in the activity log, and is checked by
-              deterministic rules. Undo anything you disagree with.
-            </li>
-            <li>
-              <strong>Install with one file.</strong>{' '}
-              <button
-                className="button button-primary studio-compact-button"
-                type="button"
-                onClick={downloadConfig}
-              >
-                Download config
-              </button>{' '}
-              then paste this back to your agent and it finishes the install:
-              <PromptCopy idPrefix="studio-how-handoff" prompt={HANDOFF_PROMPT} />
-              Prefer to do it yourself? Put the file at your site repo root, add
-              the one-line adapter from the Adapter setup tab, and deploy as
-              usual.
-            </li>
-          </ol>
-        </section>
           </GlassSurface>
 
           <GlassSurface
