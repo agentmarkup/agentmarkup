@@ -145,6 +145,9 @@ function Layout({ children }: { children: React.ReactNode }) {
   }, [theme])
 
   useEffect(() => {
+    // The cursor-tracking glass glow does per-move layout reads and style
+    // writes; keep it off the Studio workspace alongside the WebGL background.
+    if (currentPath.startsWith('/studio')) return
     if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return
     const handlePointerMove = (event: PointerEvent) => {
       if (!(event.target instanceof Element)) return
@@ -177,7 +180,7 @@ function Layout({ children }: { children: React.ReactNode }) {
     }
     document.addEventListener('pointermove', handlePointerMove, { passive: true })
     return () => document.removeEventListener('pointermove', handlePointerMove)
-  }, [])
+  }, [currentPath])
 
   useEffect(() => {
     const dialog = menuDialogRef.current
