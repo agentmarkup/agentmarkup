@@ -217,10 +217,13 @@ function Layout({ children }: { children: React.ReactNode }) {
   }
 
   const showDevShowcase = Boolean(DevShowcase && currentPath === '/__design/')
+  // The Studio is a long-lived interactive workspace, often embedded in an
+  // agent's in-app browser; the continuous WebGL background costs GPU there.
+  const showMoltenBackground = !currentPath.startsWith('/studio')
 
   return (
     <>
-      <SiteMoltenMetal theme={theme} />
+      {showMoltenBackground ? <SiteMoltenMetal theme={theme} /> : null}
       <a className="skip-link" href="#page-content">Skip to content</a>
       <header className="site-header">
         <GlassSurface className="site-header-glass" borderRadius={22} saturation={1.45} distortionScale={-62}>
