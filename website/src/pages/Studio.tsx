@@ -839,7 +839,7 @@ function Studio() {
             <li>Optional: inspect your site to import its current state as a starting point.</li>
             <li>Tell the agent the policy you want, or edit the contract by hand.</li>
             <li>Review the findings. Undo anything you disagree with; the agent cannot undo.</li>
-            <li>Download agentmarkup.config.mjs, place it at your site repo root, add the one-line adapter from the Adapter setup tab, then build and deploy as usual.</li>
+            <li>Download agentmarkup.config.mjs and install it your way: add the one-line adapter from the Adapter setup tab, or run <code>npx @agentmarkup/cli generate</code> over your built output, or hand the file to your coding agent - the agentmarkup plugin for Claude Code and Codex wires it up for you. Then deploy as usual.</li>
           </ol>
         </section>
           </GlassSurface>
