@@ -120,13 +120,35 @@ describe('C2 content-signal-vs-llms', () => {
   it('reports an error for either concrete Content-Signal conflict', () => {
     const llmsConflict = createDraftWithEntry();
     llmsConflict.access.contentSignal.search = 'no';
-    expectFinding(llmsConflict, 'C2');
+    const llmsFinding = expectFinding(llmsConflict, 'C2');
+    expect(llmsFinding.title).toBe('Content policy conflicts with llms.txt');
+    expect(llmsFinding.loci).toEqual(['Content-Signal', 'llms.txt']);
 
     const mirrorConflict = createDraft();
     mirrorConflict.content.markdownMirrors.enabled = true;
     mirrorConflict.access.contentSignal.aiInput = 'no';
     const finding = expectFinding(mirrorConflict, 'C2');
+    expect(finding.title).toBe('Content policy conflicts with mirrors');
     expect(finding.loci).toEqual(['Content-Signal', 'markdown mirrors']);
+  });
+
+  it('merges simultaneous llms.txt and mirror conflicts', () => {
+    const draft = createDraftWithEntry();
+    draft.access.contentSignal.search = 'no';
+    draft.access.contentSignal.aiInput = 'no';
+    draft.content.markdownMirrors.enabled = true;
+
+    const finding = expectFinding(draft, 'C2');
+    expect(finding.title).toBe(
+      'Content policy conflicts with llms.txt and mirrors'
+    );
+    expect(finding.detail).toContain('Content-Signal search is "no"');
+    expect(finding.detail).toContain('Content-Signal ai-input is "no"');
+    expect(finding.loci).toEqual([
+      'Content-Signal',
+      'llms.txt',
+      'markdown mirrors',
+    ]);
   });
 
   it('does not report when both advertised surfaces are allowed', () => {
@@ -187,6 +209,7 @@ describe('C4 identity-drift', () => {
       url: 'https://different.example',
     };
     const organizationFinding = expectFinding(organizationDrift, 'C4');
+    expect(organizationFinding.title).toBe('Published identity values drift');
     expect(organizationFinding.loci).toEqual(['JSON-LD', 'site identity']);
 
     const cardDrift = createDraft();
@@ -203,7 +226,40 @@ describe('C4 identity-drift', () => {
       providerOrganization: 'Different Provider',
     };
     const cardFinding = expectFinding(cardDrift, 'C4');
+    expect(cardFinding.title).toBe('Agent Card identity drifts');
     expect(cardFinding.loci).toEqual(['Agent Card', 'site identity']);
+  });
+
+  it('merges simultaneous Organization and Agent Card identity drift', () => {
+    const draft = createDraft();
+    draft.identity.organization = {
+      name: 'Different Organization',
+      url: 'https://organization.example',
+    };
+    draft.agentCard = {
+      enabled: true,
+      version: '1.0.0',
+      supportedInterfaces: [
+        {
+          url: 'https://example.com/a2a',
+          protocolBinding: 'HTTP+JSON',
+          protocolVersion: '1.0',
+        },
+      ],
+      providerOrganization: 'Different Provider',
+      providerUrl: 'https://provider.example',
+    };
+
+    const finding = expectFinding(draft, 'C4');
+    expect(finding.detail).toContain('Organization name');
+    expect(finding.detail).toContain('Organization URL');
+    expect(finding.detail).toContain('Agent Card provider organization');
+    expect(finding.detail).toContain('Agent Card provider URL');
+    expect(finding.loci).toEqual([
+      'JSON-LD',
+      'site identity',
+      'Agent Card',
+    ]);
   });
 
   it('does not report matching names and trailing-slash-normalized URLs', () => {

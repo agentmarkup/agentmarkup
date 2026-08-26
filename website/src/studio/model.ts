@@ -321,7 +321,10 @@ function applyAccessPatch(
 
   if (isRecord(value.crawlers)) {
     for (const [crawler, directive] of Object.entries(value.crawlers)) {
-      if (crawler.length > LIMITS.crawlerNameMax) {
+      if (
+        isUnsafeObjectKey(crawler) ||
+        crawler.length > LIMITS.crawlerNameMax
+      ) {
         continue;
       }
 
@@ -355,7 +358,11 @@ function applyAccessPatch(
     value: {
       crawlers: Object.fromEntries(
         Object.entries(crawlers)
-          .filter(([crawler]) => crawler.length <= LIMITS.crawlerNameMax)
+          .filter(
+            ([crawler]) =>
+              !isUnsafeObjectKey(crawler) &&
+              crawler.length <= LIMITS.crawlerNameMax
+          )
           .slice(0, LIMITS.crawlersMax)
       ),
       contentSignal: { ...current.contentSignal, ...contentSignalPatch },
@@ -643,12 +650,43 @@ function sanitizeSkills(value: unknown): StudioSkill[] | undefined {
       LIMITS.modesMax,
       LIMITS.shortText
     );
+    const security = sanitizeSkillSecurity(item.security);
 
     if (examples !== undefined) skill.examples = examples;
     if (inputModes !== undefined) skill.inputModes = inputModes;
     if (outputModes !== undefined) skill.outputModes = outputModes;
+    if (security !== undefined) skill.security = security;
 
     return [skill];
+  });
+}
+
+function sanitizeSkillSecurity(
+  value: unknown
+): NonNullable<StudioSkill['security']> | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  return value.slice(0, LIMITS.modesMax).flatMap((requirement) => {
+    if (!isRecord(requirement)) {
+      return [];
+    }
+
+    const entries = Object.entries(requirement)
+      .slice(0, LIMITS.skillTagsMax)
+      .flatMap(([scheme, scopes]) => {
+        const sanitizedScopes = sanitizeStringArray(
+          scopes,
+          LIMITS.modesMax,
+          LIMITS.shortText
+        );
+        return sanitizedScopes === undefined
+          ? []
+          : [[truncate(scheme, LIMITS.shortText), sanitizedScopes] as const];
+      });
+
+    return [Object.fromEntries(entries)];
   });
 }
 
@@ -710,6 +748,10 @@ function isCrawlerDirective(value: unknown): value is 'allow' | 'disallow' {
 
 function isContentSignalDirective(value: unknown): value is 'yes' | 'no' {
   return value === 'yes' || value === 'no';
+}
+
+function isUnsafeObjectKey(value: string): boolean {
+  return value === '__proto__' || value === 'prototype' || value === 'constructor';
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

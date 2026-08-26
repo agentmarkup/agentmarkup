@@ -424,6 +424,46 @@ describe('studioReducer boundaries', () => {
     expect(skill?.outputModes).not.toContain(`output-${LIMITS.modesMax}`);
   });
 
+  it('preserves and bounds agent skill security requirements', () => {
+    const security = Array.from(
+      { length: LIMITS.modesMax + 1 },
+      (_, requirementIndex) => Object.fromEntries(
+        Array.from(
+          { length: LIMITS.skillTagsMax + 1 },
+          (_, schemeIndex) => [
+            `${requirementIndex}-${schemeIndex}-${'k'.repeat(LIMITS.shortText)}`,
+            Array.from(
+              { length: LIMITS.modesMax + 1 },
+              (_, scopeIndex) =>
+                `${scopeIndex}-${'s'.repeat(LIMITS.shortText)}`
+            ),
+          ]
+        )
+      )
+    );
+    const state = studioReducer(createInitialState(), {
+      type: 'SET_AGENT_CARD',
+      source: 'agent',
+      payload: {
+        skills: [{
+          id: 'search',
+          name: 'Search',
+          description: 'Searches.',
+          tags: [],
+          security,
+        }],
+      },
+    });
+
+    const saved = state.draft.agentCard.skills?.[0]?.security;
+    expect(saved).toHaveLength(LIMITS.modesMax);
+    expect(Object.keys(saved?.[0] ?? {})).toHaveLength(LIMITS.skillTagsMax);
+    const [scheme, scopes] = Object.entries(saved?.[0] ?? {})[0] ?? [];
+    expect(scheme).toHaveLength(LIMITS.shortText);
+    expect(scopes).toHaveLength(LIMITS.modesMax);
+    expect(scopes?.[0]).toHaveLength(LIMITS.shortText);
+  });
+
   it('caps crawler keys by insertion order at the configured boundary', () => {
     const crawlers = Object.fromEntries(
       Array.from(
@@ -460,6 +500,28 @@ describe('studioReducer boundaries', () => {
     expect(state.draft.access.crawlers[boundaryName]).toBe('allow');
     expect(state.draft.access.crawlers[overlongName]).toBeUndefined();
     expect(Object.keys(state.draft.access.crawlers)).toEqual([boundaryName]);
+  });
+
+  it('drops prototype-sensitive crawler names without prototype pollution', () => {
+    const crawlers = Object.fromEntries([
+      ['__proto__', 'allow'],
+      ['prototype', 'allow'],
+      ['constructor', 'disallow'],
+      ['SafeBot', 'allow'],
+    ]) as Record<string, 'allow' | 'disallow'>;
+    const objectPrototype = Object.getPrototypeOf({});
+    const objectPrototypeKeys = Reflect.ownKeys(Object.prototype);
+    const state = studioReducer(createInitialState(), {
+      type: 'SET_ACCESS_POLICY',
+      source: 'agent',
+      payload: { crawlers },
+    });
+
+    expect(Object.keys(state.draft.access.crawlers)).toEqual(['SafeBot']);
+    expect(Object.hasOwn(state.draft.access.crawlers, '__proto__')).toBe(false);
+    expect(Object.getPrototypeOf(state.draft.access.crawlers)).toBe(objectPrototype);
+    expect(Object.getPrototypeOf({})).toBe(objectPrototype);
+    expect(Reflect.ownKeys(Object.prototype)).toEqual(objectPrototypeKeys);
   });
 
   it('ignores invalid-shaped fields without throwing', () => {

@@ -194,6 +194,27 @@ export interface Contradiction {
 
 export type AdapterName = 'vite' | 'astro' | 'next' | 'nuxt' | 'cli';
 
+/**
+ * Result of the inspect_site intake (same-origin /api/check). Carries only
+ * structured findings, never raw page text; the WebMCP tool layer consumes
+ * this via dependency injection.
+ */
+export interface InspectSiteOutcome {
+  ok: boolean;
+  /** Bounded human-readable summary for the agent-facing tool result. */
+  summaryText: string;
+  /** Structured findings (bounded list); levels mirror the checker's AuditLevel. */
+  findings?: Array<{ level: string; title: string }>;
+  /** Draft slices derived from the check, for IMPORT_FROM_CHECK. Absent on failure. */
+  draftPatch?: Partial<StudioDraft>;
+  /** The checked site root the patch was derived from. */
+  sourceUrl?: string;
+  /** Set when the checker requires a human step (Turnstile) or rate limit cooldown. */
+  humanActionNeeded?: 'turnstile' | 'rate-limited';
+  /** Structured error code when ok is false (e.g. 'invalid_url', 'fetch_failed'). */
+  errorCode?: string;
+}
+
 export interface CompiledSurface {
   llmsTxt: string;
   /** Skeleton form; real inlined content is produced at build time. Null when disabled. */

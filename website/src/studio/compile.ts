@@ -1,6 +1,5 @@
 import {
   buildAgentCard,
-  generateContentSignalHeaders,
   generateLlmsFullTxt,
   generateLlmsTxt,
   patchHeadersFile,
@@ -74,7 +73,15 @@ export function toAgentMarkupConfig(draft: StudioDraft): AgentMarkupConfig {
   }
 
   if (draft.agentCard.enabled) {
-    config.agentCard = buildAgentCardConfig(draft);
+    const agentCard = toEnabledAgentCard(draft);
+    const candidate = { ...config, agentCard };
+    if (
+      !validateAgentCardConfig(candidate).some(
+        (result) => result.severity === 'error'
+      )
+    ) {
+      config.agentCard = agentCard;
+    }
   }
 
   return config;
@@ -87,6 +94,16 @@ export function compileDraft(draft: StudioDraft): CompiledSurface {
   const siteValidation = validateSite(config.site);
   if (siteValidation) {
     pushUniqueValidations(validations, [siteValidation]);
+  }
+
+  if (draft.agentCard.enabled) {
+    pushUniqueValidations(
+      validations,
+      validateAgentCardConfig({
+        ...config,
+        agentCard: toEnabledAgentCard(draft),
+      })
+    );
   }
 
   const llmsTxtResult = runGuarded(
@@ -121,10 +138,7 @@ export function compileDraft(draft: StudioDraft): CompiledSurface {
   );
 
   const headersFile = runGuarded(
-    () => {
-      generateContentSignalHeaders(config.contentSignalHeaders);
-      return patchHeadersFile('', config.contentSignalHeaders);
-    },
+    () => patchHeadersFile('', config.contentSignalHeaders),
     '',
     validations
   );
@@ -309,30 +323,52 @@ function buildGlobalSchemas(draft: StudioDraft): SchemaConfig[] {
   return schemas;
 }
 
-function buildAgentCardConfig(draft: StudioDraft): EnabledAgentCardConfig {
+export function toEnabledAgentCard(
+  draft: StudioDraft
+): EnabledAgentCardConfig {
+  const rawAgentCard = draft.agentCard as unknown;
+  const agentCard = isUnknownRecord(rawAgentCard) ? rawAgentCard : {};
   const card: EnabledAgentCardConfig = {
     enabled: true,
-    supportedInterfaces: draft.agentCard.supportedInterfaces ?? [],
-    version: draft.agentCard.version ?? '',
+    supportedInterfaces: toObjectArray<
+      EnabledAgentCardConfig['supportedInterfaces'][number]
+    >(agentCard.supportedInterfaces),
+    version: typeof agentCard.version === 'string' ? agentCard.version : '',
   };
 
-  if (draft.agentCard.description !== undefined) {
-    card.description = draft.agentCard.description;
+  if (typeof agentCard.description === 'string') {
+    card.description = agentCard.description;
   }
-  if (draft.agentCard.skills?.length) {
-    card.skills = draft.agentCard.skills;
+  if (Array.isArray(agentCard.skills) && agentCard.skills.length > 0) {
+    card.skills = toObjectArray<
+      NonNullable<EnabledAgentCardConfig['skills']>[number]
+    >(agentCard.skills);
   }
   if (
-    draft.agentCard.providerOrganization !== undefined ||
-    draft.agentCard.providerUrl !== undefined
+    agentCard.providerOrganization !== undefined ||
+    agentCard.providerUrl !== undefined
   ) {
     card.provider = {
-      organization: draft.agentCard.providerOrganization ?? '',
-      url: draft.agentCard.providerUrl ?? '',
+      organization: typeof agentCard.providerOrganization === 'string'
+        ? agentCard.providerOrganization
+        : '',
+      url: typeof agentCard.providerUrl === 'string'
+        ? agentCard.providerUrl
+        : '',
     };
   }
 
   return card;
+}
+
+function toObjectArray<T>(value: unknown): T[] {
+  return Array.isArray(value)
+    ? value.map((item) => isUnknownRecord(item) ? item as T : {} as T)
+    : [];
+}
+
+function isUnknownRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 interface ResolvedAgentCard {

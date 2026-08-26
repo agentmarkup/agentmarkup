@@ -193,6 +193,7 @@ describe('compileDraft', () => {
       supportedInterfaces: [],
     };
 
+    expect(toAgentMarkupConfig(draft)).not.toHaveProperty('agentCard');
     expect(() => compileDraft(draft)).not.toThrow();
     const invalid = compileDraft(draft);
     expect(invalid.agentCardJson).toBeNull();
@@ -366,7 +367,7 @@ describe('renderConfigMjs', () => {
     const rendered = renderConfigMjs(createFullDraft());
 
     expect(rendered).toMatch(
-      /\bsite\s*:[\s\S]*\bname\s*:[\s\S]*\bdescription\s*:[\s\S]*\bllmsTxt\s*:[\s\S]*\bmarkdownPages\s*:[\s\S]*\bcontentSignalHeaders\s*:[\s\S]*\bglobalSchemas\s*:[\s\S]*\baiCrawlers\s*:[\s\S]*\bvalidation\s*:/
+      /\bsite\s*:[\s\S]*\bname\s*:[\s\S]*\bdescription\s*:[\s\S]*\bagentCard\s*:[\s\S]*\bllmsTxt\s*:[\s\S]*\bllmsFullTxt\s*:[\s\S]*\bmarkdownPages\s*:[\s\S]*\bcontentSignalHeaders\s*:[\s\S]*\bglobalSchemas\s*:[\s\S]*\baiCrawlers\s*:[\s\S]*\bvalidation\s*:/
     );
     expect(rendered).not.toMatch(/\boutDir\s*:/);
   });

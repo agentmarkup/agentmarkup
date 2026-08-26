@@ -2,9 +2,9 @@ import {
   isMarkdownPageExcluded,
   validateAgentCardConfig,
   type AgentMarkupConfig,
-  type EnabledAgentCardConfig,
 } from '@agentmarkup/core';
 
+import { toEnabledAgentCard } from './compile';
 import {
   CRAWLER_GROUPS,
   type Contradiction,
@@ -63,6 +63,7 @@ function detectContentSignalVsLlms(draft: StudioDraft): Contradiction | null {
   const entries = getLlmsEntries(draft);
   const whenToUse = getWhenToUse(draft);
   const contentSignal = getContentSignal(draft);
+  const conflicts: Array<Pick<Contradiction, 'title' | 'detail' | 'loci'>> = [];
 
   if (
     read(contentSignal, 'search') === 'no' &&
@@ -79,29 +80,37 @@ function detectContentSignalVsLlms(draft: StudioDraft): Contradiction | null {
       .filter((value): value is string => value !== null)
       .join(' and ');
 
-    return {
-      code: 'C2',
-      severity: 'error',
+    conflicts.push({
       title: 'Content policy conflicts with llms.txt',
       detail: `Content-Signal search is "no", while llms.txt contains ${llmsContent}.`,
       loci: ['Content-Signal', 'llms.txt'],
-    };
+    });
   }
 
   if (
     read(contentSignal, 'aiInput') === 'no' &&
     read(getMarkdownMirrors(draft), 'enabled') === true
   ) {
-    return {
-      code: 'C2',
-      severity: 'error',
+    conflicts.push({
       title: 'Content policy conflicts with mirrors',
       detail: 'Content-Signal ai-input is "no", while markdown mirrors are enabled.',
       loci: ['Content-Signal', 'markdown mirrors'],
-    };
+    });
   }
 
-  return null;
+  if (conflicts.length === 0) {
+    return null;
+  }
+
+  return {
+    code: 'C2',
+    severity: 'error',
+    title: conflicts.length === 1
+      ? conflicts[0].title
+      : 'Content policy conflicts with llms.txt and mirrors',
+    detail: conflicts.map(({ detail }) => detail).join(' '),
+    loci: dedupeStrings(conflicts.flatMap(({ loci }) => loci)),
+  };
 }
 
 function detectMirrorExcludedButListed(draft: StudioDraft): Contradiction | null {
@@ -167,16 +176,6 @@ function detectIdentityDrift(draft: StudioDraft): Contradiction | null {
     }
   }
 
-  if (mismatches.length > 0) {
-    return {
-      code: 'C4',
-      severity: 'warning',
-      title: 'Published identity values drift',
-      detail: mismatches.join(' '),
-      loci: ['JSON-LD', 'site identity'],
-    };
-  }
-
   const agentCard = getAgentCard(draft);
   const providerOrganization = getNonEmptyString(
     read(agentCard, 'providerOrganization')
@@ -206,17 +205,24 @@ function detectIdentityDrift(draft: StudioDraft): Contradiction | null {
     }
   }
 
-  if (agentCardMismatches.length > 0) {
-    return {
-      code: 'C4',
-      severity: 'warning',
-      title: 'Agent Card identity drifts',
-      detail: agentCardMismatches.join(' '),
-      loci: ['Agent Card', 'site identity'],
-    };
+  if (mismatches.length === 0 && agentCardMismatches.length === 0) {
+    return null;
   }
 
-  return null;
+  const loci = [
+    ...(mismatches.length > 0 ? ['JSON-LD', 'site identity'] : []),
+    ...(agentCardMismatches.length > 0 ? ['Agent Card', 'site identity'] : []),
+  ];
+
+  return {
+    code: 'C4',
+    severity: 'warning',
+    title: mismatches.length > 0
+      ? 'Published identity values drift'
+      : 'Agent Card identity drifts',
+    detail: [...mismatches, ...agentCardMismatches].join(' '),
+    loci: dedupeStrings(loci),
+  };
 }
 
 function detectCardWithoutInterface(draft: StudioDraft): Contradiction | null {
@@ -226,7 +232,7 @@ function detectCardWithoutInterface(draft: StudioDraft): Contradiction | null {
   }
 
   const errors = validateAgentCardConfig(
-    buildAgentCardValidationConfig(draft, agentCard)
+    buildAgentCardValidationConfig(draft)
   ).filter(({ severity }) => severity === 'error');
 
   if (errors.length === 0) {
@@ -380,42 +386,14 @@ function getWhenToUse(draft: StudioDraft): string[] {
 }
 
 function buildAgentCardValidationConfig(
-  draft: StudioDraft,
-  agentCard: UnknownRecord | null
+  draft: StudioDraft
 ): AgentMarkupConfig {
   const identity = getIdentity(draft);
-  const card: EnabledAgentCardConfig = {
-    enabled: true,
-    supportedInterfaces: getObjectArray(
-      read(agentCard, 'supportedInterfaces')
-    ) as unknown as EnabledAgentCardConfig['supportedInterfaces'],
-    version: getString(read(agentCard, 'version')) ?? '',
-  };
-  const cardDescription = getString(read(agentCard, 'description'));
-  const skills = read(agentCard, 'skills');
-
-  if (cardDescription !== undefined) {
-    card.description = cardDescription;
-  }
-  if (Array.isArray(skills) && skills.length > 0) {
-    card.skills = getObjectArray(
-      skills
-    ) as unknown as EnabledAgentCardConfig['skills'];
-  }
-  if (
-    read(agentCard, 'providerOrganization') !== undefined ||
-    read(agentCard, 'providerUrl') !== undefined
-  ) {
-    card.provider = {
-      organization: getString(read(agentCard, 'providerOrganization')) ?? '',
-      url: getString(read(agentCard, 'providerUrl')) ?? '',
-    };
-  }
 
   const config: AgentMarkupConfig = {
     site: getString(read(identity, 'site')) ?? '',
     name: getString(read(identity, 'name')) ?? '',
-    agentCard: card,
+    agentCard: toEnabledAgentCard(draft),
   };
   const identityDescription = getString(read(identity, 'description'));
   if (identityDescription !== undefined) {
@@ -480,12 +458,6 @@ function getStringArray(value: unknown): string[] {
     : [];
 }
 
-function getObjectArray(value: unknown): UnknownRecord[] {
-  return Array.isArray(value)
-    ? value.map((entry) => asRecord(entry) ?? {})
-    : [];
-}
-
 function parseHttpUrl(value: string | null): URL | null {
   if (!value) {
     return null;
@@ -525,6 +497,10 @@ function normalizeTrailingSlash(value: string): string {
 
 function pluralize(count: number, singular: string, plural: string): string {
   return count === 1 ? singular : plural;
+}
+
+function dedupeStrings(values: string[]): string[] {
+  return [...new Set(values)];
 }
 
 function isContradiction(
