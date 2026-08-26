@@ -10,6 +10,11 @@
     "heading": "Check your website before AI crawlers and search engines do"
   },
   {
+    "route": "/studio/",
+    "source": "src/pages/Studio.tsx",
+    "heading": "Agent Surface Studio"
+  },
+  {
     "route": "/security-scan/",
     "source": "src/pages/SecurityScan.tsx",
     "heading": "Passive security scan for public websites"

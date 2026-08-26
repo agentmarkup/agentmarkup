@@ -35,6 +35,32 @@ const organizationContactPoints = [
   },
 ]
 
+const studioDescription =
+  'Configure, inspect, and compile a coherent machine-readable website surface with visible WebMCP tools, deterministic findings, and install-ready agentmarkup artifacts.'
+
+const studioFaqs = [
+  {
+    question: 'What is WebMCP?',
+    answer:
+      'WebMCP lets a compatible browser expose page-defined tools to an agent. In the Studio, those tools edit the same visible draft that you can edit manually.',
+  },
+  {
+    question: 'Is anything sent to a server?',
+    answer:
+      'The draft stays in memory in this browser tab. The optional site inspection sends the entered public URL through the existing agentmarkup checker API and imports only bounded structured findings.',
+  },
+  {
+    question: 'How are findings decided?',
+    answer:
+      'Every validation and contradiction is deterministic. The Studio reports the exact rule and affected surfaces without producing a rating or percentage.',
+  },
+  {
+    question: 'How do I install the result?',
+    answer:
+      'Download agentmarkup.config.mjs, install the matching agentmarkup package, copy the Adapter setup snippet, and run your normal production build.',
+  },
+]
+
 // The /contact/ page uses a hand-written schema, so it needs the explicit types.
 const contactPointsJsonLd = organizationContactPoints.map((point) => ({
   '@type': 'ContactPoint',
@@ -272,6 +298,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         checker: resolve(__dirname, 'checker/index.html'),
+        studio: resolve(__dirname, 'studio/index.html'),
         'security-scan': resolve(__dirname, 'security-scan/index.html'),
         'docs-llms-txt': resolve(__dirname, 'docs/llms-txt/index.html'),
         'docs-json-ld': resolve(__dirname, 'docs/json-ld/index.html'),
@@ -306,6 +333,7 @@ export default defineConfig({
         'not-found': resolve(__dirname, '404.html'),
         'prerender-main': resolve(__dirname, 'src/main.tsx'),
         'prerender-checker': resolve(__dirname, 'src/entries/checker.tsx'),
+        'prerender-studio': resolve(__dirname, 'src/entries/studio.tsx'),
         'prerender-security-scan': resolve(__dirname, 'src/entries/security-scan.tsx'),
         'prerender-docs-llms-txt': resolve(__dirname, 'src/entries/llms-txt.tsx'),
         'prerender-docs-json-ld': resolve(__dirname, 'src/entries/json-ld.tsx'),
@@ -414,6 +442,7 @@ export default defineConfig({
           {
             title: 'Features',
             entries: [
+              { title: 'Agent Surface Studio', url: '/studio/', description: studioDescription },
               { title: 'llms.txt Generation', url: '/llms.txt', description: 'Auto-generates /llms.txt at build time following the llmstxt.org spec' },
               { title: 'JSON-LD Injection', url: '/docs/json-ld/', description: 'Injects structured data into HTML with XSS-safe serialization and type-safe presets' },
               { title: 'AI Crawler Management', url: '/robots.txt', description: 'Generates or patches robots.txt with directives for GPTBot, ClaudeBot, and others' },
@@ -494,6 +523,18 @@ export default defineConfig({
               description: 'Check any public website for llms.txt, JSON-LD structured data, markdown mirrors, robots.txt AI crawler rules, sitemap discovery, and thin client-rendered HTML.',
             },
             { preset: 'faqPage' as const, url: `${siteUrl}/checker/`, questions: checkerFaqs },
+          ],
+        },
+        {
+          path: '/studio/',
+          schemas: [
+            {
+              '@type': 'WebPage',
+              name: 'Agent Surface Studio',
+              url: `${siteUrl}/studio/`,
+              description: studioDescription,
+            },
+            { preset: 'faqPage' as const, url: `${siteUrl}/studio/`, questions: studioFaqs },
           ],
         },
         {

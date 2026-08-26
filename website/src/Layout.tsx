@@ -33,6 +33,7 @@ const learnLinks: NavLink[] = [
 ]
 
 const developerLinks: NavLink[] = [
+  { href: '/studio/', label: 'Studio' },
   { href: '/docs/audit/', label: 'Audit guide' },
   { href: 'https://github.com/agentmarkup/agentmarkup', label: 'GitHub', external: true },
   { href: 'https://www.npmjs.com/search?q=%40agentmarkup', label: 'npm packages', external: true },

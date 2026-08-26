@@ -81,6 +81,37 @@
     "rawH1Count": 1
   },
   {
+    "route": "/studio/",
+    "title": "Agent Surface Studio - agentmarkup",
+    "description": "Configure, inspect, and compile a coherent machine-readable website surface with visible agent tools, deterministic findings, and install-ready agentmarkup artifacts.",
+    "canonical": "https://agentmarkup.dev/studio/",
+    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+    "h1": [
+      "Agent Surface Studio"
+    ],
+    "h2": [
+      "How to connect an agent",
+      "CONTRACT",
+      "ARTIFACTS",
+      "FINDINGS + ACTIVITY",
+      "Frequently asked questions"
+    ],
+    "sectionIds": [],
+    "schemaTypes": [
+      "Answer",
+      "ContactPoint",
+      "FAQPage",
+      "Organization",
+      "PostalAddress",
+      "Question",
+      "WebPage",
+      "WebSite"
+    ],
+    "internalLinks": [],
+    "prerendered": true,
+    "rawH1Count": 1
+  },
+  {
     "route": "/security-scan/",
     "title": "Passive website security scan - agentmarkup",
     "description": "Passive security scan for public websites: HTTPS and HSTS, Content-Security-Policy, clickjacking and sniffing protections, cookie flags, mixed content, and security.txt.",
