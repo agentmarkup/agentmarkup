@@ -759,15 +759,13 @@ function Studio() {
                   <p>Live output</p>
                   <h2 id="studio-artifacts-title">ARTIFACTS</h2>
                 </div>
-                {selectedArtifact.id === 'config' ? (
-                  <button
-                    className="button button-secondary studio-compact-button"
-                    type="button"
-                    onClick={downloadConfig}
-                  >
-                    Download
-                  </button>
-                ) : null}
+                <button
+                  className="button button-primary studio-compact-button"
+                  type="button"
+                  onClick={downloadConfig}
+                >
+                  Download config
+                </button>
               </div>
 
               <div
