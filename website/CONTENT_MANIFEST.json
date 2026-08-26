@@ -12,7 +12,7 @@
   {
     "route": "/studio/",
     "source": "src/pages/Studio.tsx",
-    "heading": "Agent Surface Studio"
+    "heading": "AgentMarkup Studio"
   },
   {
     "route": "/security-scan/",

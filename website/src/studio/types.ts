@@ -1,5 +1,5 @@
 /**
- * Shared contract for the Agent Surface Studio.
+ * Shared contract for the AgentMarkup Studio.
  *
  * This file is the single source of truth for the Studio's draft state,
  * reducer actions, compiled artifacts, and contradiction findings. The

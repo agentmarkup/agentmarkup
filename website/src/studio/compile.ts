@@ -223,7 +223,7 @@ export function renderConfigMjs(draft: StudioDraft): string {
     .join('\n');
 
   return [
-    '// Generated with Agent Surface Studio by agentmarkup: https://agentmarkup.dev/studio/',
+    '// Generated with AgentMarkup Studio by agentmarkup: https://agentmarkup.dev/studio/',
     '// Place at the project root as agentmarkup.config.mjs.',
     '// Review crawler and Content-Signal choices before running a build.',
     '',
@@ -241,8 +241,8 @@ export function renderAdapterSnippet(
   void draft;
   const attribution =
     adapter === 'cli'
-      ? '# Agent Surface Studio by agentmarkup: https://agentmarkup.dev/studio/'
-      : '// Agent Surface Studio by agentmarkup: https://agentmarkup.dev/studio/';
+      ? '# AgentMarkup Studio by agentmarkup: https://agentmarkup.dev/studio/'
+      : '// AgentMarkup Studio by agentmarkup: https://agentmarkup.dev/studio/';
   const snippets: Record<AdapterName, string> = {
     vite: [
       "import { defineConfig } from 'vite';",

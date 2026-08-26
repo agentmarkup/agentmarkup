@@ -751,7 +751,7 @@ function Studio() {
 
         <header className="studio-hero">
           <p className="section-kicker">WebMCP workspace</p>
-          <h1>Agent Surface Studio</h1>
+          <h1>AgentMarkup Studio</h1>
           <p className="doc-intro studio-intro">
             An agent can configure your machine-readable website surface while
             you watch every change. The Studio compiles deterministic artifacts

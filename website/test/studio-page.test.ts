@@ -145,7 +145,7 @@ function makeCheckResponse(): SiteCheckResponse {
   };
 }
 
-describe('Agent Surface Studio page', () => {
+describe('AgentMarkup Studio page', () => {
   let container: HTMLDivElement;
   let root: Root | null;
   let modelContext: MockModelContext;
@@ -467,7 +467,7 @@ describe('Agent Surface Studio page', () => {
     await renderStudio();
 
     expect(container.querySelectorAll('h1')).toHaveLength(1);
-    expect(container.querySelector('h1')?.textContent).toBe('Agent Surface Studio');
+    expect(container.querySelector('h1')?.textContent).toBe('AgentMarkup Studio');
     expect(container.textContent).toContain(
       'An agent can configure your machine-readable website surface while you watch every change.'
     );
@@ -582,7 +582,7 @@ describe('Agent Surface Studio page', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const html = renderToString(createElement(Studio));
 
-    expect(html).toContain('<h1>Agent Surface Studio</h1>');
+    expect(html).toContain('<h1>AgentMarkup Studio</h1>');
     expect(html).toContain('Agent connection: checking...');
     expect(html).toMatch(/<details class="studio-connect"[^>]* open="">/);
 

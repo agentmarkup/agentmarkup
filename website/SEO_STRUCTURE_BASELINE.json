@@ -82,12 +82,12 @@
   },
   {
     "route": "/studio/",
-    "title": "Agent Surface Studio - agentmarkup",
+    "title": "AgentMarkup Studio - agentmarkup",
     "description": "Configure, inspect, and compile a coherent machine-readable website surface with visible agent tools, deterministic findings, and install-ready agentmarkup artifacts.",
     "canonical": "https://agentmarkup.dev/studio/",
     "robots": "index,follow,max-image-preview:large,max-snippet:-1",
     "h1": [
-      "Agent Surface Studio"
+      "AgentMarkup Studio"
     ],
     "h2": [
       "How to connect an agent",

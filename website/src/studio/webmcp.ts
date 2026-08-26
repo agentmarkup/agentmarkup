@@ -64,7 +64,7 @@ const STUDIO_TOOL_METADATA = {
   getStudioState: {
     name: 'get_studio_state',
     description:
-      'Read a compact summary of the current Agent Surface Studio draft, contradictions, and recent activity.',
+      'Read a compact summary of the current AgentMarkup Studio draft, contradictions, and recent activity.',
   },
   setSiteIdentity: {
     name: 'set_site_identity',

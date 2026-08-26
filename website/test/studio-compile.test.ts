@@ -51,13 +51,13 @@ function createFullDraft(): StudioDraft {
   return {
     identity: {
       site: 'https://studio.example.com',
-      name: 'Agent Surface Studio',
+      name: 'AgentMarkup Studio',
       description: 'Builds a coherent machine-readable website surface.',
       organization: {
         name: 'Example Labs',
         url: 'https://studio.example.com/about',
         logo: 'https://studio.example.com/logo.png',
-        description: 'Maintains Agent Surface Studio.',
+        description: 'Maintains AgentMarkup Studio.',
         sameAs: ['https://social.example.com/example-labs'],
         contactPoint: [
           {
@@ -131,11 +131,11 @@ describe('compileDraft', () => {
   it('compiles a full draft through the core generators', () => {
     const compiled = compileDraft(createFullDraft());
 
-    expect(compiled.llmsTxt).toContain('# Agent Surface Studio');
+    expect(compiled.llmsTxt).toContain('# AgentMarkup Studio');
     expect(compiled.llmsTxt).toContain(
       '[Studio guide](https://studio.example.com/guide.md)'
     );
-    expect(compiled.llmsFullTxt).toContain('# Agent Surface Studio');
+    expect(compiled.llmsFullTxt).toContain('# AgentMarkup Studio');
     expect(compiled.robotsTxt).toContain(
       'User-agent: GPTBot\nDisallow: /'
     );

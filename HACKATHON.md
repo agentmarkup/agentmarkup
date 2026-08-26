@@ -1,6 +1,6 @@
-# Agent Surface Studio - WebMCP Challenge entry
+# AgentMarkup Studio - WebMCP Challenge entry
 
-Agent Surface Studio is agentmarkup's entry for [The WebMCP Challenge](https://webmcp.devpost.com/).
+AgentMarkup Studio is agentmarkup's entry for [The WebMCP Challenge](https://webmcp.devpost.com/).
 It is a page on the production site, [agentmarkup.dev/studio/](https://agentmarkup.dev/studio/), where a
 browser AI agent and a human configure a website's complete machine-readable surface together:
 the agent edits a visible draft through WebMCP tools, a deterministic compiler turns the draft

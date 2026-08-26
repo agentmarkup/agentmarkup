@@ -442,7 +442,7 @@ export default defineConfig({
           {
             title: 'Features',
             entries: [
-              { title: 'Agent Surface Studio', url: '/studio/', description: studioDescription },
+              { title: 'AgentMarkup Studio', url: '/studio/', description: studioDescription },
               { title: 'llms.txt Generation', url: '/llms.txt', description: 'Auto-generates /llms.txt at build time following the llmstxt.org spec' },
               { title: 'JSON-LD Injection', url: '/docs/json-ld/', description: 'Injects structured data into HTML with XSS-safe serialization and type-safe presets' },
               { title: 'AI Crawler Management', url: '/robots.txt', description: 'Generates or patches robots.txt with directives for GPTBot, ClaudeBot, and others' },
@@ -530,7 +530,7 @@ export default defineConfig({
           schemas: [
             {
               '@type': 'WebPage',
-              name: 'Agent Surface Studio',
+              name: 'AgentMarkup Studio',
               url: `${siteUrl}/studio/`,
               description: studioDescription,
             },
