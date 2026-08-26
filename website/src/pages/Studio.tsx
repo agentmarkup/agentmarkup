@@ -93,6 +93,9 @@ type CommitTextareaProps = Omit<
 
 const ADAPTERS: AdapterName[] = ['vite', 'astro', 'next', 'nuxt', 'cli'];
 
+const HANDOFF_PROMPT =
+  'Take agentmarkup.config.mjs from my Downloads folder and install it into my website repository: detect the framework, install the matching agentmarkup adapter, wire the config in, run a build, and show me what changed. Ask before deploying.';
+
 const STARTER_PROMPT =
   'Make my site friendly to AI search but keep my content out of training data.';
 
@@ -356,6 +359,49 @@ function StudioStarter({
         </button>
       </div>
     </aside>
+  );
+}
+
+function StudioHandoff() {
+  const promptRef = useRef<HTMLElement>(null);
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'selected'>(
+    'idle'
+  );
+
+  const copyPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(HANDOFF_PROMPT);
+      setCopyState('copied');
+    } catch {
+      const prompt = promptRef.current;
+      const selection = window.getSelection();
+      if (prompt && selection) {
+        const range = document.createRange();
+        range.selectNodeContents(prompt);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+      setCopyState('selected');
+    }
+  };
+
+  return (
+    <div className="studio-handoff">
+      <p id="studio-handoff-title">
+        Downloaded? Paste this back to your agent and it finishes the install:
+      </p>
+      <div className="studio-starter-prompt">
+        <code id="studio-handoff-prompt" ref={promptRef}>{HANDOFF_PROMPT}</code>
+        <button
+          className="button button-secondary studio-compact-button"
+          type="button"
+          aria-describedby="studio-handoff-prompt"
+          onClick={() => void copyPrompt()}
+        >
+          {copyState === 'copied' ? 'Copied' : copyState === 'selected' ? 'Selected' : 'Copy prompt'}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -772,6 +818,8 @@ function Studio() {
                 You install one file: agentmarkup.config.mjs. Every other tab is
                 a preview of exactly what your build will generate from it.
               </p>
+
+              <StudioHandoff />
 
               <div
                 className="studio-tabs"

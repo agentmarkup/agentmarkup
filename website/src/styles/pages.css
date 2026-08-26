@@ -998,3 +998,10 @@
   color: var(--text-secondary, inherit);
   font-size: 0.92rem;
 }
+
+.studio-handoff { margin: 0 0 var(--space-3); }
+
+.studio-handoff > p {
+  margin: 0 0 0.5rem;
+  font-size: 0.92rem;
+}
