@@ -192,6 +192,30 @@ describe('C3 mirror-excluded-but-listed', () => {
     expect(finding.loci).toEqual(['llms.txt', 'markdown mirrors']);
   });
 
+  it('matches relative and absolute entries against a path-prefixed site', () => {
+    for (const url of [
+      '/docs/private.html',
+      'https://example.com/docs/private.html',
+    ]) {
+      const draft = createDraftWithEntry(url, 'Private docs');
+      draft.identity.site = 'https://example.com/docs';
+      draft.content.markdownMirrors.enabled = true;
+      draft.content.markdownMirrors.exclude = ['/private/'];
+
+      const finding = expectFinding(draft, 'C3');
+      expect(finding.detail).toContain('whose page path "/private.html"');
+    }
+  });
+
+  it('keeps root-site relative entry matching unchanged', () => {
+    const draft = createDraftWithEntry('/private.html', 'Private docs');
+    draft.content.markdownMirrors.enabled = true;
+    draft.content.markdownMirrors.exclude = ['/private/'];
+
+    const finding = expectFinding(draft, 'C3');
+    expect(finding.detail).toContain('whose page path "/private.html"');
+  });
+
   it('does not report when the excluded page is not listed', () => {
     const draft = createDraftWithEntry('/public');
     draft.content.markdownMirrors.enabled = true;

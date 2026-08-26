@@ -340,7 +340,8 @@ function getSameSitePage(draft: StudioDraft, entry: unknown): SameSitePage | nul
 
   if (url.startsWith('/') && !url.startsWith('//')) {
     try {
-      path = new URL(url, 'https://studio.invalid').pathname;
+      const pathname = new URL(url, 'https://studio.invalid').pathname;
+      path = site ? pathRelativeToSite(site, pathname) : pathname;
     } catch {
       return null;
     }

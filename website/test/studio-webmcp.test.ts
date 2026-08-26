@@ -324,9 +324,9 @@ describe('WebMCP registration', () => {
     expect(mc.descriptors.get('compile_agent_surface')?.annotations).toEqual({ readOnlyHint: true });
     expect(mc.descriptors.get('export_build_plan')?.annotations).toEqual({ readOnlyHint: true });
     expect(mc.descriptors.get('inspect_site')?.annotations).toEqual({
-      readOnlyHint: true,
       untrustedContentHint: true,
     });
+    expect(mc.descriptors.get('inspect_site')?.annotations).not.toHaveProperty('readOnlyHint');
     const inspectUrlSchema = (
       mc.descriptors.get('inspect_site')?.inputSchema.properties as
         | Record<string, Record<string, unknown>>
@@ -502,6 +502,39 @@ describe('write tool validation and dispatch', () => {
       const result = await mc.executeTool(name, JSON.stringify(args));
       expect(resultText(result)).toMatch(/^Rejected: /);
     }
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it('rejects six skill security requirements instead of silently truncating them', async () => {
+    const { deps, dispatch } = fakeDeps();
+    const { mc } = await registerWith(deps);
+    const result = await mc.executeTool('configure_agent_card', JSON.stringify({
+      skills: [{
+        id: 'answer',
+        name: 'Answer',
+        description: 'Answers questions.',
+        tags: ['questions'],
+        security: Array.from(
+          { length: LIMITS.modesMax + 1 },
+          (_, index) => ({ [`oauth${index}`]: [] })
+        ),
+      }],
+    }));
+
+    expect(resultText(result)).toMatch(/^Rejected: /);
+    expect(resultText(result)).toContain(`at most ${LIMITS.modesMax} items`);
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it('rejects crawler names containing ASCII control characters', async () => {
+    const { deps, dispatch } = fakeDeps();
+    const { mc } = await registerWith(deps);
+    const result = await mc.executeTool('set_access_policy', JSON.stringify({
+      crawlers: { 'Poisoned\nBot': 'disallow' },
+    }));
+
+    expect(resultText(result)).toMatch(/^Rejected: /);
+    expect(resultText(result)).toContain('"error":"invalid_arguments"');
     expect(dispatch).not.toHaveBeenCalled();
   });
 

@@ -198,12 +198,6 @@ function CommitTextarea({
       value={committed.localValue}
       onChange={(event) => committed.setLocalValue(event.target.value)}
       onBlur={committed.commit}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
-          event.preventDefault();
-          committed.commit();
-        }
-      }}
     />
   );
 }
@@ -429,7 +423,8 @@ function Studio() {
         return;
       }
 
-      const accepted = pristine || window.confirm(
+      const currentDraftIsPristine = isPristineDraft(stateRef.current.draft);
+      const accepted = currentDraftIsPristine || window.confirm(
         'Import the inspected settings into this draft? Your current draft can be restored with Undo.'
       );
       if (!accepted) {
@@ -441,6 +436,12 @@ function Studio() {
         source: 'human',
         payload: outcome.draftPatch,
         sourceUrl: outcome.sourceUrl ?? inspectUrl,
+      });
+    } catch {
+      setInspectOutcome({
+        ok: false,
+        errorCode: 'fetch_failed',
+        summaryText: 'The inspection result could not be applied. Try again.',
       });
     } finally {
       setInspectPending(false);

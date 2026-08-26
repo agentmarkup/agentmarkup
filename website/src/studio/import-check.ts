@@ -44,7 +44,7 @@ export async function inspectSite(
       body: JSON.stringify({ url: normalizedUrl }),
       signal: controller.signal,
     });
-    const payload: unknown = await response.json();
+    const payload: unknown = await response.json().catch(() => null);
     const checkerError = parseCheckerError(payload);
 
     if (checkerError?.turnstileRequired === true) {

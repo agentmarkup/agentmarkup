@@ -322,7 +322,7 @@ const SKILL_SCHEMA: JsonSchema = {
     security: {
       type: 'array',
       description: 'Optional security requirements for this skill.',
-      maxItems: LIMITS.skillsMax,
+      maxItems: LIMITS.modesMax,
       items: SECURITY_REQUIREMENT_SCHEMA,
     },
   },
@@ -570,7 +570,7 @@ function buildToolDescriptors(deps: StudioToolDeps): ModelContextToolDescriptor[
     {
       ...STUDIO_TOOL_METADATA.inspectSite,
       inputSchema: INSPECT_INPUT_SCHEMA,
-      annotations: { readOnlyHint: true, untrustedContentHint: true },
+      annotations: { untrustedContentHint: true },
       execute: safelyExecute(async (args) => {
         const parsed = validateInspectArgs(args);
         if (!parsed.ok) return rejected(parsed.reason);
@@ -930,7 +930,12 @@ function validateAccessArgs(value: unknown): Validation<AccessPolicyPayload> {
     const entries = Object.entries(record.value.crawlers);
     if (entries.length > LIMITS.crawlersMax) return invalid(`crawlers must contain at most ${LIMITS.crawlersMax} entries`);
     for (const [crawler, directive] of entries) {
-      if (!crawler || crawler.length > LIMITS.crawlerNameMax || isUnsafeKey(crawler)) {
+      if (
+        !crawler ||
+        crawler.length > LIMITS.crawlerNameMax ||
+        isUnsafeKey(crawler) ||
+        hasAsciiControlCharacter(crawler)
+      ) {
         return invalid(`crawler names must be 1 to ${LIMITS.crawlerNameMax} safe characters`);
       }
       if (directive !== null && !isCrawlerDirective(directive)) {
@@ -1097,8 +1102,8 @@ function validateSkill(value: unknown, index: number): string | null {
 
   if (record.value.security !== undefined) {
     if (!Array.isArray(record.value.security)) return `${label}.security must be an array`;
-    if (record.value.security.length > LIMITS.skillsMax) {
-      return `${label}.security must contain at most ${LIMITS.skillsMax} items`;
+    if (record.value.security.length > LIMITS.modesMax) {
+      return `${label}.security must contain at most ${LIMITS.modesMax} items`;
     }
     for (const [requirementIndex, requirement] of record.value.security.entries()) {
       if (!isRecord(requirement)) return `${label}.security[${requirementIndex}] must be an object`;
@@ -1276,6 +1281,16 @@ function isRecord(value: unknown): value is UnknownRecord {
 
 function isUnsafeKey(value: string): boolean {
   return value === '__proto__' || value === 'prototype' || value === 'constructor';
+}
+
+function hasAsciiControlCharacter(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code < 0x20 || code === 0x7f) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function isModelContextLike(value: unknown): value is ModelContextLike {

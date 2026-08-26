@@ -48,7 +48,16 @@ function setInputValue(input: HTMLInputElement, value: string): void {
   input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
-function blurInput(input: HTMLInputElement): void {
+function setTextareaValue(textarea: HTMLTextAreaElement, value: string): void {
+  const setter = Object.getOwnPropertyDescriptor(
+    HTMLTextAreaElement.prototype,
+    'value'
+  )?.set;
+  setter?.call(textarea, value);
+  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function blurInput(input: HTMLInputElement | HTMLTextAreaElement): void {
   input.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
 }
 
@@ -318,6 +327,37 @@ describe('Agent Surface Studio page', () => {
     expect(secondSectionInput.id).toBe('studio-section-0');
   });
 
+  it('keeps textarea newlines local on Enter and commits them on blur', async () => {
+    await renderStudio();
+
+    const description = container.querySelector<HTMLTextAreaElement>(
+      '#studio-description'
+    );
+    if (!description) {
+      throw new Error('Missing description textarea');
+    }
+
+    const enterEvent = new KeyboardEvent('keydown', {
+      key: 'Enter',
+      bubbles: true,
+      cancelable: true,
+    });
+    await act(async () => {
+      setTextareaValue(description, 'First line\nSecond line');
+      description.dispatchEvent(enterEvent);
+    });
+    expect(enterEvent.defaultPrevented).toBe(false);
+    expect(description.value).toBe('First line\nSecond line');
+    expect(container.querySelectorAll('.studio-activity-row')).toHaveLength(0);
+
+    await act(async () => blurInput(description));
+    expect(container.querySelectorAll('.studio-activity-row')).toHaveLength(1);
+    await clickButton(container, 'agentmarkup.config.mjs');
+    expect(
+      container.querySelector('.studio-artifact-output .code-content')?.textContent
+    ).toContain('First line\\nSecond line');
+  });
+
   it('honors both inspection import confirmation branches', async () => {
     const payload = makeCheckResponse();
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
@@ -353,5 +393,78 @@ describe('Agent Surface Studio page', () => {
     await flushReact();
     expect(siteInput.value).toBe('https://example.com');
     expect(confirm).toHaveBeenCalledTimes(2);
+  });
+
+  it('confirms an inspection import when the draft changes while inspection is pending', async () => {
+    const payload = makeCheckResponse();
+    let resolvePayload: ((value: SiteCheckResponse) => void) | undefined;
+    const payloadPromise = new Promise<SiteCheckResponse>((resolve) => {
+      resolvePayload = resolve;
+    });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      status: 200,
+      ok: true,
+      json: vi.fn(() => payloadPromise),
+    }));
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    await renderStudio();
+
+    const nameInput = container.querySelector<HTMLInputElement>('#studio-name');
+    const inspectInput = container.querySelector<HTMLInputElement>('#studio-inspect-url');
+    const siteInput = container.querySelector<HTMLInputElement>('#studio-site');
+    if (!nameInput || !inspectInput || !siteInput) {
+      throw new Error('Missing inspection controls');
+    }
+
+    await act(async () => {
+      setInputValue(inspectInput, 'example.com');
+      blurInput(inspectInput);
+    });
+    await clickButton(container, 'Inspect site');
+    expect(findButton(container, 'Inspecting...').disabled).toBe(true);
+
+    await act(async () => {
+      setInputValue(nameInput, 'Edited while inspecting');
+      blurInput(nameInput);
+      resolvePayload?.(payload);
+    });
+    await flushReact();
+
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(siteInput.value).toBe('');
+    expect(nameInput.value).toBe('Edited while inspecting');
+  });
+
+  it('shows a failure outcome when inspection import handling throws', async () => {
+    const payload = makeCheckResponse();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      status: 200,
+      ok: true,
+      json: vi.fn().mockResolvedValue(payload),
+    }));
+    vi.spyOn(window, 'confirm').mockImplementation(() => {
+      throw new Error('Unexpected confirmation failure');
+    });
+    await renderStudio();
+
+    const nameInput = container.querySelector<HTMLInputElement>('#studio-name');
+    const inspectInput = container.querySelector<HTMLInputElement>('#studio-inspect-url');
+    if (!nameInput || !inspectInput) {
+      throw new Error('Missing inspection controls');
+    }
+
+    await act(async () => {
+      setInputValue(nameInput, 'Existing draft');
+      blurInput(nameInput);
+      setInputValue(inspectInput, 'example.com');
+      blurInput(inspectInput);
+    });
+    await clickButton(container, 'Inspect site');
+    await flushReact();
+
+    expect(container.querySelector('.studio-inspect-result')?.textContent).toContain(
+      'The inspection result could not be applied. Try again.'
+    );
+    expect(findButton(container, 'Inspect site').disabled).toBe(false);
   });
 });

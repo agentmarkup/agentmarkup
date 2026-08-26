@@ -120,6 +120,7 @@ describe('studioReducer setters', () => {
       search: 'yes',
       aiInput: 'yes',
     });
+    expect(next.log.at(-1)?.summary).not.toContain('dropped at the cap');
   });
 
   it('deep-merges imported slices and mentions the source URL', () => {
@@ -464,6 +465,30 @@ describe('studioReducer boundaries', () => {
     expect(scopes?.[0]).toHaveLength(LIMITS.shortText);
   });
 
+  it('drops prototype-sensitive agent skill security schemes', () => {
+    const security = [Object.fromEntries([
+      ['__proto__', ['admin']],
+      ['oauth2', ['read:answers']],
+    ])];
+    const state = studioReducer(createInitialState(), {
+      type: 'SET_AGENT_CARD',
+      source: 'agent',
+      payload: {
+        skills: [{
+          id: 'search',
+          name: 'Search',
+          description: 'Searches.',
+          tags: [],
+          security,
+        }],
+      },
+    });
+
+    const saved = state.draft.agentCard.skills?.[0]?.security?.[0];
+    expect(saved).toEqual({ oauth2: ['read:answers'] });
+    expect(Object.hasOwn(saved ?? {}, '__proto__')).toBe(false);
+  });
+
   it('caps crawler keys by insertion order at the configured boundary', () => {
     const crawlers = Object.fromEntries(
       Array.from(
@@ -481,6 +506,55 @@ describe('studioReducer boundaries', () => {
     expect(Object.keys(saved)).toHaveLength(LIMITS.crawlersMax);
     expect(saved[`Crawler-${LIMITS.crawlersMax - 1}`]).toBe('allow');
     expect(saved[`Crawler-${LIMITS.crawlersMax}`]).toBeUndefined();
+    expect(state.log.at(-1)?.summary).toContain('(1 crawler(s) dropped at the cap)');
+  });
+
+  it('updates an existing crawler when the map is at the cap', () => {
+    const crawlers = Object.fromEntries(
+      Array.from(
+        { length: LIMITS.crawlersMax },
+        (_, index) => [`Crawler-${index}`, 'allow'] as const
+      )
+    );
+    const atCap = studioReducer(createInitialState(), {
+      type: 'SET_ACCESS_POLICY',
+      source: 'human',
+      payload: { crawlers },
+    });
+    const updated = studioReducer(atCap, {
+      type: 'SET_ACCESS_POLICY',
+      source: 'agent',
+      payload: { crawlers: { 'Crawler-0': 'disallow' } },
+    });
+
+    expect(updated.draft.access.crawlers['Crawler-0']).toBe('disallow');
+    expect(Object.keys(updated.draft.access.crawlers)).toHaveLength(LIMITS.crawlersMax);
+    expect(updated.log.at(-1)?.summary).toContain('(crawlers)');
+    expect(updated.log.at(-1)?.summary).not.toContain('dropped at the cap');
+  });
+
+  it('drops a new crawler without claiming success when the map is at the cap', () => {
+    const crawlers = Object.fromEntries(
+      Array.from(
+        { length: LIMITS.crawlersMax },
+        (_, index) => [`Crawler-${index}`, 'allow'] as const
+      )
+    );
+    const atCap = studioReducer(createInitialState(), {
+      type: 'SET_ACCESS_POLICY',
+      source: 'human',
+      payload: { crawlers },
+    });
+    const dropped = studioReducer(atCap, {
+      type: 'SET_ACCESS_POLICY',
+      source: 'agent',
+      payload: { crawlers: { NewBot: 'allow' } },
+    });
+
+    expect(dropped.draft.access.crawlers.NewBot).toBeUndefined();
+    expect(dropped.log.at(-1)?.summary).toBe(
+      'Agent made no valid changes. (1 crawler(s) dropped at the cap)'
+    );
   });
 
   it('keeps crawler names at the length cap and drops longer names', () => {
@@ -522,6 +596,22 @@ describe('studioReducer boundaries', () => {
     expect(Object.getPrototypeOf(state.draft.access.crawlers)).toBe(objectPrototype);
     expect(Object.getPrototypeOf({})).toBe(objectPrototype);
     expect(Reflect.ownKeys(Object.prototype)).toEqual(objectPrototypeKeys);
+  });
+
+  it('drops crawler names containing ASCII control characters', () => {
+    const state = studioReducer(createInitialState(), {
+      type: 'SET_ACCESS_POLICY',
+      source: 'agent',
+      payload: {
+        crawlers: {
+          'Poisoned\nBot': 'disallow',
+          SafeBot: 'allow',
+        },
+      },
+    });
+
+    expect(state.draft.access.crawlers).toEqual({ SafeBot: 'allow' });
+    expect(Object.hasOwn(state.draft.access.crawlers, 'Poisoned\nBot')).toBe(false);
   });
 
   it('ignores invalid-shaped fields without throwing', () => {

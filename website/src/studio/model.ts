@@ -86,13 +86,16 @@ export function studioReducer(
         ...state.draft,
         access: result.value,
       };
+      const droppedSummary = result.droppedCrawlers > 0
+        ? ` (${result.droppedCrawlers} crawler(s) dropped at the cap)`
+        : '';
 
       return recordAction(
         state,
         action.type,
         action.source,
         draft,
-        summarizeFields(action.source, 'set access policy', result.appliedKeys)
+        `${summarizeFields(action.source, 'set access policy', result.appliedKeys)}${droppedSummary}`
       );
     }
 
@@ -137,7 +140,10 @@ export function studioReducer(
       const fields = result.appliedKeys.length > 0
         ? ` (${result.appliedKeys.join(', ')})`
         : '';
-      const summary = `${sourceLabel(action.source)} imported settings from ${sourceUrl}${fields}.`;
+      const droppedSummary = result.droppedCrawlers > 0
+        ? ` (${result.droppedCrawlers} crawler(s) dropped at the cap)`
+        : '';
+      const summary = `${sourceLabel(action.source)} imported settings from ${sourceUrl}${fields}.${droppedSummary}`;
 
       return recordAction(
         state,
@@ -249,13 +255,14 @@ function isDeepEqual(left: unknown, right: unknown): boolean {
 function applyImport(
   draft: StudioDraft,
   value: unknown
-): { value: StudioDraft; appliedKeys: string[] } {
+): { value: StudioDraft; appliedKeys: string[]; droppedCrawlers: number } {
   if (!isRecord(value)) {
-    return { value: draft, appliedKeys: [] };
+    return { value: draft, appliedKeys: [], droppedCrawlers: 0 };
   }
 
   let next = draft;
   const appliedKeys: string[] = [];
+  let droppedCrawlers = 0;
 
   if (isRecord(value.identity)) {
     const patch = sanitizeIdentityPatch(value.identity);
@@ -267,6 +274,7 @@ function applyImport(
 
   if (isRecord(value.access)) {
     const result = applyAccessPatch(next.access, value.access);
+    droppedCrawlers = result.droppedCrawlers;
     if (result.appliedKeys.length > 0) {
       next = { ...next, access: result.value };
       appliedKeys.push('access');
@@ -289,21 +297,38 @@ function applyImport(
     }
   }
 
-  return { value: next, appliedKeys };
+  return { value: next, appliedKeys, droppedCrawlers };
 }
 
 function applyAccessPatch(
   current: StudioAccessPolicy,
   value: unknown
-): { value: StudioAccessPolicy; appliedKeys: string[] } {
+): { value: StudioAccessPolicy; appliedKeys: string[]; droppedCrawlers: number } {
   if (!isRecord(value)) {
-    return { value: current, appliedKeys: [] };
+    return { value: current, appliedKeys: [], droppedCrawlers: 0 };
   }
 
   const crawlers = { ...current.crawlers };
   const appliedKeys: string[] = [];
   let groupsApplied = false;
   let crawlersApplied = false;
+  let droppedCrawlers = 0;
+
+  const applyCrawlerDirective = (
+    crawler: string,
+    directive: 'allow' | 'disallow'
+  ): boolean => {
+    if (
+      !Object.hasOwn(crawlers, crawler) &&
+      Object.keys(crawlers).length >= LIMITS.crawlersMax
+    ) {
+      droppedCrawlers += 1;
+      return false;
+    }
+
+    crawlers[crawler] = directive;
+    return true;
+  };
 
   if (isRecord(value.groups)) {
     for (const groupName of Object.keys(CRAWLER_GROUPS) as Array<keyof typeof CRAWLER_GROUPS>) {
@@ -313,9 +338,8 @@ function applyAccessPatch(
       }
 
       for (const crawler of CRAWLER_GROUPS[groupName]) {
-        crawlers[crawler] = directive;
+        groupsApplied = applyCrawlerDirective(crawler, directive) || groupsApplied;
       }
-      groupsApplied = true;
     }
   }
 
@@ -323,17 +347,19 @@ function applyAccessPatch(
     for (const [crawler, directive] of Object.entries(value.crawlers)) {
       if (
         isUnsafeObjectKey(crawler) ||
+        hasAsciiControlCharacter(crawler) ||
         crawler.length > LIMITS.crawlerNameMax
       ) {
         continue;
       }
 
       if (directive === null) {
-        delete crawlers[crawler];
-        crawlersApplied = true;
+        if (Object.hasOwn(crawlers, crawler)) {
+          delete crawlers[crawler];
+          crawlersApplied = true;
+        }
       } else if (isCrawlerDirective(directive)) {
-        crawlers[crawler] = directive;
-        crawlersApplied = true;
+        crawlersApplied = applyCrawlerDirective(crawler, directive) || crawlersApplied;
       }
     }
   }
@@ -351,7 +377,7 @@ function applyAccessPatch(
   }
 
   if (appliedKeys.length === 0) {
-    return { value: current, appliedKeys };
+    return { value: current, appliedKeys, droppedCrawlers };
   }
 
   return {
@@ -361,13 +387,14 @@ function applyAccessPatch(
           .filter(
             ([crawler]) =>
               !isUnsafeObjectKey(crawler) &&
+              !hasAsciiControlCharacter(crawler) &&
               crawler.length <= LIMITS.crawlerNameMax
           )
-          .slice(0, LIMITS.crawlersMax)
       ),
       contentSignal: { ...current.contentSignal, ...contentSignalPatch },
     },
     appliedKeys,
+    droppedCrawlers,
   };
 }
 
@@ -676,6 +703,9 @@ function sanitizeSkillSecurity(
     const entries = Object.entries(requirement)
       .slice(0, LIMITS.skillTagsMax)
       .flatMap(([scheme, scopes]) => {
+        if (isUnsafeObjectKey(scheme)) {
+          return [];
+        }
         const sanitizedScopes = sanitizeStringArray(
           scopes,
           LIMITS.modesMax,
@@ -752,6 +782,16 @@ function isContentSignalDirective(value: unknown): value is 'yes' | 'no' {
 
 function isUnsafeObjectKey(value: string): boolean {
   return value === '__proto__' || value === 'prototype' || value === 'constructor';
+}
+
+function hasAsciiControlCharacter(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code < 0x20 || code === 0x7f) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

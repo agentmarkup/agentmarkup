@@ -179,6 +179,24 @@ describe('inspectSite', () => {
     expect(result).not.toHaveProperty('findings');
   });
 
+  it('returns a rate-limit outcome when the 429 body is not JSON', async () => {
+    const fetchImpl = vi.fn<typeof fetch>(async () =>
+      new Response('Too many requests.', { status: 429 })
+    );
+
+    const result = await inspectSite('https://example.com', fetchImpl);
+
+    expect(result).toMatchObject({
+      ok: false,
+      humanActionNeeded: 'rate-limited',
+      errorCode: 'rate_limited',
+    });
+    expect(result.summaryText).toBe(
+      'The site checker is rate-limited. Wait before trying again.'
+    );
+    expect(result).not.toHaveProperty('findings');
+  });
+
   it('returns a human-action outcome when Turnstile is required', async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () =>
       jsonResponse(
