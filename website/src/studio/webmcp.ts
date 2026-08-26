@@ -754,7 +754,7 @@ function artifactByteSizes(compiled: CompiledSurface): Record<string, number> {
 
 function exportResult(config: string): ToolResult {
   const guidance =
-    '// Adapter guidance: use Vite, Astro, Next, or Nuxt when it owns final output; use CLI for other static output owners.';
+    '// Next steps: place agentmarkup.config.mjs at the site repo root, add the one-line adapter for your framework (Vite, Astro, Next, or Nuxt when it owns final output; CLI otherwise), then build and deploy as usual.';
   const fullResult = `${config.trimEnd()}\n${guidance}\n`;
 
   if (fullResult.length <= TOOL_RESULT_LIMIT) {

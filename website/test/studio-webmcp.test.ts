@@ -699,7 +699,7 @@ describe('bounded read tool results', () => {
     const smallText = resultText(await smallContext.mc.executeTool('export_build_plan', '{}'));
 
     expect(smallText).toContain(smallConfig.trimEnd());
-    expect(smallText).toContain('Adapter guidance:');
+    expect(smallText).toContain('Next steps:');
     expect(smallText).not.toContain('"tooLarge":true');
 
     const fragment = 'DO_NOT_RETURN_A_PARTIAL_CONFIG';

@@ -768,6 +768,11 @@ function Studio() {
                 </button>
               </div>
 
+              <p className="studio-artifacts-note">
+                You install one file: agentmarkup.config.mjs. Every other tab is
+                a preview of exactly what your build will generate from it.
+              </p>
+
               <div
                 className="studio-tabs"
                 role="tablist"
@@ -826,6 +831,17 @@ function Studio() {
                 )}
               </div>
             </section>
+
+        <section className="studio-how" aria-labelledby="studio-how-title">
+          <h2 id="studio-how-title">How it works</h2>
+          <ol className="studio-how-steps">
+            <li>Open this page in an agent browser: ChatGPT&apos;s in-app browser, or Chrome with WebMCP enabled.</li>
+            <li>Optional: inspect your site to import its current state as a starting point.</li>
+            <li>Tell the agent the policy you want, or edit the contract by hand.</li>
+            <li>Review the findings. Undo anything you disagree with; the agent cannot undo.</li>
+            <li>Download agentmarkup.config.mjs, place it at your site repo root, add the one-line adapter from the Adapter setup tab, then build and deploy as usual.</li>
+          </ol>
+        </section>
           </GlassSurface>
 
           <GlassSurface
