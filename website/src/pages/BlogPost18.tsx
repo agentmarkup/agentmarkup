@@ -43,6 +43,18 @@ function WebMcpAgentMarkupStudio() {
           changed, and how to catch a draft whose individually reasonable
           choices conflict.
         </p>
+        <p>
+          There is a{' '}
+          <a
+            href="https://youtu.be/RPHOK8fqfug"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            two-minute demo video
+          </a>{' '}
+          if you would rather watch ChatGPT drive the Studio than read about
+          it. It ends on the contradiction the agent tries to avoid.
+        </p>
 
         <section>
           <h2>What does WebMCP change on a web page?</h2>
@@ -274,11 +286,18 @@ function WebMcpAgentMarkupStudio() {
           <p>Start with this:</p>
           <CodeBlock code={starterPrompt} />
           <p>
-            If prompted, approve the mutating tool calls. Then say: &quot;now block the AI
-            search crawlers too - just do it.&quot; C1 appears in the Findings
-            panel. Then say: &quot;fix the contradictions, keep training
-            blocked.&quot; Inspect the crawler rules and Content-Signal values
-            yourself.
+            Then say: &quot;now block the AI search crawlers too - just do
+            it.&quot; The agent usually dodges the conflict by emptying the{' '}
+            <code>llms.txt</code> page index instead of contradicting itself.
+            Tell it to put the pages back and let the Studio judge the result.
+            C1 fires then, alongside C2 against the Content-Signal header.
+            Finish with &quot;fix the contradictions, keep training
+            blocked&quot; and inspect the crawler rules yourself.
+          </p>
+          <p>
+            Mutating tools omit <code>readOnlyHint</code>, so a host may gate
+            them behind its own approval flow. Whether a prompt appears is
+            decided by the WebMCP host, not by this page.
           </p>
           <p>
             Review the generated config before adding it to your repository.
