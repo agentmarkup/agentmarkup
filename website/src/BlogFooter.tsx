@@ -2,12 +2,14 @@ import { author } from './data/editorial'
 import { getBlogFooterModel } from './data/blog-footer'
 import { formatEditorialDate } from './formatDate'
 import { EditorialMeta } from './ui/EditorialMeta'
+import PreferredSourceCta from './ui/PreferredSourceCta'
 
 function BlogFooter({ currentSlug }: { currentSlug: string }) {
   const { previousPost, nextPost, orientation, recommendedPosts } = getBlogFooterModel(currentSlug)
 
   return (
     <div className="blog-footer">
+      <PreferredSourceCta variant="article" />
       <div className="blog-outro-card">
         <section className="blog-author-card">
           <p className="blog-author-label">Written by</p>

@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState, useSyncExternalStore } fro
 import CookieConsent from './CookieConsent'
 import { GlassSurface } from './ui/GlassSurface'
 import { GitHubIcon } from './ui/GitHubIcon'
+import PreferredSourceCta from './ui/PreferredSourceCta'
 import { ReadingTools } from './ui/ReadingTools'
 import { SiteMoltenMetal } from './ui/SiteMoltenMetal'
 
@@ -323,6 +324,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           <div className="footer-brand">
             <a href="/" className="nav-brand"><img src="/favicon.png" alt="" width="28" height="28" />agentmarkup</a>
             <p>Make your website easier for people and AI to understand.</p>
+            <PreferredSourceCta variant="footer" />
           </div>
           <div className="footer-grid">
             <section className="footer-col" aria-labelledby="footer-product"><h2 id="footer-product">Product</h2><a href="/checker/">Website checker</a><a href="/security-scan/">Security scan</a><a href="/docs/audit/">Audit guide</a></section>
