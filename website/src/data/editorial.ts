@@ -44,6 +44,16 @@ export const editorialLabels = {
 
 export const blogPosts: BlogPostMeta[] = [
   {
+    slug: 'webmcp-agentmarkup-studio',
+    title: 'I built AgentMarkup Studio with WebMCP',
+    description: "AgentMarkup Studio uses WebMCP so a browser agent can edit a visible draft of a site's machine-readable surface while rules catch cross-surface contradictions.",
+    date: '2026-08-27',
+    readingTime: '9 min read',
+    audience: 'technical',
+    topic: 'implementation',
+    level: 'advanced',
+  },
+  {
     slug: 'agentmarkup-plugin-chatgpt-codex-claude-code',
     title: 'agentmarkup is now a plugin for ChatGPT, Codex and Claude Code',
     description: 'The agentmarkup plugin is now published for ChatGPT and Codex, with a guided workflow for installing, building and validating machine-readable website output.',

@@ -120,6 +120,11 @@
     "heading": "We ran 500 of America's biggest companies through an AI-crawler audit"
   },
   {
+    "route": "/blog/webmcp-agentmarkup-studio/",
+    "source": "src/pages/BlogPost18.tsx",
+    "heading": "I built AgentMarkup Studio with WebMCP"
+  },
+  {
     "route": "/blog/agentmarkup-plugin-chatgpt-codex-claude-code/",
     "source": "src/pages/BlogPost17.tsx",
     "heading": "agentmarkup is now a plugin for ChatGPT, Codex and Claude Code"

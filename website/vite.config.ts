@@ -306,6 +306,7 @@ export default defineConfig({
         'docs-audit': resolve(__dirname, 'docs/audit/index.html'),
         learn: resolve(__dirname, 'learn/index.html'),
         'blog-index': resolve(__dirname, 'blog/index.html'),
+        'blog-post-18': resolve(__dirname, 'blog/webmcp-agentmarkup-studio/index.html'),
         'blog-ai-crawler-audit-500-companies': resolve(__dirname, 'blog/ai-crawler-audit-500-companies/index.html'),
         'blog-post-17': resolve(__dirname, 'blog/agentmarkup-plugin-chatgpt-codex-claude-code/index.html'),
         'blog-post-15': resolve(__dirname, 'blog/soft-404-ai-discoverability-tools/index.html'),
@@ -341,6 +342,7 @@ export default defineConfig({
         'prerender-docs-audit': resolve(__dirname, 'src/entries/audit.tsx'),
         'prerender-learn': resolve(__dirname, 'src/entries/learn.tsx'),
         'prerender-blog-index': resolve(__dirname, 'src/entries/blog-index.tsx'),
+        'prerender-blog-post-18': resolve(__dirname, 'src/entries/blog-post-18.tsx'),
         'prerender-blog-ai-crawler-audit-500-companies': resolve(__dirname, 'src/entries/blog-post-14.tsx'),
         'prerender-blog-post-17': resolve(__dirname, 'src/entries/blog-post-17.tsx'),
         'prerender-blog-post-15': resolve(__dirname, 'src/entries/blog-post-15.tsx'),
@@ -421,6 +423,7 @@ export default defineConfig({
           {
             title: 'Blog',
             entries: [
+              { title: 'I built AgentMarkup Studio with WebMCP', url: '/blog/webmcp-agentmarkup-studio/', description: "AgentMarkup Studio uses WebMCP so a browser agent can edit a visible draft of a site's machine-readable surface while rules catch cross-surface contradictions" },
               { title: 'agentmarkup is now a plugin for ChatGPT, Codex and Claude Code', url: '/blog/agentmarkup-plugin-chatgpt-codex-claude-code/', description: 'The agentmarkup plugin is published in OpenAI Plugin Directory for ChatGPT and Codex, installable in Claude Code from the repository marketplace, and pending review in Anthropic community directory' },
               { title: 'agentmarkup.dev served a soft-404. Our own tooling missed it.', url: '/blog/soft-404-ai-discoverability-tools/', description: 'Why AI-discoverability audits and scores are not enough, what our own tools missed, and how build-time generation turns findings into site changes and CI gates' },
               { title: "We audited 500 of America's biggest companies for AI readiness", url: '/blog/ai-crawler-audit-500-companies/', description: 'We ran 500 of the largest US public companies through @agentmarkup/audit: most serve readable HTML, but 46% have no usable structured data, 86% have no llms.txt, and seven serve crawlers a blank page' },
