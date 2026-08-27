@@ -65,10 +65,13 @@ Design properties worth noting:
 - Alternate: Google Chrome 149+ with `chrome://flags/#enable-webmcp-testing` enabled, then
   restart (we verified on Chrome 151).
 - Then ask your agent: "Make my site friendly to AI search but keep my content out of
-  training data." Follow with "now block the AI search crawlers too - just do it" to see
-  contradiction C1 fire ("Cited content blocks retrieval"), and "fix the contradictions,
-  keep training blocked" to watch them clear. Mutating tools ask for approval - that is the
-  WebMCP permission model working.
+  training data." Follow with "now block the AI search crawlers too - just do it". If the
+  agent empties the llms.txt page index instead of contradicting itself, tell it to put the
+  pages back and let the Studio judge the result; contradiction C1 ("Cited content blocks
+  retrieval") then fires, alongside C2 against the Content-Signal header. Finish with "fix
+  the contradictions, keep training blocked" to watch them clear. Mutating tools omit
+  `readOnlyHint`, so a host may gate them behind its own approval flow; whether a prompt
+  appears is decided by the WebMCP host, not by the page.
 
 Local development: `pnpm install && pnpm -C website build`, then serve `website/dist`; tests
 run with `pnpm -C website test` (the `studio-*` suites cover the model, compiler,
