@@ -359,4 +359,46 @@ describe('worker JSON error envelope', () => {
     expect(payload.code).toBe('invalid_request')
     expect(payload.error).toBeTruthy()
   })
+
+  it('maps every rejected URL to 400 invalid_request with the generic message, never a 500', async () => {
+    for (const url of [
+      'http://localhost/',
+      'https://127.0.0.1/',
+      'https://[::1]/',
+      'https://10.0.0.1/',
+      'ftp://example.com/',
+      'https://user:secret@example.com/',
+      'https://example.com:8080/',
+      'https://--------/',
+      'not a url at all',
+    ]) {
+      const response = await worker.fetch(
+        request(`/api/check?url=${encodeURIComponent(url)}`),
+        makeEnv()
+      )
+
+      expect(response.status).toBe(400)
+      expect(await response.json()).toEqual({
+        error: 'Enter a public http:// or https:// website URL.',
+        code: 'invalid_request',
+      })
+    }
+  })
+
+  it('maps an unreadable POST body to 400 invalid_request', async () => {
+    const response = await worker.fetch(
+      request('/api/check', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: '{not json',
+      }),
+      makeEnv()
+    )
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({
+      error: 'Enter a public http:// or https:// website URL.',
+      code: 'invalid_request',
+    })
+  })
 })

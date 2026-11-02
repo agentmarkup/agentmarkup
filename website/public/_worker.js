@@ -41,9 +41,69 @@ const CHECKS_SCHEMA_STATEMENTS = [
 /** A path no real route should claim, used to observe not-found handling. */
 const SOFT_404_PROBE_PATH = '/agentmarkup-probe-404-does-not-exist-9f3a2c';
 
+/** What an HTML client sends. The homepage and sample page keep it so content checks see what a browser sees. */
+const DEFAULT_ACCEPT = 'text/html,text/plain,application/xml,text/xml;q=0.9,*/*;q=0.1';
+/** The not-found probe only: markdown-first, so a compliant negotiator can answer an agent-readable 404 body. */
+const PROBE_ACCEPT = 'text/markdown, application/json;q=0.9, text/html;q=0.8, */*;q=0.1';
+
 const FETCH_TIMEOUT_MS = 10_000;
 const MAX_RESPONSE_BYTES = 5 * 1024 * 1024;
 const MAX_REDIRECTS = 5;
+const SAMPLE_PAGE_MAX_REDIRECTS = 3;
+const SECONDARY_MAX_REDIRECTS = 2;
+// Hard stop on outbound fetch() calls per check. The per-resource redirect caps
+// (homepage 5, sample page 3, five secondaries at 2, probe 0) already bound a
+// run to 6 + 4 + 5 x 3 + 1 = 26 calls, so this is a safety net, not the
+// working limit. CHECKER_MAX_FETCHES in the env can lower it, never raise it.
+const MAX_FETCHES_PER_CHECK = 30;
+// At most this many in-flight requests on the target at once. Lower it to 3 if
+// a pilot shows 5xx/429 clusters on cheap shared hosts.
+const MAX_CONCURRENT_FETCHES = 4;
+const CHECK_RESOURCE_KEYS = [
+  'homepage',
+  'homepageMarkdown',
+  'llmsTxt',
+  'robotsTxt',
+  'sitemap',
+  'notFoundProbe',
+  'samplePage',
+  'samplePageMarkdown',
+];
+// Response headers copied onto each checker resource. An allowlist, never the
+// whole header map: set-cookie must not enter the payload or the D1 cache.
+// `location` only ever appears on a 3xx that the probe reports as its final
+// answer (it follows no redirects).
+const DISCOVERY_HEADER_NAMES = [
+  'link',
+  'vary',
+  'cf-mitigated',
+  'content-signal',
+  'x-robots-tag',
+  'last-modified',
+  'content-length',
+  'www-authenticate',
+  'location',
+];
+const DISCOVERY_HEADER_VALUE_MAX_CHARS = 512;
+// Bot-challenge detection, identical to classifyResource in @agentmarkup/core:
+// a `cf-mitigated` header containing "challenge", or one of these markers in
+// the first 20 KB of a 401/403/429/503 body. The list is published; additions
+// bump the score catalog's MINOR version.
+const CHALLENGE_STATUSES = [401, 403, 429, 503];
+const CHALLENGE_SCAN_CHARS = 20 * 1024;
+const CHALLENGE_MARKERS = [
+  '__cf_chl',
+  'challenge-platform',
+  'cf-browser-verification',
+  'Just a moment...',
+  'Attention Required!',
+  'Enable JavaScript and cookies to continue',
+  'Pardon Our Interruption',
+  '_Incapsula_Resource',
+  'captcha-delivery',
+  'px-captcha',
+];
+const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
 const IP_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const IP_RATE_LIMIT_MAX = 10;
 const TARGET_CACHE_TTL_MS = 3 * 60 * 1000;
@@ -89,8 +149,24 @@ const SECURITY_HEADERS = {
 
 let checksSchemaReadyPromise;
 let checksSchemaUnavailable = false;
+// Retention DELETEs run at most once per CLEANUP_INTERVAL_MS per isolate
+// instead of three statements on every request, cache hits included.
+let lastCleanupAt = 0;
 
 const TOTAL_TIMEOUT_MS = 25000;
+
+/**
+ * A rejected caller input: empty, not http(s), credentials, a blocked host, a
+ * non-standard port, or an unreadable request body. The check handler maps
+ * exactly this class to HTTP 400; any other exception is a checker bug and
+ * surfaces as HTTP 500 with a server-side log line.
+ */
+class InvalidUrlError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'InvalidUrlError';
+  }
+}
 
 export default {
   async fetch(request, env) {
@@ -144,6 +220,10 @@ export default {
 };
 
 async function handleCheckRequest(request, url, env, checkStartTime) {
+  // One budget per request: outbound fetch() calls (hard stop at
+  // MAX_FETCHES_PER_CHECK) and D1 statements, both reported in `fetchSummary`.
+  const budget = { fetches: 0, maxFetches: getMaxFetches(env), d1: 0 };
+
   try {
     const { input, turnstileToken } = await readCheckRequest(request, url);
     const normalized = normalizePublicUrl(input);
@@ -153,7 +233,8 @@ async function handleCheckRequest(request, url, env, checkStartTime) {
       request,
       normalized,
       checkedAt,
-      turnstileToken
+      turnstileToken,
+      budget
     );
     if (protection.response) {
       return protection.response;
@@ -162,120 +243,61 @@ async function handleCheckRequest(request, url, env, checkStartTime) {
     const cachedResponse = await readCachedResponse(
       env,
       normalized,
-      protection.metadata
+      protection.metadata,
+      budget
     );
     if (cachedResponse) {
       return json(cachedResponse, 200, rateLimitHeaders(protection.metadata));
     }
 
-    const homepage = await fetchText(normalized, checkStartTime);
-    const targetUrl = toSiteRootUrl(homepage.finalUrl || normalized);
-    const homepageMarkdownUrl =
-      (homepage.ok && homepage.body
-        ? findMarkdownAlternateUrl(homepage.body, targetUrl)
-        : null) ?? buildMarkdownUrl(targetUrl);
-    const homepageMarkdown = homepageMarkdownUrl
-      ? await fetchText(homepageMarkdownUrl, checkStartTime)
-      : null;
-    const llmsTxt = await fetchText(new URL('/llms.txt', targetUrl).toString(), checkStartTime);
-    const robotsTxt = await fetchText(new URL('/robots.txt', targetUrl).toString(), checkStartTime);
+    const evidence = await fetchCheckEvidence(normalized, checkStartTime, budget);
+    const { targetUrl } = evidence;
+    const fetchSummary = buildFetchSummary(evidence, checkStartTime, budget);
 
-    let samplePage = null;
-    let samplePageMarkdown = null;
-
-    if (homepage.ok && homepage.body) {
-      const samplePageUrl = findFirstInternalLink(
-        homepage.body,
-        homepage.finalUrl || targetUrl
-      );
-      if (samplePageUrl) {
-        samplePage = await fetchText(samplePageUrl, checkStartTime);
-        const sampleMarkdownUrl =
-          (samplePage.ok && samplePage.body
-            ? findMarkdownAlternateUrl(
-                samplePage.body,
-                samplePage.finalUrl || samplePageUrl
-              )
-            : null) ?? buildMarkdownUrl(samplePage.finalUrl || samplePageUrl);
-        samplePageMarkdown = sampleMarkdownUrl
-          ? await fetchText(sampleMarkdownUrl, checkStartTime)
-          : null;
-      }
-    }
-
-    let sitemapUrl = null;
-    let sitemapSource = null;
-
-    if (robotsTxt.ok && robotsTxt.body) {
-      const discoveredSitemap = findSitemapUrl(robotsTxt.body, targetUrl);
-      if (discoveredSitemap) {
-        sitemapUrl = discoveredSitemap;
-        sitemapSource = 'robots';
-      }
-    }
-
-    if (!sitemapUrl) {
-      sitemapUrl = new URL('/sitemap.xml', targetUrl).toString();
-      sitemapSource = 'default';
-    }
-
-    // One extra request to a path no real route should claim, so the report can
-    // tell a real 404 from a soft-404 that makes every path look like it exists.
-    // Deliberately does not follow redirects, for two reasons. Correctness: a
-    // missing path that 302s to the homepage is its own distinct behaviour, and
-    // following the hop would report it as a soft-404 instead of a redirect.
-    // Budget: a followed chain costs up to MAX_REDIRECTS extra subrequests, and
-    // the free Workers tier allows 50 per request.
-    const notFoundProbe = await fetchText(
-      new URL(SOFT_404_PROBE_PATH, targetUrl).toString(),
-      checkStartTime,
-      { maxRedirects: 0 }
-    );
-
-    const sitemap = sitemapUrl ? await fetchText(sitemapUrl, checkStartTime) : null;
-    const payload = {
-      targetUrl,
-      origin: new URL(targetUrl).origin,
-      fetchedAt: checkedAt,
-      normalizedFrom: input.trim() && input.trim() !== targetUrl ? input.trim() : null,
-      homepage,
-      homepageMarkdown,
-      llmsTxt,
-      robotsTxt,
-      sitemap,
-      sitemapUrl,
-      sitemapSource,
-      notFoundProbe,
-      samplePage,
-      samplePageMarkdown,
-      cache: {
-        hit: false,
-        cachedAt: null,
-        expiresAt: null,
+    const storage = await persistCheckedUrl(
+      env,
+      {
+        input,
+        normalized: targetUrl,
+        origin: new URL(targetUrl).origin,
+        checkedAt,
+        homepage: evidence.homepage,
+        llmsTxt: evidence.llmsTxt,
+        robotsTxt: evidence.robotsTxt,
+        sitemap: evidence.sitemap,
       },
-      protection: protection.metadata,
-    };
+      budget
+    );
+    fetchSummary.d1Statements = budget.d1;
 
-    const storage = await persistCheckedUrl(env, {
-      input,
-      normalized: targetUrl,
-      origin: new URL(targetUrl).origin,
-      checkedAt,
-      homepage,
-      llmsTxt,
-      robotsTxt,
-      sitemap,
-    });
+    // Only a complete run is cached (see cacheCheckResponse), so a partial run
+    // must not advertise a cache lifetime it does not have.
+    const cacheable = fetchSummary.analysisStatus === 'complete';
     const cacheExpiresAt = new Date(
       Date.parse(checkedAt) + TARGET_CACHE_TTL_MS
     ).toISOString();
     const responseBody = {
-      ...payload,
+      targetUrl,
+      origin: new URL(targetUrl).origin,
+      fetchedAt: checkedAt,
+      normalizedFrom: input.trim() && input.trim() !== targetUrl ? input.trim() : null,
+      homepage: evidence.homepage,
+      homepageMarkdown: evidence.homepageMarkdown,
+      llmsTxt: evidence.llmsTxt,
+      robotsTxt: evidence.robotsTxt,
+      sitemap: evidence.sitemap,
+      sitemapUrl: evidence.sitemapUrl,
+      sitemapSource: evidence.sitemapSource,
+      notFoundProbe: evidence.notFoundProbe,
+      samplePage: evidence.samplePage,
+      samplePageMarkdown: evidence.samplePageMarkdown,
+      fetchSummary,
       cache: {
         hit: false,
-        cachedAt: checkedAt,
-        expiresAt: cacheExpiresAt,
+        cachedAt: cacheable ? checkedAt : null,
+        expiresAt: cacheable ? cacheExpiresAt : null,
       },
+      protection: protection.metadata,
       storage,
     };
 
@@ -285,19 +307,171 @@ async function handleCheckRequest(request, url, env, checkStartTime) {
       targetUrl,
       responseBody,
       checkedAt,
-      cacheExpiresAt
+      cacheExpiresAt,
+      budget
     );
 
     return json(responseBody, 200, rateLimitHeaders(protection.metadata));
   } catch (error) {
+    // Only a rejected input is the caller's fault. Anything else is a bug in
+    // the checker and must surface as a 500 with a server-side log line, not
+    // hide behind "Enter a public URL".
+    if (error instanceof InvalidUrlError) {
+      return jsonError('invalid_request', error.message, 400);
+    }
+
+    console.error('checker request failed', error);
     return jsonError(
-      'invalid_request',
-      error instanceof Error
-        ? error.message
-        : 'Enter a public http:// or https:// website URL.',
-      400
+      'checker_error',
+      'The checker hit an internal error. Try again in a moment.',
+      500
     );
   }
+}
+
+/**
+ * The fetch plan. Only the homepage is a hard prerequisite: it decides the
+ * final origin, the markdown alternate link and the sample page. robots.txt
+ * gates the sitemap URL and the sample page gates its markdown mirror; those
+ * two are chained. Everything else runs as one wave through a semaphore of
+ * MAX_CONCURRENT_FETCHES, robots submitted first so the chained sitemap starts
+ * earliest, so the critical path is about three fetch slots instead of eight
+ * sequential awaits. `fetchText` never rejects, so Promise.all is safe.
+ */
+async function fetchCheckEvidence(normalized, checkStartTime, budget) {
+  const homepage = await fetchText(
+    normalized,
+    checkStartTime,
+    checkerFetchOptions(budget, { maxRedirects: MAX_REDIRECTS })
+  );
+  const targetUrl = toSiteRootUrl(homepage.finalUrl || normalized);
+  // Same-origin judgements use the final URL: a www redirect changes the origin.
+  const homepageBase = homepage.finalUrl || targetUrl;
+  const hasHtml = homepage.ok && Boolean(homepage.body);
+  const homepageMarkdownUrl =
+    (hasHtml ? findMarkdownAlternateUrl(homepage.body, homepageBase) : null) ??
+    buildMarkdownUrl(targetUrl);
+  const samplePageUrl = hasHtml
+    ? findFirstInternalLink(homepage.body, homepageBase)
+    : null;
+
+  const limit = createLimiter(MAX_CONCURRENT_FETCHES);
+  const secondary = checkerFetchOptions(budget, {
+    maxRedirects: SECONDARY_MAX_REDIRECTS,
+  });
+  const run = (resourceUrl, options) =>
+    limit(() => fetchText(resourceUrl, checkStartTime, options));
+
+  const robotsPromise = run(new URL('/robots.txt', targetUrl).toString(), secondary);
+  // One extra request to a path no real route should claim, so the report can
+  // tell a real 404 from a soft-404 that makes every path look like it exists.
+  // It follows no redirects: a missing path that 302s to the homepage is its
+  // own distinct behaviour, reported as the 3xx it answered with its Location.
+  const probePromise = run(
+    new URL(SOFT_404_PROBE_PATH, targetUrl).toString(),
+    checkerFetchOptions(budget, { maxRedirects: 0, accept: PROBE_ACCEPT })
+  );
+  const llmsPromise = run(new URL('/llms.txt', targetUrl).toString(), secondary);
+  const homepageMarkdownPromise = run(homepageMarkdownUrl, secondary);
+  const samplePromise = samplePageUrl
+    ? run(
+        samplePageUrl,
+        checkerFetchOptions(budget, { maxRedirects: SAMPLE_PAGE_MAX_REDIRECTS })
+      )
+    : Promise.resolve(null);
+  const sitemapPromise = robotsPromise.then((robotsTxt) => {
+    const declared =
+      robotsTxt.ok && robotsTxt.body ? findSitemapUrl(robotsTxt.body, targetUrl) : null;
+    const sitemapUrl = declared ?? new URL('/sitemap.xml', targetUrl).toString();
+    return run(sitemapUrl, secondary).then((sitemap) => ({
+      sitemap,
+      sitemapUrl,
+      sitemapSource: declared ? 'robots' : 'default',
+    }));
+  });
+  const sampleMarkdownPromise = samplePromise.then((samplePage) => {
+    if (!samplePage) {
+      return null;
+    }
+    const base = samplePage.finalUrl || samplePageUrl;
+    const sampleMarkdownUrl =
+      (samplePage.ok && samplePage.body
+        ? findMarkdownAlternateUrl(samplePage.body, base)
+        : null) ?? buildMarkdownUrl(base);
+    return run(sampleMarkdownUrl, secondary);
+  });
+
+  const [
+    robotsTxt,
+    notFoundProbe,
+    llmsTxt,
+    homepageMarkdown,
+    samplePage,
+    sitemapResult,
+    samplePageMarkdown,
+  ] = await Promise.all([
+    robotsPromise,
+    probePromise,
+    llmsPromise,
+    homepageMarkdownPromise,
+    samplePromise,
+    sitemapPromise,
+    sampleMarkdownPromise,
+  ]);
+
+  return {
+    targetUrl,
+    homepage,
+    homepageMarkdown,
+    llmsTxt,
+    robotsTxt,
+    sitemap: sitemapResult.sitemap,
+    sitemapUrl: sitemapResult.sitemapUrl,
+    sitemapSource: sitemapResult.sitemapSource,
+    notFoundProbe,
+    samplePage,
+    samplePageMarkdown,
+    samplePageUrl,
+  };
+}
+
+/**
+ * `complete` when every fetched resource finished, `partial` when at least one
+ * is unverified (timed out, budget-stopped, transport error, 429/5xx), `blocked`
+ * when the homepage itself is unverified. `unverified` lists payload keys so a
+ * client can name what to re-run; `elapsedMs` is the fetch wall-clock.
+ */
+function buildFetchSummary(evidence, checkStartTime, budget) {
+  const unverified = [];
+  let hops = 0;
+
+  for (const key of CHECK_RESOURCE_KEYS) {
+    const resource = evidence[key];
+    if (!resource) {
+      continue;
+    }
+    hops += resource.hops ?? 0;
+    if (resource.outcome === 'unverified') {
+      unverified.push(key);
+    }
+  }
+
+  const analysisStatus =
+    evidence.homepage.outcome === 'unverified'
+      ? 'blocked'
+      : unverified.length > 0
+        ? 'partial'
+        : 'complete';
+
+  return {
+    analysisStatus,
+    unverified,
+    elapsedMs: Date.now() - checkStartTime,
+    fetches: budget.fetches,
+    hops,
+    d1Statements: budget.d1,
+    samplePageUrl: evidence.samplePageUrl,
+  };
 }
 
 async function handleSecurityScanRequest(request, url, env, checkStartTime) {
@@ -534,10 +708,10 @@ async function readCheckRequest(request, url) {
       };
     }
   } catch {
-    throw new Error('Enter a public http:// or https:// website URL.');
+    throw new InvalidUrlError('Enter a public http:// or https:// website URL.');
   }
 
-  throw new Error('Enter a public http:// or https:// website URL.');
+  throw new InvalidUrlError('Enter a public http:// or https:// website URL.');
 }
 
 async function applyCheckerProtection(
@@ -545,7 +719,8 @@ async function applyCheckerProtection(
   request,
   normalized,
   checkedAt,
-  turnstileToken
+  turnstileToken,
+  budget
 ) {
   const metadata = {
     rateLimitWindowSeconds: Math.floor(IP_RATE_LIMIT_WINDOW_MS / 1000),
@@ -562,7 +737,7 @@ async function applyCheckerProtection(
     };
   }
 
-  const schemaReady = await ensureChecksSchema(env);
+  const schemaReady = await ensureChecksSchema(env, budget);
   if (!schemaReady) {
     return {
       metadata,
@@ -570,10 +745,10 @@ async function applyCheckerProtection(
     };
   }
 
-  await cleanupCheckerStorage(env, checkedAt);
+  await cleanupCheckerStorage(env, checkedAt, budget);
 
   const ipHash = await hashClientIp(readClientIp(request));
-  const recentState = await getRecentIpState(env, ipHash, checkedAt);
+  const recentState = await getRecentIpState(env, ipHash, checkedAt, budget);
   const turnstileConfig = getTurnstileConfig(env);
 
   metadata.turnstileThreshold = turnstileConfig.enabled
@@ -627,12 +802,16 @@ async function applyCheckerProtection(
     metadata.turnstileVerified = true;
   }
 
-  await logCheckerRequestEvent(env, {
-    ipHash,
-    normalized,
-    requestedAt: checkedAt,
-    challengePassed: metadata.turnstileVerified,
-  });
+  await logCheckerRequestEvent(
+    env,
+    {
+      ipHash,
+      normalized,
+      requestedAt: checkedAt,
+      challengePassed: metadata.turnstileVerified,
+    },
+    budget
+  );
 
   return {
     metadata: {
@@ -712,10 +891,11 @@ async function verifyTurnstileToken(env, request, token) {
   };
 }
 
-async function getRecentIpState(env, ipHash, checkedAt) {
+async function getRecentIpState(env, ipHash, checkedAt, budget) {
   const windowStart = new Date(
     Date.parse(checkedAt) - IP_RATE_LIMIT_WINDOW_MS
   ).toISOString();
+  countD1(budget, 1);
   const row = await env.CHECKS_DB.prepare(
     `
       SELECT
@@ -738,7 +918,8 @@ async function getRecentIpState(env, ipHash, checkedAt) {
   };
 }
 
-async function logCheckerRequestEvent(env, payload) {
+async function logCheckerRequestEvent(env, payload, budget) {
+  countD1(budget, 1);
   await env.CHECKS_DB.prepare(
     `
       INSERT INTO checker_request_events (
@@ -759,7 +940,14 @@ async function logCheckerRequestEvent(env, payload) {
     .run();
 }
 
-async function cleanupCheckerStorage(env, checkedAt) {
+async function cleanupCheckerStorage(env, checkedAt, budget) {
+  const now = Date.now();
+  if (lastCleanupAt && now - lastCleanupAt < CLEANUP_INTERVAL_MS) {
+    return;
+  }
+  lastCleanupAt = now;
+  countD1(budget, 3);
+
   const requestCutoff = new Date(
     Date.parse(checkedAt) - REQUEST_EVENT_RETENTION_MS
   ).toISOString();
@@ -780,16 +968,17 @@ async function cleanupCheckerStorage(env, checkedAt) {
   ]);
 }
 
-async function readCachedResponse(env, normalized, protectionMetadata) {
+async function readCachedResponse(env, normalized, protectionMetadata, budget) {
   if (!env?.CHECKS_DB) {
     return null;
   }
 
-  if (!(await ensureChecksSchema(env))) {
+  if (!(await ensureChecksSchema(env, budget))) {
     return null;
   }
 
   const now = new Date().toISOString();
+  countD1(budget, 1);
   const row = await env.CHECKS_DB.prepare(
     `
       SELECT response_json, cached_at, expires_at
@@ -822,6 +1011,7 @@ async function readCachedResponse(env, normalized, protectionMetadata) {
       protection: protectionMetadata,
     };
   } catch {
+    countD1(budget, 1);
     await env.CHECKS_DB.prepare(
       `DELETE FROM checker_cache WHERE normalized_url = ?`
     )
@@ -837,13 +1027,22 @@ async function cacheCheckResponse(
   targetUrl,
   payload,
   checkedAt,
-  expiresAt
+  expiresAt,
+  budget
 ) {
   if (!env?.CHECKS_DB) {
     return;
   }
 
-  if (!(await ensureChecksSchema(env))) {
+  // Only a complete run is cached. A payload whose fetchSummary says partial
+  // or blocked carries a timed-out resource that must not be pinned for every
+  // viewer of this target for the next three minutes. Payloads without a
+  // fetchSummary (the security scan) are cached as before.
+  if (payload.fetchSummary && payload.fetchSummary.analysisStatus !== 'complete') {
+    return;
+  }
+
+  if (!(await ensureChecksSchema(env, budget))) {
     return;
   }
 
@@ -859,6 +1058,7 @@ async function cacheCheckResponse(
   }
 
   const keys = targetUrl === normalized ? [normalized] : [normalized, targetUrl];
+  countD1(budget, keys.length);
 
   try {
     await env.CHECKS_DB.batch(
@@ -881,7 +1081,7 @@ async function cacheCheckResponse(
   }
 }
 
-async function persistCheckedUrl(env, payload) {
+async function persistCheckedUrl(env, payload, budget) {
   if (!env?.CHECKS_DB) {
     return {
       persisted: false,
@@ -890,13 +1090,14 @@ async function persistCheckedUrl(env, payload) {
   }
 
   try {
-    if (!(await ensureChecksSchema(env))) {
+    if (!(await ensureChecksSchema(env, budget))) {
       return {
         persisted: false,
         reason: 'schema-unavailable',
       };
     }
 
+    countD1(budget, 1);
     await env.CHECKS_DB.prepare(
       `
         INSERT INTO checker_checks (
@@ -936,12 +1137,13 @@ async function persistCheckedUrl(env, payload) {
   }
 }
 
-async function ensureChecksSchema(env) {
+async function ensureChecksSchema(env, budget) {
   if (!env?.CHECKS_DB || checksSchemaUnavailable) {
     return false;
   }
 
   if (!checksSchemaReadyPromise) {
+    countD1(budget, CHECKS_SCHEMA_STATEMENTS.length);
     checksSchemaReadyPromise = env.CHECKS_DB.batch(
       CHECKS_SCHEMA_STATEMENTS.map((statement) =>
         env.CHECKS_DB.prepare(statement)
@@ -960,7 +1162,7 @@ async function ensureChecksSchema(env) {
 function normalizePublicUrl(value) {
   const trimmed = value.trim();
   if (!trimmed) {
-    throw new Error('Enter a public http:// or https:// website URL.');
+    throw new InvalidUrlError('Enter a public http:// or https:// website URL.');
   }
 
   try {
@@ -995,7 +1197,7 @@ function normalizePublicUrl(value) {
 
     return parsed.toString();
   } catch {
-    throw new Error('Enter a public http:// or https:// website URL.');
+    throw new InvalidUrlError('Enter a public http:// or https:// website URL.');
   }
 }
 
@@ -1185,10 +1387,34 @@ function isBlockedIpv6(groups) {
 }
 
 async function fetchText(targetUrl, checkStartTime, options = {}) {
-  const invocationDeadline = Date.now() + (options.timeoutMs ?? FETCH_TIMEOUT_MS);
-  const overallStartTime = checkStartTime || Date.now();
+  const startedAt = Date.now();
+  const invocationDeadline = startedAt + (options.timeoutMs ?? FETCH_TIMEOUT_MS);
+  const overallStartTime = checkStartTime || startedAt;
   const capturedCookies = new Map();
   let cookieCaptureSupported = options.captureHeaders ? null : false;
+  // Per-resource accounting: redirects followed and whether a request was ever
+  // sent. A budget stop before the first request marks the resource `skipped`.
+  const trace = { startedAt, hops: 0, started: false };
+  const finish = (resource, response = null) =>
+    finalizeFetchedResource(
+      response
+        ? withCapturedResponseMetadata(
+            resource,
+            response,
+            options.captureHeaders,
+            capturedCookies,
+            cookieCaptureSupported
+          )
+        : withEmptyCapturedResponseMetadata(
+            resource,
+            options.captureHeaders,
+            capturedCookies,
+            cookieCaptureSupported
+          ),
+      response,
+      options,
+      trace
+    );
 
   try {
     let currentUrl = targetUrl;
@@ -1196,11 +1422,15 @@ async function fetchText(targetUrl, checkStartTime, options = {}) {
     const maxRedirects = options.maxRedirects ?? MAX_REDIRECTS;
 
     for (let redirectCount = 0; redirectCount <= maxRedirects; redirectCount += 1) {
+      trace.hops = redirectCount;
       const remainingGlobalTime =
         TOTAL_TIMEOUT_MS - (Date.now() - overallStartTime);
+      if (remainingGlobalTime <= 0) {
+        throw new Error('Checker time budget exhausted.');
+      }
       const remainingInvocationTime = invocationDeadline - Date.now();
-      if (remainingGlobalTime <= 0 || remainingInvocationTime <= 0) {
-        throw new Error('Overall checker timeout exceeded.');
+      if (remainingInvocationTime <= 0) {
+        throw new Error('Request timed out.');
       }
 
       const parsed = new URL(currentUrl);
@@ -1211,6 +1441,16 @@ async function fetchText(targetUrl, checkStartTime, options = {}) {
       if (parsed.port && parsed.port !== '80' && parsed.port !== '443') {
         throw new Error('Request was blocked by checker safety rules.');
       }
+
+      // Counted only when a request is actually sent, so fetchSummary.fetches
+      // equals the number of fetch() calls made.
+      if (options.budget) {
+        if (options.budget.fetches >= options.budget.maxFetches) {
+          throw new Error('Checker request budget exhausted.');
+        }
+        options.budget.fetches += 1;
+      }
+      trace.started = true;
 
       const timeoutForThisFetch = Math.min(
         remainingInvocationTime,
@@ -1223,7 +1463,7 @@ async function fetchText(targetUrl, checkStartTime, options = {}) {
           signal,
           headers: {
             'user-agent': CHECKER_USER_AGENT,
-            accept: 'text/html,text/plain,application/xml,text/xml;q=0.9,*/*;q=0.1',
+            accept: options.accept ?? DEFAULT_ACCEPT,
           },
         });
         if (options.captureHeaders) {
@@ -1237,7 +1477,7 @@ async function fetchText(targetUrl, checkStartTime, options = {}) {
         if (response.status >= 300 && response.status < 400) {
           const location = response.headers.get('location');
           if (!location) {
-            return withCapturedResponseMetadata(
+            return finish(
               {
                 requestedUrl: targetUrl,
                 finalUrl: currentUrl,
@@ -1248,10 +1488,27 @@ async function fetchText(targetUrl, checkStartTime, options = {}) {
                 xRobotsTag: response.headers.get('x-robots-tag'),
                 error: 'Redirect response had no Location header.',
               },
-              response,
-              options.captureHeaders,
-              capturedCookies,
-              cookieCaptureSupported
+              response
+            );
+          }
+
+          // A resource that follows no redirects (the not-found probe) reports
+          // the 3xx it received as its final, completed answer, Location
+          // included through the discovery headers, rather than the
+          // "Too many redirects" failure a capped chain gets.
+          if (maxRedirects === 0) {
+            await cancelResponseBody(response);
+            return finish(
+              {
+                requestedUrl: targetUrl,
+                finalUrl: currentUrl,
+                status: response.status,
+                ok: false,
+                contentType: response.headers.get('content-type'),
+                body: null,
+                xRobotsTag: response.headers.get('x-robots-tag'),
+              },
+              response
             );
           }
 
@@ -1270,7 +1527,7 @@ async function fetchText(targetUrl, checkStartTime, options = {}) {
               nextUrl.protocol !== 'https:')
           ) {
             await cancelResponseBody(response);
-            return {
+            return finish({
               requestedUrl: targetUrl,
               finalUrl: currentUrl,
               status: 0,
@@ -1279,7 +1536,7 @@ async function fetchText(targetUrl, checkStartTime, options = {}) {
               body: null,
               xRobotsTag: null,
               error: 'Redirected off the scanned site.',
-            };
+            });
           }
 
           await cancelResponseBody(response);
@@ -1292,9 +1549,12 @@ async function fetchText(targetUrl, checkStartTime, options = {}) {
         // final URL, and captured headers, so header and transport checks can
         // still run on a large or slow homepage (partial results).
         let body = null;
+        let bodyBytes;
         let bodyError;
         try {
-          body = await readBoundedText(response);
+          const read = await readBoundedBody(response);
+          body = read.text;
+          bodyBytes = read.bytes;
         } catch (error) {
           bodyError = mapFetchError(error);
         }
@@ -1307,50 +1567,193 @@ async function fetchText(targetUrl, checkStartTime, options = {}) {
           body,
           xRobotsTag: response.headers.get('x-robots-tag'),
           ...(bodyError ? { error: bodyError } : {}),
+          ...(bodyBytes === undefined ? {} : { bodyBytes }),
         };
-        return withCapturedResponseMetadata(
-          result,
-          response,
-          options.captureHeaders,
-          capturedCookies,
-          cookieCaptureSupported
-        );
+        return finish(result, response);
       } finally {
         cancel();
       }
     }
 
-    return withEmptyCapturedResponseMetadata(
-      {
-        requestedUrl: targetUrl,
-        finalUrl: currentUrl,
-        status: 0,
-        ok: false,
-        contentType: null,
-        body: null,
-        xRobotsTag: null,
-        error: 'Too many redirects.',
-      },
-      options.captureHeaders,
-      capturedCookies,
-      cookieCaptureSupported
-    );
+    return finish({
+      requestedUrl: targetUrl,
+      finalUrl: currentUrl,
+      status: 0,
+      ok: false,
+      contentType: null,
+      body: null,
+      xRobotsTag: null,
+      error: 'Too many redirects.',
+    });
   } catch (error) {
-    return withEmptyCapturedResponseMetadata(
-      {
-        requestedUrl: targetUrl,
-        finalUrl: targetUrl,
-        status: 0,
-        ok: false,
-        contentType: null,
-        body: null,
-        xRobotsTag: null,
-        error: mapFetchError(error),
-      },
-      options.captureHeaders,
-      capturedCookies,
-      cookieCaptureSupported
-    );
+    // An abort that fired because the 25 s check budget ran out, not the
+    // per-request 10 s, is the check's fault, not the target's: name it.
+    const mapped = mapFetchError(error);
+    const starved =
+      mapped === 'Request timed out.' &&
+      TOTAL_TIMEOUT_MS - (Date.now() - overallStartTime) <= 0;
+    return finish({
+      requestedUrl: targetUrl,
+      finalUrl: targetUrl,
+      status: 0,
+      ok: false,
+      contentType: null,
+      body: null,
+      xRobotsTag: null,
+      error: starved ? 'Checker time budget exhausted.' : mapped,
+    });
+  }
+}
+
+/**
+ * Adds the transport accounting every checker resource carries (`durationMs`,
+ * `hops`, `skipped`), the allowlisted discovery headers, the 404/410 body drop
+ * and the `outcome` classification. Shared by the success and failure paths so
+ * a timed-out resource is shaped exactly like a completed one.
+ */
+function finalizeFetchedResource(resource, response, options, trace) {
+  const result = {
+    ...resource,
+    durationMs: Date.now() - trace.startedAt,
+    hops: trace.hops,
+  };
+
+  if (!trace.started) {
+    result.skipped = true;
+  }
+
+  if (options.captureDiscoveryHeaders) {
+    result.headers = response ? captureDiscoveryHeaders(response.headers) : {};
+  }
+
+  // No analyzer reads a 404/410 body (the soft-404 comparison runs on 2xx
+  // only), and on a WordPress site each one is the full 404 template, so drop
+  // it before serialization. `bodyBytes` keeps the length for the
+  // agent-readable-404 rule, which needs only the content type and size.
+  if (
+    options.dropNotFoundBody &&
+    (result.status === 404 || result.status === 410) &&
+    typeof result.body === 'string'
+  ) {
+    result.body = null;
+    result.bodyDropped = true;
+  }
+
+  result.outcome = classifyResource(result);
+  return result;
+}
+
+function captureDiscoveryHeaders(headers) {
+  const captured = {};
+  for (const name of DISCOVERY_HEADER_NAMES) {
+    const value = headers.get(name);
+    if (value === null || value === '') {
+      continue;
+    }
+    captured[name] =
+      value.length > DISCOVERY_HEADER_VALUE_MAX_CHARS
+        ? value.slice(0, DISCOVERY_HEADER_VALUE_MAX_CHARS)
+        : value;
+  }
+  return captured;
+}
+
+function hasChallengeMarkers(resource) {
+  const mitigated = resource.headers?.['cf-mitigated'];
+  if (typeof mitigated === 'string' && mitigated.toLowerCase().includes('challenge')) {
+    return true;
+  }
+  if (typeof resource.body !== 'string') {
+    return false;
+  }
+  const head = resource.body.slice(0, CHALLENGE_SCAN_CHARS);
+  return CHALLENGE_MARKERS.some((marker) => head.includes(marker));
+}
+
+/**
+ * The single place that decides what a fetched resource is, identical to
+ * classifyResource in @agentmarkup/core so the browser and the worker agree:
+ * - `unverified`: skipped, status 0, an error, a 2xx without a body, or a
+ *   429/5xx without challenge markers (transport noise, never a finding)
+ * - `challenge`: 401/403/429/503 carrying a bot-challenge marker
+ * - `not-found`: 404 or 410
+ * - `http-error`: any other completed non-2xx (including a 3xx on the probe)
+ * - `ok`: 2xx with a body
+ * A null resource (no sample link) is `absent`, which is never serialized.
+ */
+function classifyResource(resource) {
+  if (!resource) {
+    return 'absent';
+  }
+  const status = resource.status;
+  if (resource.skipped || status === 0 || resource.error) {
+    return 'unverified';
+  }
+  if (status >= 200 && status < 300) {
+    return resource.body === null ? 'unverified' : 'ok';
+  }
+  if (CHALLENGE_STATUSES.includes(status) && hasChallengeMarkers(resource)) {
+    return 'challenge';
+  }
+  if (status === 429 || status >= 500) {
+    return 'unverified';
+  }
+  if (status === 404 || status === 410) {
+    return 'not-found';
+  }
+  return 'http-error';
+}
+
+/** Options every checker-chain fetch shares; the caller sets the redirect cap and the Accept header. */
+function checkerFetchOptions(budget, overrides = {}) {
+  return {
+    budget,
+    captureDiscoveryHeaders: true,
+    dropNotFoundBody: true,
+    ...overrides,
+  };
+}
+
+/** A small FIFO semaphore: at most `maxConcurrent` tasks run at once. */
+function createLimiter(maxConcurrent) {
+  let active = 0;
+  const queue = [];
+
+  const next = () => {
+    if (active >= maxConcurrent || queue.length === 0) {
+      return;
+    }
+    active += 1;
+    const { task, resolve, reject } = queue.shift();
+    Promise.resolve()
+      .then(task)
+      .then(resolve, reject)
+      .finally(() => {
+        active -= 1;
+        next();
+      });
+  };
+
+  return (task) =>
+    new Promise((resolve, reject) => {
+      queue.push({ task, resolve, reject });
+      next();
+    });
+}
+
+/** CHECKER_MAX_FETCHES in the env can only lower the hard stop (tests use it). */
+function getMaxFetches(env) {
+  return clampInteger(
+    Number.parseInt(String(env?.CHECKER_MAX_FETCHES ?? ''), 10),
+    1,
+    MAX_FETCHES_PER_CHECK,
+    MAX_FETCHES_PER_CHECK
+  );
+}
+
+function countD1(budget, statements) {
+  if (budget) {
+    budget.d1 += statements;
   }
 }
 
@@ -1613,6 +2016,11 @@ function buildUrl(protocol, hostname, pathname) {
 }
 
 async function readBoundedText(response, maxResponseBytes = MAX_RESPONSE_BYTES) {
+  return (await readBoundedBody(response, maxResponseBytes)).text;
+}
+
+/** Reads a body under the size cap and reports its byte length beside the text. */
+async function readBoundedBody(response, maxResponseBytes = MAX_RESPONSE_BYTES) {
   const contentLengthHeader = response.headers.get('content-length');
   if (contentLengthHeader) {
     const contentLength = Number.parseInt(contentLengthHeader, 10);
@@ -1622,7 +2030,7 @@ async function readBoundedText(response, maxResponseBytes = MAX_RESPONSE_BYTES) 
   }
 
   if (!response.body) {
-    return '';
+    return { text: '', bytes: 0 };
   }
 
   const reader = response.body.getReader();
@@ -1650,7 +2058,7 @@ async function readBoundedText(response, maxResponseBytes = MAX_RESPONSE_BYTES) 
   }
 
   text += decoder.decode();
-  return text;
+  return { text, bytes: totalBytes };
 }
 
 function createTimeoutSignal(timeoutMs) {
@@ -1676,7 +2084,10 @@ function mapFetchError(error) {
     if (
       error.message === 'Response exceeded the checker size limit.' ||
       error.message === 'Request was blocked by checker safety rules.' ||
-      error.message === 'Too many redirects.'
+      error.message === 'Too many redirects.' ||
+      error.message === 'Request timed out.' ||
+      error.message === 'Checker time budget exhausted.' ||
+      error.message === 'Checker request budget exhausted.'
     ) {
       return error.message;
     }

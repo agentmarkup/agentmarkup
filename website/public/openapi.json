@@ -1011,7 +1011,8 @@
               "rate_limited",
               "verification_required",
               "not_found",
-              "server_error"
+              "server_error",
+              "checker_error"
             ]
           },
           "retryAfterSeconds": {
@@ -1086,12 +1087,50 @@
               "string",
               "null"
             ]
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "not-found",
+              "http-error",
+              "challenge",
+              "unverified"
+            ],
+            "description": "What this resource is, decided once and shared with the score engine: `ok` (2xx with a body), `not-found` (404 or 410), `http-error` (any other completed non-2xx, including a 3xx the probe did not follow), `challenge` (401/403/429/503 carrying a bot-challenge marker), `unverified` (status 0, an error, a 2xx without a body, a skipped fetch, or a 429/5xx without challenge markers: transport noise that never counts as a finding)."
+          },
+          "durationMs": {
+            "type": "integer",
+            "description": "Wall-clock milliseconds from the first request for this resource to its final response or failure."
+          },
+          "hops": {
+            "type": "integer",
+            "description": "Redirects followed before the final response; 0 when the first response was final."
+          },
+          "skipped": {
+            "type": "boolean",
+            "description": "Present and true when no request was sent for this resource because the checker's request or time budget was already exhausted."
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Allowlisted response headers of the final response, lowercase names, each value cut at 512 characters: link, vary, cf-mitigated, content-signal, x-robots-tag, last-modified, content-length, www-authenticate, and location on a 3xx the probe reports as final. Never includes set-cookie."
+          },
+          "bodyBytes": {
+            "type": "integer",
+            "description": "Byte length of the response body as read, present whenever a body was read, including when it was dropped."
+          },
+          "bodyDropped": {
+            "type": "boolean",
+            "description": "Present and true when a 404 or 410 body was read but omitted from the response to keep it small; `bodyBytes` still reports its length."
           }
         }
       },
       "SiteCheckResponse": {
         "type": "object",
-        "description": "Raw resources fetched for one origin. Findings are derived from these client-side, so the response carries evidence rather than a verdict. There is deliberately no score, grade, or percentage.",
+        "description": "Raw resources fetched for one origin, plus a `fetchSummary` describing how the fetch went. Findings and the agent-readiness score are derived from these resources client-side by a published, deterministic formula, so the response carries evidence rather than a verdict. A run whose `fetchSummary.analysisStatus` is not `complete` is never cached; re-run it.",
         "required": [
           "targetUrl",
           "origin",
@@ -1186,11 +1225,72 @@
               }
             ]
           },
+          "fetchSummary": {
+            "$ref": "#/components/schemas/FetchSummary"
+          },
           "cache": {
             "$ref": "#/components/schemas/CacheStatus"
           },
           "protection": {
             "$ref": "#/components/schemas/ProtectionStatus"
+          }
+        }
+      },
+      "FetchSummary": {
+        "type": "object",
+        "description": "How the fetch went. `complete` means every fetched resource finished; `partial` means at least one did not (named in `unverified`) and the run is not cached; `blocked` means the homepage itself never completed.",
+        "required": [
+          "analysisStatus",
+          "unverified"
+        ],
+        "properties": {
+          "analysisStatus": {
+            "type": "string",
+            "enum": [
+              "complete",
+              "partial",
+              "blocked"
+            ]
+          },
+          "unverified": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "homepage",
+                "homepageMarkdown",
+                "llmsTxt",
+                "robotsTxt",
+                "sitemap",
+                "notFoundProbe",
+                "samplePage",
+                "samplePageMarkdown"
+              ]
+            },
+            "description": "Keys of the resources in this response whose `outcome` is `unverified`, in payload order."
+          },
+          "elapsedMs": {
+            "type": "integer",
+            "description": "Wall-clock milliseconds the fetch phase took."
+          },
+          "fetches": {
+            "type": "integer",
+            "description": "Outbound requests made, redirect hops included. Hard stop at 30."
+          },
+          "hops": {
+            "type": "integer",
+            "description": "Redirects followed across all resources."
+          },
+          "d1Statements": {
+            "type": "integer",
+            "description": "Database statements issued before the response was assembled; 0 without a database binding."
+          },
+          "samplePageUrl": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The sampled same-origin page (the first internal link on the homepage), or null when none was found."
           }
         }
       },

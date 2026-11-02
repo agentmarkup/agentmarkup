@@ -82,4 +82,48 @@ describe('published OpenAPI document', () => {
       expect(documented).toContain(code)
     }
   })
+
+  it('documents the fetch summary and per-resource transport fields as additive, optional fields', () => {
+    const resource = spec.components.schemas.RemoteResource as {
+      required: string[]
+      properties: Record<string, { enum?: string[] }>
+    }
+    for (const name of ['outcome', 'durationMs', 'hops', 'skipped', 'headers', 'bodyBytes', 'bodyDropped']) {
+      expect(resource.properties).toHaveProperty(name)
+      expect(resource.required).not.toContain(name)
+    }
+    expect(resource.properties.outcome.enum).toEqual([
+      'ok',
+      'not-found',
+      'http-error',
+      'challenge',
+      'unverified',
+    ])
+
+    const check = spec.components.schemas.SiteCheckResponse as {
+      description: string
+      required: string[]
+      properties: Record<string, { $ref?: string }>
+    }
+    expect(check.properties.fetchSummary?.$ref).toBe('#/components/schemas/FetchSummary')
+    expect(check.required).not.toContain('fetchSummary')
+    expect(check.description).not.toMatch(/no score/i)
+
+    const summary = spec.components.schemas.FetchSummary as {
+      required: string[]
+      properties: { analysisStatus: { enum: string[] }; unverified: { items: { enum: string[] } } }
+    }
+    expect(summary.required).toEqual(['analysisStatus', 'unverified'])
+    expect(summary.properties.analysisStatus.enum).toEqual(['complete', 'partial', 'blocked'])
+    expect(summary.properties.unverified.items.enum).toEqual([
+      'homepage',
+      'homepageMarkdown',
+      'llmsTxt',
+      'robotsTxt',
+      'sitemap',
+      'notFoundProbe',
+      'samplePage',
+      'samplePageMarkdown',
+    ])
+  })
 })
