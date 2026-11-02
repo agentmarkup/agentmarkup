@@ -97,7 +97,7 @@ export const axEvaluators: Record<string, EvaluatorEntry> = {
         })
         .join(', ');
       const evidence = [
-        `${fields.labelled}/${fields.total} fields labelled (label[for], wrapping label, aria-label or aria-labelledby; placeholders never count)`,
+        `${fields.labelled}/${fields.total} fields labelled (label[for], wrapping label, aria-label, aria-labelledby or title; placeholders never count)`,
         fields.unlabelled.length > 0
           ? `unlabelled: ${unlabelled}${fields.unlabelled.length > LISTED_UNNAMED ? ` and ${fields.unlabelled.length - LISTED_UNNAMED} more` : ''}`
           : '',

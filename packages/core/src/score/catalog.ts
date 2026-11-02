@@ -196,12 +196,16 @@ export const SCORE_CATALOG: ReadonlyArray<CheckDefinition> = [
     bucket: 'content',
     applicability: 'Always.',
     evidence: 'Homepage body; sample page body when the sample completed.',
-    rule: 'Sub-rules: homepage text of at least 500 characters and not a client shell; a non-empty h1; sample page text of at least 500 characters (only when the sample completed). Fraction = passed / applicable sub-rules.',
+    rule: 'Sub-rules: homepage text of at least 500 characters and not a client shell; a non-empty h1; sample page text of at least 500 characters (only when the sample completed). Page text is the body text without script, style, noscript, template, svg, canvas, iframe and form blocks, so form labels and options never count. Fraction = passed / applicable sub-rules.',
     availability: 'now',
     oraCounterpart: 'content-no-js',
     clientSentence: {
       pass: 'Your page text is in the page itself, so AI can read it without running scripts.',
-      fail: 'Your page text only appears after scripts run, so most AI readers see an empty page.',
+      fail: 'Your page has little readable text in its HTML, so AI readers see little of what you offer.',
+      partial: 'Part of your page text or its main heading is missing from the HTML, so AI readers see less than your visitors do.',
+      variants: {
+        'client-shell': 'Your page text only appears after scripts run, so most AI readers see an empty page.',
+      },
     },
     action: 'Serve the page text in the HTML (server-side rendering or prerendering).',
     fixes: {
@@ -294,6 +298,7 @@ export const SCORE_CATALOG: ReadonlyArray<CheckDefinition> = [
     clientSentence: {
       pass: 'Your page marks where the main content and the menu are and has an ordered outline.',
       fail: 'Your page does not mark where the main content and the menu are, or its headings skip levels, so an AI cannot outline it.',
+      partial: 'Your page marks part of its structure, but the main content, the menu or the heading order is still missing or out of order.',
     },
     action: 'Wrap the content in main, the menu in nav, and keep headings in order (h1, h2, h3).',
     fixes: {
@@ -357,12 +362,13 @@ export const SCORE_CATALOG: ReadonlyArray<CheckDefinition> = [
     bucket: 'controls',
     applicability: 'Not applicable when the homepage has no fields (input other than hidden, submit, button, reset or image; select; textarea).',
     evidence: 'Homepage body.',
-    rule: 'A field is labelled by a label[for] matching its id, a wrapping label, aria-label or aria-labelledby. A placeholder never counts. Fraction = labelled / total, proportional.',
+    rule: 'A field is labelled by a label[for] matching its id, a wrapping label, aria-label, aria-labelledby or a non-empty title (HTML-AAM names a control from its title when nothing else does). A placeholder never counts. Fraction = labelled / total, proportional.',
     availability: 'now',
     oraCounterpart: 'ax-form-labeling',
     clientSentence: {
       pass: 'Your form fields are labeled so an AI knows what to type where.',
       fail: 'Some form fields have no label, so an AI does not know what to type where.',
+      partial: 'Some of your form fields have labels and others do not, so an AI has to guess what to type in those.',
     },
     action: 'Add a label element (or aria-label) to every field; placeholders do not count.',
     fixes: {
@@ -474,6 +480,7 @@ export const SCORE_CATALOG: ReadonlyArray<CheckDefinition> = [
     clientSentence: {
       pass: 'Your homepage carries its basic labels: official address, language, preview image and type.',
       fail: 'Your homepage is missing some basic labels (official address, language, preview image or type).',
+      partial: 'Your homepage has some of its basic labels but not all of them (official address, language, preview image or type).',
     },
     action: 'Add a self-referencing canonical, html lang, og:image and og:type to the homepage.',
     fixes: {
@@ -543,6 +550,12 @@ export const SCORE_CATALOG: ReadonlyArray<CheckDefinition> = [
     clientSentence: {
       pass: 'Your business listing includes an address and a way to contact you.',
       fail: 'Your business listing is missing an address or a way to contact you.',
+      variants: {
+        'no-address': 'Your business listing for AI has a way to contact you but no street address or city.',
+        'no-contact': 'Your business listing for AI has your address but no phone number or email.',
+        'no-contact-point':
+          'Your business listing for AI has your address and a phone number or email, but not as a contact point, the entry AI assistants read for how to reach you.',
+      },
     },
     action: 'Add a PostalAddress and a contactPoint to the Organization JSON-LD.',
     fixes: {
@@ -589,6 +602,7 @@ export const SCORE_CATALOG: ReadonlyArray<CheckDefinition> = [
     clientSentence: {
       pass: 'Your site has About, Contact and Privacy pages linked from the homepage.',
       fail: 'Your homepage does not link About, Contact and Privacy pages.',
+      partial: 'Your homepage links some, but not all, of your About, Contact and Privacy pages.',
     },
     action: 'Link About, Contact and Privacy pages from the homepage menu or footer.',
     fixes: {
@@ -629,12 +643,13 @@ export const SCORE_CATALOG: ReadonlyArray<CheckDefinition> = [
     bucket: 'discovery',
     applicability: 'Always.',
     evidence: '/llms.txt as a text resource.',
-    rule: 'A heading or sentence with explicit guidance (when to use, use X when, do not use X for/when, best fit for/when), or a heading containing \'use cases\' or \'for agents\', scores 1. A summary blockquote of at least 100 characters after the H1 scores 0.5. Absent, HTML, or under 100 characters of text scores 0. A fetch that did not complete is unverified. A presence rule, not a semantic one.',
+    rule: 'A heading or sentence with explicit guidance scores 1: \'when to use\', \'best fit for/when\' or \'instructions for (AI) agents\' anywhere; \'use X when\' (zero to three words for X) or \'do not use X for/when\' (one to three words) as an instruction, at the start of a line, sentence or list item or after should, can, may, must or please, optionally opened by one of only, always, never or also; or a heading containing \'use cases\' or \'for agents\'. A summary blockquote of at least 100 characters after the H1 scores 0.5. Absent, HTML, or under 100 characters of text scores 0. A fetch that did not complete is unverified. A presence rule, not a semantic one.',
     availability: 'now',
     oraCounterpart: 'agent-instruction',
     clientSentence: {
       pass: 'Your site has a short guide (llms.txt) that tells AI what you offer and when to use it.',
       fail: 'Your site has no short guide (llms.txt) telling AI what you offer and when to use it.',
+      partial: 'Your short guide for AI (llms.txt) says what you offer but not when to use it.',
     },
     action: 'Publish /llms.txt with a summary and a "When to use" section.',
     fixes: {

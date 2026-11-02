@@ -1,4 +1,11 @@
-import { TOP_FIXES_LIMIT, getCheckDefinition, rankTopFixes } from '@agentmarkup/core/score';
+import {
+  TOP_FIXES_LIMIT,
+  clientSentenceFor,
+  fixActionFor,
+  getCheckDefinition,
+  platformFixesApply,
+  rankTopFixes,
+} from '@agentmarkup/core/score';
 import type { ScoreReport } from '@agentmarkup/core/score';
 
 import { platformFixFor } from '../checker/check-copy';
@@ -30,14 +37,14 @@ export function TopFixes({ report }: TopFixesProps) {
         <ol className="top-fixes-list">
           {fixes.map((fix) => {
             const definition = getCheckDefinition(fix.id);
-            const platformFix = platformFixFor(definition, report.platform);
+            const platformFix = platformFixesApply(fix) ? platformFixFor(definition, report.platform) : null;
             return (
               <li key={fix.id} className="top-fixes-item" data-check-id={fix.id}>
                 <div>
                   <h3>{definition?.name ?? fix.id}</h3>
-                  <p>{definition?.clientSentence.fail ?? fix.evidence}</p>
+                  <p>{definition ? clientSentenceFor(fix) : fix.evidence}</p>
                   <p>
-                    <strong>What to do:</strong> {definition?.action ?? 'See the methodology.'}
+                    <strong>What to do:</strong> {fixActionFor(fix) ?? 'See the methodology.'}
                   </p>
                   {platformFix ? (
                     <p>

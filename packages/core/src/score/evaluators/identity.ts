@@ -189,7 +189,7 @@ export const identityEvaluators: Record<string, EvaluatorEntry> = {
         }
         return scored(0, 'no Organization or LocalBusiness node', ['homepage']);
       }
-      let best: { node: JsonLdNode; fraction: number; evidence: string } | null = null;
+      let best: { node: JsonLdNode; fraction: number; evidence: string; variant: string | undefined } | null = null;
       for (const node of organizations) {
         const address = node.address;
         const addressNodes = Array.isArray(address) ? address : [address];
@@ -202,14 +202,11 @@ export const identityEvaluators: Record<string, EvaluatorEntry> = {
             (hasValue(entry as JsonLdNode, 'streetAddress') || hasValue(entry as JsonLdNode, 'addressLocality'))
         );
         const contact = node.contactPoint;
-        const contactNodes = Array.isArray(contact) ? contact : [contact];
-        const contactOk = contactNodes.some(
-          (entry) =>
-            typeof entry === 'object' &&
-            entry !== null &&
-            !Array.isArray(entry) &&
-            (hasValue(entry as JsonLdNode, 'telephone') || hasValue(entry as JsonLdNode, 'email'))
+        const contactNodes = (Array.isArray(contact) ? contact : [contact]).filter(
+          (entry): entry is JsonLdNode => typeof entry === 'object' && entry !== null && !Array.isArray(entry)
         );
+        const contactOk = contactNodes.some((entry) => hasValue(entry, 'telephone') || hasValue(entry, 'email'));
+        const contactLabel = contactNodes.length > 0 ? 'contactPoint without telephone or email' : 'no contactPoint';
         const topLevel = hasValue(node, 'telephone') || hasValue(node, 'email');
         const fraction = (addressOk ? 0.5 : 0) + (contactOk ? 0.5 : topLevel ? 0.25 : 0);
         const evidence = [
@@ -218,14 +215,23 @@ export const identityEvaluators: Record<string, EvaluatorEntry> = {
           contactOk
             ? 'contactPoint with telephone or email'
             : topLevel
-              ? 'no contactPoint, top-level telephone or email only'
-              : 'no contactPoint, no top-level telephone or email',
+              ? `${contactLabel}, top-level telephone or email only`
+              : `${contactLabel}, no top-level telephone or email`,
         ].join('; ');
+        // A partial result names what is actually missing (catalog variants).
+        const variant =
+          fraction <= 0 || fraction >= 1
+            ? undefined
+            : !addressOk
+              ? 'no-address'
+              : topLevel
+                ? 'no-contact-point'
+                : 'no-contact';
         if (!best || fraction > best.fraction) {
-          best = { node, fraction, evidence };
+          best = { node, fraction, evidence, variant };
         }
       }
-      return scored(best!.fraction, best!.evidence, ['homepage']);
+      return scored(best!.fraction, best!.evidence, ['homepage'], { sentenceVariant: best!.variant });
     },
   },
   'jsonld.same-as': {

@@ -130,6 +130,23 @@ export interface SiteEvidence {
 export interface CheckClientSentence {
   pass: string;
   fail: string;
+  /** For a partial result; without it the partial line names the check and quotes its evidence. */
+  partial?: string;
+  /** Sentences an evaluator selects with `CheckResult.sentenceVariant`, in place of fail and partial. */
+  variants?: Readonly<Record<string, string>>;
+}
+
+/**
+ * A secondary resource that answered a bot-challenge page (a 401, 403, 429 or 503
+ * with the marker reach.bot-detection reads) and so decided a check: the fix is to
+ * let agents through on that path, not to publish the resource.
+ */
+export interface CheckChallenge {
+  resource: EvidenceResourceKey;
+  url: string | null;
+  status: number;
+  /** The marker as quoted in the evidence, e.g. `cf-mitigated: challenge`. */
+  marker: string;
 }
 
 export interface CheckPlatformFixes {
@@ -175,6 +192,10 @@ export interface CheckResult {
   reason?: string;
   /** Resources the decision read; a transport failure there can never yield `fail`. */
   resources?: EvidenceResourceKey[];
+  /** Set when a secondary resource answered a bot challenge and that answer decided the result. */
+  challenge?: CheckChallenge;
+  /** A key of the catalog's `clientSentence.variants` that describes this result better than fail or partial. */
+  sentenceVariant?: string;
 }
 
 export interface ScoredCheck extends CheckResult {

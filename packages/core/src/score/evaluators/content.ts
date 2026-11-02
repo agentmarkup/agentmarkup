@@ -1,5 +1,6 @@
 // content: content.no-js, content.auth-gate, content.token-budget.
 import { controlBodyHtml, looksLikeClientShell, tokenizeTags } from '../html-lite.js';
+import type { CheckChallenge } from '../types.js';
 import {
   formatCount,
   sampleState,
@@ -45,7 +46,9 @@ export const contentEvaluators: Record<string, EvaluatorEntry> = {
       }
       const passed = results.filter(Boolean).length;
       parts.push(`${passed}/${results.length} sub-rules`);
-      return scored(passed / results.length, parts.filter(Boolean).join('; '), ['homepage', 'samplePage']);
+      return scored(passed / results.length, parts.filter(Boolean).join('; '), ['homepage', 'samplePage'], {
+        sentenceVariant: shell ? 'client-shell' : undefined,
+      });
     },
   },
   'content.auth-gate': {
@@ -58,17 +61,21 @@ export const contentEvaluators: Record<string, EvaluatorEntry> = {
       }
       const sample = context.sample;
       let scope = '';
+      let sampleChallenge: CheckChallenge | undefined;
       if (sample.absent || sample.unverified) {
         scope = `judged on the homepage alone (${sampleState(context)})`;
       } else if (sample.status === 401 || sample.status === 403) {
-        findings.push(`sample page ${sample.finalUrl ?? ''} answered HTTP ${sample.status}`);
+        findings.push(`sample page ${sample.finalUrl ?? ''} answered ${sample.challengeState() ?? `HTTP ${sample.status}`}`);
+        sampleChallenge = sample.challengeNote('samplePage');
       } else if (sampleUsable(context) && hasPasswordField(sample) && sample.text.length < MIN_PAGE_TEXT) {
         findings.push(
           `sample page ${sample.finalUrl ?? ''} shows a password field with ${formatCount(sample.text.length)} chars of text`
         );
       }
       if (findings.length > 0) {
-        return scored(0, findings.join('; '), ['homepage', 'samplePage']);
+        // The challenge decides the result only when the homepage shows no gate of its own.
+        const challenge = findings.length === 1 ? sampleChallenge : undefined;
+        return scored(0, findings.join('; '), ['homepage', 'samplePage'], { challenge });
       }
       return scored(
         1,

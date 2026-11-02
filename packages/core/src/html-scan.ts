@@ -234,3 +234,58 @@ export function replaceTags(html: string, replacement: string, allowEmpty = fals
   }
   return last === 0 ? html : out + html.slice(last);
 }
+
+const MOUNT_NODE_TAGS = ['div', 'main', 'section'];
+const MOUNT_ATTR_RE = /(?:id|class)="/g;
+const MOUNT_KEYWORD_RE = /root|app|__next|svelte|mount/;
+const WHITESPACE_RE = /\s/;
+
+/**
+ * `/^<(div|main|section)\b[^>]*(id|class)="[^"]*(root|app|__next|svelte|mount)[^"]*"[^>]*>\s*<\/\1>$/.test(value)`
+ * in linear time: one opener, an id or class attribute whose quoted value names a
+ * mount point, then only `>`, whitespace and the matching closing tag. The regex
+ * backtracked through every keyword of an attribute value that never closed.
+ * Shared by `validation/html.ts` and `score/html-lite.ts` so the two stay in step.
+ */
+export function isLoneMountNode(value: string): boolean {
+  const tag = MOUNT_NODE_TAGS.find(
+    (name) => value.startsWith(`<${name}`) && !isWordChar(value.charCodeAt(name.length + 1))
+  );
+  if (!tag) {
+    return false;
+  }
+  const close = `</${tag}>`;
+  if (!value.endsWith(close)) {
+    return false;
+  }
+  // `[^>]*>\s*` before the closing tag: the opener ends at the `>` in front of the trailing whitespace.
+  let gt = value.length - close.length - 1;
+  while (gt >= 0 && WHITESPACE_RE.test(value[gt])) {
+    gt -= 1;
+  }
+  const start = tag.length + 1;
+  if (gt < start || value.charCodeAt(gt) !== 62) {
+    return false;
+  }
+  // Inside the opener: `[^>]*` before the attribute, `[^"]*` around the keyword, `[^>]*` after the closing quote.
+  const opener = value.slice(start, gt);
+  const firstGt = opener.indexOf('>');
+  const lastGt = opener.lastIndexOf('>');
+  const attr = new RegExp(MOUNT_ATTR_RE.source, MOUNT_ATTR_RE.flags);
+  let match: RegExpExecArray | null;
+  while ((match = attr.exec(opener)) !== null) {
+    if (firstGt !== -1 && match.index > firstGt) {
+      return false;
+    }
+    const valueStart = match.index + match[0].length;
+    const quote = opener.indexOf('"', valueStart);
+    if (quote === -1) {
+      return false;
+    }
+    if (lastGt < quote && MOUNT_KEYWORD_RE.test(opener.slice(valueStart, quote))) {
+      return true;
+    }
+  }
+  return false;
+}
+

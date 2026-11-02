@@ -7,6 +7,7 @@ import { SCORE_CATALOG, SCORE_CATALOG_VERSION, TOP_FIXES_LIMIT, rankTopFixes, re
 
 
 import { analyzeSiteCheck } from '../src/checker/analyze';
+import { auditItemsForReport } from '../src/checker/check-copy';
 import ScoreMethodology from '../src/pages/ScoreMethodology';
 import { ScorePanel } from '../src/ui/ScorePanel';
 import { verdictExplanationForGrade } from '../src/ui/status-model';
@@ -248,6 +249,25 @@ describe('TopFixes', () => {
     const list = element ? findElement(element, 'ol') : null;
     const keys = ((list?.props as { children?: ReactNode })?.children as ReactElement[]).map((child) => child.key);
     expect(keys).toEqual(ranked.map((fix) => fix.id));
+  });
+
+  it('tells a site whose llms.txt answers a bot challenge to let agents through, not to publish one', () => {
+    const challenged = analyzeSiteCheck(
+      siteCheck({
+        llms: status(`${ORIGIN}/llms.txt`, 403, {
+          contentType: 'text/html; charset=UTF-8',
+          body: '<html><head><title>Just a moment...</title></head><body></body></html>',
+          headers: { 'cf-mitigated': 'challenge' },
+        }),
+      })
+    ).report;
+    const container = renderMarkup(createElement(TopFixes, { report: challenged }));
+    const item = container.querySelector('li[data-check-id="llms.exists"]');
+    expect(item?.textContent).toContain('Your bot protection shows AI assistants a challenge page instead of /llms.txt (HTTP 403).');
+    expect(item?.textContent).toContain('Let AI agents through the bot challenge on /llms.txt');
+    expect(item?.textContent).not.toContain('Publish /llms.txt');
+    const finding = auditItemsForReport(challenged).find((entry) => entry.checkId === 'llms.exists');
+    expect(finding?.action).toContain('Let AI agents through the bot challenge on /llms.txt');
   });
 
   it('renders nothing for a blocked run and "At the cap" for a perfect score', () => {

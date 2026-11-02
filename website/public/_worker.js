@@ -270,9 +270,11 @@ async function handleCheckRequest(request, url, env, checkStartTime) {
     );
     fetchSummary.d1Statements = budget.d1;
 
-    // Only a complete run is cached (see cacheCheckResponse), so a partial run
-    // must not advertise a cache lifetime it does not have.
-    const cacheable = fetchSummary.analysisStatus === 'complete';
+    // Only a complete run without a challenged resource is cached (see
+    // cacheCheckResponse), so any other run must not advertise a cache
+    // lifetime it does not have.
+    const cacheable =
+      fetchSummary.analysisStatus === 'complete' && !hasChallengedResource(evidence);
     const cacheExpiresAt = new Date(
       Date.parse(checkedAt) + TARGET_CACHE_TTL_MS
     ).toISOString();
@@ -440,16 +442,43 @@ async function fetchCheckEvidence(normalized, checkStartTime, budget) {
 /**
  * `complete` when every fetched resource finished, `partial` when at least one
  * is unverified (timed out, budget-stopped, transport error, 429/5xx), `blocked`
- * when the homepage itself is unverified. `unverified` lists payload keys so a
+ * when the homepage itself is unverified or gave a final non-2xx other than
+ * 401/403. `unverified` lists payload keys so a
  * client can name what to re-run; `elapsedMs` is the fetch wall-clock.
  */
-// A challenged not-found probe (429/503 with challenge markers) leaves
-// nav.not-found unverified in the score engine, so the run is not complete
-// either. classifyResource itself stays unchanged for parity with core.
+// Same rule as the score engine, so fetchSummary.analysisStatus always equals
+// score.analysisStatus. Outcome `unverified` counts. A challenged resource is a
+// measured answer, except a not-found probe that answers 429/503 with challenge
+// markers: core leaves nav.not-found unverified for it ('probe-challenged'). A
+// 401/403 challenged probe scores nav.not-found as a measured fail and does not
+// count. classifyResource itself stays unchanged for parity with core.
 function isUnverifiedForSummary(key, resource) {
+  if (resource.outcome === 'unverified') {
+    return true;
+  }
   return (
-    resource.outcome === 'unverified' ||
-    (key === 'notFoundProbe' && resource.outcome === 'challenge')
+    key === 'notFoundProbe' &&
+    resource.outcome === 'challenge' &&
+    resource.status !== 401 &&
+    resource.status !== 403
+  );
+}
+
+// A challenge answer is often per-IP and transient, so a run in which any
+// resource answered one is never cached, whatever its fetch-summary status.
+function hasChallengedResource(record) {
+  return CHECK_RESOURCE_KEYS.some((key) => record[key]?.outcome === 'challenge');
+}
+
+// `blocked` exactly when the score engine blocks the run: the homepage is
+// unverified (a re-run may succeed), or its final answer is a non-2xx other
+// than 401/403 (404, 410, 400, ...: nothing to score). A 401, a 403 or a
+// challenge page is scored, so it does not block.
+function isBlockedHomepage(homepage) {
+  return (
+    homepage.outcome === 'unverified' ||
+    homepage.outcome === 'not-found' ||
+    (homepage.outcome === 'http-error' && homepage.status !== 401 && homepage.status !== 403)
   );
 }
 
@@ -468,12 +497,11 @@ function buildFetchSummary(evidence, checkStartTime, budget) {
     }
   }
 
-  const analysisStatus =
-    evidence.homepage.outcome === 'unverified'
-      ? 'blocked'
-      : unverified.length > 0
-        ? 'partial'
-        : 'complete';
+  const analysisStatus = isBlockedHomepage(evidence.homepage)
+    ? 'blocked'
+    : unverified.length > 0
+      ? 'partial'
+      : 'complete';
 
   return {
     analysisStatus,
@@ -1046,11 +1074,15 @@ async function cacheCheckResponse(
     return;
   }
 
-  // Only a complete run is cached. A payload whose fetchSummary says partial
-  // or blocked carries a timed-out resource that must not be pinned for every
-  // viewer of this target for the next three minutes. Payloads without a
-  // fetchSummary (the security scan) are cached as before.
-  if (payload.fetchSummary && payload.fetchSummary.analysisStatus !== 'complete') {
+  // Only a complete run without a challenged resource is cached. A payload
+  // whose fetchSummary says partial or blocked carries a timed-out resource,
+  // and a challenge answer is often per-IP and transient; neither may be
+  // pinned for every viewer of this target for the next three minutes.
+  // Payloads without a fetchSummary (the security scan) are cached as before.
+  if (
+    payload.fetchSummary &&
+    (payload.fetchSummary.analysisStatus !== 'complete' || hasChallengedResource(payload))
+  ) {
     return;
   }
 
@@ -1531,12 +1563,19 @@ async function fetchText(targetUrl, checkStartTime, options = {}) {
             );
           }
 
-          const nextUrl = new URL(location, currentUrl);
+          let nextUrl;
+          try {
+            nextUrl = new URL(location, currentUrl);
+          } catch (error) {
+            await cancelResponseBody(response);
+            throw error;
+          }
           if (
             !['http:', 'https:'].includes(nextUrl.protocol) ||
             isBlockedHostname(nextUrl.hostname) ||
             (nextUrl.port && nextUrl.port !== '80' && nextUrl.port !== '443')
           ) {
+            await cancelResponseBody(response);
             throw new Error('Request was blocked by checker safety rules.');
           }
 
@@ -2155,11 +2194,19 @@ function resolveSitemapDeclaration(candidate, baseUrl) {
   }
 }
 
-function findSitemapUrl(robotsTxt, baseUrl) {
-  const sitemapPattern = /^\s*Sitemap:\s*(\S+)\s*$/gim;
-  let match;
+// robots.txt directives are single lines (RFC 9309), so the declaration is read one
+// line at a time; a multiline `^\s*` rescanned every following blank line from each
+// line start (10 s on 80,000 blank lines). Lines end at CRLF, LF, CR, U+2028 or
+// U+2029, the terminators the multiline `^` and `$` used.
+const ROBOTS_LINE_BREAK_RE = /\r\n|[\n\r\u2028\u2029]/;
+const SITEMAP_LINE_RE = /^\s*Sitemap:\s*(\S+)\s*$/i;
 
-  while ((match = sitemapPattern.exec(robotsTxt)) !== null) {
+function findSitemapUrl(robotsTxt, baseUrl) {
+  for (const line of robotsTxt.split(ROBOTS_LINE_BREAK_RE)) {
+    const match = SITEMAP_LINE_RE.exec(line);
+    if (!match) {
+      continue;
+    }
     const candidate = resolveSitemapDeclaration(match[1], baseUrl);
     if (candidate) {
       return candidate;

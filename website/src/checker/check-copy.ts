@@ -4,6 +4,8 @@
 // URLs and header values only), actions and help lines come from the row.
 import {
   catalogIndexOf,
+  clientSentenceFor,
+  fixActionFor,
   getCheckDefinition,
   unverifiedResourcesWithoutChecks,
   type CheckDefinition,
@@ -115,8 +117,7 @@ export function auditItemForCheck(check: ScoredCheck): AuditItem | null {
   }
   const definition = getCheckDefinition(check.id);
   const name = definition?.name ?? check.id;
-  const sentence =
-    check.status === 'pass' ? definition?.clientSentence.pass : definition?.clientSentence.fail;
+  const sentence = definition ? clientSentenceFor(check) : null;
   return {
     id: check.id,
     checkId: check.id,
@@ -126,7 +127,7 @@ export function auditItemForCheck(check: ScoredCheck): AuditItem | null {
     action:
       check.status === 'pass'
         ? 'No change needed. Keep it this way when the site changes.'
-        : definition?.action ?? 'See the score methodology for this check.',
+        : fixActionFor(check) ?? 'See the score methodology for this check.',
     docUrl: definition?.docUrl ?? SCORE_METHODOLOGY_PATH,
     agentmarkupHelp: definition?.agentmarkupHelp,
   };

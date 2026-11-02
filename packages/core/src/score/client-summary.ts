@@ -1,6 +1,7 @@
 // Plain-text client summary of a ScoreReport: no markdown markers, ready to paste
 // into an email. Every line comes from the catalog's client copy.
 import { getCheckDefinition } from './catalog.js';
+import { clientSentenceFor, fixActionFor, platformFixesApply } from './check-copy.js';
 import { RESOURCE_NOTE_LABELS } from './evaluate.js';
 import { compareReports, unverifiedResourcesWithoutChecks } from './formula.js';
 import type { ScoreReport, ScoredCheck, SitePlatform } from './types.js';
@@ -22,7 +23,7 @@ const PLATFORM_LABELS: Record<SitePlatform, string> = {
 
 function platformFix(check: ScoredCheck, platform: SitePlatform | null): string | null {
   const definition = getCheckDefinition(check.id);
-  if (!definition || !platform || platform === 'wix') {
+  if (!definition || !platform || platform === 'wix' || !platformFixesApply(check)) {
     return null;
   }
   const fix = definition.fixes[platform];
@@ -35,11 +36,12 @@ function platformFix(check: ScoredCheck, platform: SitePlatform | null): string 
 function describeFix(check: ScoredCheck, index: number, platform: SitePlatform | null): string[] {
   const definition = getCheckDefinition(check.id);
   const name = definition?.name ?? check.id;
-  const sentence = definition?.clientSentence.fail ?? '';
+  const sentence = definition ? clientSentenceFor(check) : '';
   const gain = check.estGain !== null ? ` Estimated gain: ${check.estGain} points.` : '';
   const lines = [`${index + 1}. ${name}. ${sentence}${gain}`.trim()];
-  if (definition?.action) {
-    lines.push(`   What to do: ${definition.action}`);
+  const action = fixActionFor(check);
+  if (action) {
+    lines.push(`   What to do: ${action}`);
   }
   const fix = platformFix(check, platform);
   if (fix) {

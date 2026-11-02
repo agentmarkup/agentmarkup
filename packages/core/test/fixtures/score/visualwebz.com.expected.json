@@ -1,20 +1,20 @@
 {
   "site": "visualwebz.com",
-  "source": "curl capture 2026-11-02 via probe.sh (UA agentmarkup-checker/0.3.2, 206 range artefact normalised to 200), converted by convert-fixtures.mjs; sample page from samples.txt",
+  "source": "curl capture 2026-11-02 via probe.sh (UA agentmarkup-checker/0.3.2, 206 range artefact normalised to 200), converted by convert-fixtures.mjs; sample page from samples.txt; ax.form-labeling passes 12 of 12 since the D2 round (2026-11-02): the search input (type=search name=s class=et-search-field) has title=\"Search for:\", which counts as a label (HTML-AAM names a control from its title when nothing else does)",
   "fetchedAt": "2026-11-02T12:07:28.000Z",
   "catalogVersion": "1.0.0",
   "formulaVersion": "1.0.0",
   "score": 83,
   "grade": "B",
-  "raw": 82.72,
+  "raw": 83.46,
   "analysisStatus": "complete",
   "range": null,
   "samplePageUrl": "https://visualwebz.com/website-deposit/",
   "platform": "wordpress",
   "required": {
-    "earned": 64.37,
+    "earned": 65.11,
     "available": 80,
-    "passing": 5,
+    "passing": 6,
     "total": 9
   },
   "recommended": {
@@ -43,11 +43,6 @@
       "status": "partial",
       "fraction": 0.992,
       "verified": "604 of 609 named; unnamed: the clutch.co image link (img without alt), the expertise.com image link (img alt=\"\" title=\"\"), a /how-to-write-content-for-the-web/ link containing only whitespace, and two empty Google Maps links (the third maps link has an img alt and is named); captured body read 2026-11-02 (chunk A)"
-    },
-    "ax.form-labeling": {
-      "status": "partial",
-      "fraction": 0.917,
-      "verified": "11 of 12 labelled; the search input (type=search name=s class=et-search-field) has placeholder and title only, no label[for], wrapping label, aria-label or aria-labelledby; captured body read 2026-11-02 (chunk A)"
     },
     "jsonld.org-completeness": {
       "status": "partial",

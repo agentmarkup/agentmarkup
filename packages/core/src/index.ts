@@ -46,6 +46,7 @@ export type {
   BonusSummary,
   CheckAvailability,
   CheckBucket,
+  CheckChallenge,
   CheckClientSentence,
   CheckDefinition,
   CheckPlatformFixes,
@@ -168,16 +169,23 @@ export {
   SCORE_FORMULA_VERSION,
   TRAINING_CRAWLERS,
   classifyResource,
+  clientSentenceFor,
   compareReports,
   detectPlatform,
   detectSurfaces,
   estimatedGain,
   evaluateSiteChecks,
+  fixActionFor,
   getCheckDefinition,
   gradeFor,
+  platformFixesApply,
   rankTopFixes,
   renderClientSummary,
   reportsComparable,
   scoreChecks,
   scoreRange,
 } from './score/index.js';
+// The linear tag tokenizer the score engine uses, shared with @agentmarkup/audit's
+// client-discovery link extraction so it needs no whole-document regex.
+export { tokenizeTags } from './score/html-lite.js';
+export type { TagToken } from './score/html-lite.js';

@@ -9,6 +9,7 @@ import {
   forEachAnchorHref,
   forEachLinkTag,
   registrableDomainOf,
+  resolveSitemapDeclaration,
 } from '../../src/score/discover.js';
 
 describe('registrableDomainOf', () => {
@@ -51,6 +52,72 @@ describe('findSitemapUrl', () => {
     expect(findSitemapUrl('Sitemap: https://cdn.other.net/sitemap.xml\n', 'https://www.example.com/')).toBeNull();
     expect(findSitemapUrl('Sitemap: https://example.co.uk/sitemap.xml\n', 'https://www.other.co.uk/')).toBeNull();
     expect(findSitemapUrl('Sitemap: http://93.184.216.35/sitemap.xml\n', 'http://93.184.216.34/')).toBeNull();
+  });
+});
+
+describe('findSitemapUrl line walk', () => {
+  const BASE = 'https://www.example.com/';
+  /** The multiline regex the line walk replaced. */
+  function previous(robotsTxt: string, baseUrl: string): string | null {
+    const pattern = /^\s*Sitemap:\s*(\S+)\s*$/gim;
+    let match: RegExpExecArray | null;
+    while ((match = pattern.exec(robotsTxt)) !== null) {
+      const candidate = resolveSitemapDeclaration(match[1], baseUrl);
+      if (candidate) return candidate;
+    }
+    return null;
+  }
+
+  it('returns what the multiline regex returned on seeded robots.txt bodies', () => {
+    let state = 83 >>> 0;
+    const random = () => {
+      state = (state + 0x6d2b79f5) >>> 0;
+      let t = state;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    // Every Sitemap piece carries its value: a `Sitemap:` line with nothing after the
+    // colon is the one deliberate difference (the regex's `\s*` crossed into the next
+    // line), asserted in the next test.
+    const pieces = [
+      'Sitemap: /a.xml', 'Sitemap:/b.xml', 'SITEMAP:\t/c.xml', 'sitemap:  https://www.example.com/d.xml',
+      'Sitemap: https://cdn.other.net/e.xml', 'Sitemap: /f.xml extra', ' ', '\t', '\n', '\r', '\r\n',
+      '\u2028', '\u2029', '\u00a0', 'User-agent: *', 'Disallow: /', '# c d',
+    ];
+    let found = 0;
+    for (let run = 0; run < 6000; run += 1) {
+      let body = '';
+      const count = Math.floor(random() * 12);
+      for (let i = 0; i < count; i += 1) body += pieces[Math.floor(random() * pieces.length)];
+      const expected = previous(body, BASE);
+      if (expected) found += 1;
+      expect(findSitemapUrl(body, BASE), JSON.stringify(body)).toBe(expected);
+    }
+    expect(found).toBeGreaterThan(500);
+    expect(found).toBeLessThan(5500);
+  });
+
+  it('reads a declaration on its own line only, as RFC 9309 directives are single lines', () => {
+    // The regex took the next line as the value of a bare `Sitemap:` line ...
+    const split = 'Sitemap:\nhttps://www.example.com/sitemap.xml\n';
+    expect(previous(split, BASE)).toBe('https://www.example.com/sitemap.xml');
+    expect(findSitemapUrl(split, BASE)).toBeNull();
+    // ... and so swallowed a real declaration on that next line.
+    const hidden = ' Sitemap:\r\nSitemap:/b.xml\r\r\n';
+    expect(previous(hidden, BASE)).toBeNull();
+    expect(findSitemapUrl(hidden, BASE)).toBe('https://www.example.com/b.xml');
+    expect(findSitemapUrl('  sitemap:\t https://www.example.com/s.xml \r\nUser-agent: *', BASE)).toBe('https://www.example.com/s.xml');
+  });
+
+  it('reads 1 MB of blank lines with no declaration after them in well under a second', () => {
+    // The regex rescanned the rest of the blank run from every line start when no
+    // `Sitemap:` line followed it (a following one matched on the first attempt).
+    const blank = '\n'.repeat(1024 * 1024);
+    const started = performance.now();
+    expect(findSitemapUrl(`User-agent: *\n${blank}Disallow: /private/\n`, BASE)).toBeNull();
+    expect(findSitemapUrl(`Sitemap: https://cdn.other.net/sitemap.xml\n${blank}Sitemap: /s.xml extra\n`, BASE)).toBeNull();
+    expect(performance.now() - started).toBeLessThan(1000);
   });
 });
 

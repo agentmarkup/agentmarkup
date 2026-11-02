@@ -121,4 +121,79 @@ describe('collector and worker parity', () => {
       expect(check.evidence).not.toContain('<');
     }
   });
+
+  /** One origin through the worker and through the collector, as JSON-roundtripped evidence. */
+  async function runBoth(origin: () => Record<string, Route>) {
+    vi.setSystemTime(START);
+    vi.stubGlobal('fetch', createFetchStub(origin()).fetch);
+    const response = await settleWithFakeTimers(worker.fetch(new Request(CHECK_URL), {}) as Promise<Response>);
+    expect(response.status).toBe(200);
+    const workerPayload = (await response.json()) as SiteEvidence;
+
+    vi.setSystemTime(START);
+    const collected = await settleWithFakeTimers(
+      collectSiteEvidence('https://example.com', { fetchImpl: createFetchStub(origin()).fetch, minGapMs: 0 })
+    );
+    const collectorEvidence = JSON.parse(JSON.stringify(collected)) as SiteEvidence;
+    return { workerPayload, collectorEvidence };
+  }
+
+  // The fetch summary and the score engine must name the same run status. A
+  // 401/403 challenged probe is a measured nav.not-found fail (complete); a
+  // 429/503 challenged probe leaves nav.not-found unverified (partial).
+  it.each([
+    { status: 401, expected: 'complete' },
+    { status: 403, expected: 'complete' },
+    { status: 429, expected: 'partial' },
+    { status: 503, expected: 'partial' },
+  ])('a challenged probe answering $status gives the same status in both summaries and the engine', async ({ status, expected }) => {
+    const origin = (): Record<string, Route> => ({
+      ...parityOrigin(),
+      '/about.md': () => ({ status: 200, body: '# About\n\nMarkdown twin.\n', headers: { 'content-type': 'text/markdown' } }),
+      [PROBE_PATH]: () => ({
+        status,
+        body: '<html><head><title>Just a moment...</title></head></html>',
+        headers: { 'content-type': 'text/html', 'cf-mitigated': 'challenge' },
+      }),
+    });
+    const { workerPayload, collectorEvidence } = await runBoth(origin);
+
+    expect(collectorEvidence.notFoundProbe?.outcome).toBe('challenge');
+    expect(workerPayload.notFoundProbe?.outcome).toBe('challenge');
+    const engine = scoreChecks(evaluateSiteChecks(collectorEvidence));
+    expect(engine.analysisStatus).toBe(expected);
+    expect(collectorEvidence.fetchSummary?.analysisStatus).toBe(engine.analysisStatus);
+    expect(workerPayload.fetchSummary?.analysisStatus).toBe(engine.analysisStatus);
+    expect(engine.checks.find((check) => check.id === 'nav.not-found')?.status).toBe(
+      expected === 'complete' ? 'fail' : 'unverified'
+    );
+  });
+
+  // Blocked exactly when the engine blocks: an unverified homepage (500 without
+  // markers) or a final non-2xx other than 401/403 (404, 410). A 401 or 403 is
+  // scored (reach.bot-detection 0), so the run is not blocked.
+  it.each([
+    { status: 404, expected: 'blocked', blockedKind: 'http-status' },
+    { status: 410, expected: 'blocked', blockedKind: 'http-status' },
+    { status: 500, expected: 'blocked', blockedKind: 'unverified' },
+    { status: 401, expected: 'complete', blockedKind: null },
+    { status: 403, expected: 'complete', blockedKind: null },
+  ])('a homepage answering $status gives the same status in both summaries and the engine', async ({ status, expected, blockedKind }) => {
+    const origin = (): Record<string, Route> => ({
+      ...parityOrigin(),
+      '/': () => ({ status, body: '<html><body>No page here.</body></html>', headers: { 'content-type': 'text/html' } }),
+    });
+    const { workerPayload, collectorEvidence } = await runBoth(origin);
+
+    const evaluation = evaluateSiteChecks(collectorEvidence);
+    expect(evaluation.blockedKind).toBe(blockedKind);
+    expect(evaluateSiteChecks(workerPayload).blockedKind).toBe(blockedKind);
+    const engine = scoreChecks(evaluation);
+    expect(engine.analysisStatus).toBe(expected);
+    expect(collectorEvidence.fetchSummary?.analysisStatus).toBe(engine.analysisStatus);
+    expect(workerPayload.fetchSummary?.analysisStatus).toBe(engine.analysisStatus);
+    if (expected === 'complete') {
+      expect(engine.checks.find((check) => check.id === 'reach.bot-detection')?.status).toBe('fail');
+    }
+  });
 });

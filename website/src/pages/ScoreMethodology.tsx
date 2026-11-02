@@ -187,6 +187,14 @@ function ScoreMethodology() {
                           <code>{definition.id}</code>
                           <span className="score-catalog-sentence">Pass: {definition.clientSentence.pass}</span>
                           <span className="score-catalog-sentence">Fail: {definition.clientSentence.fail}</span>
+                          {definition.clientSentence.partial ? (
+                            <span className="score-catalog-sentence">Partial: {definition.clientSentence.partial}</span>
+                          ) : null}
+                          {Object.entries(definition.clientSentence.variants ?? {}).map(([variant, sentence]) => (
+                            <span key={variant} className="score-catalog-sentence">
+                              When {variant.replace(/-/g, ' ')}: {sentence}
+                            </span>
+                          ))}
                         </td>
                         <td className="score-catalog-narrow score-catalog-bucket">{definition.bucket}</td>
                         <td>{definition.applicability}</td>

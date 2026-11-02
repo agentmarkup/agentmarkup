@@ -15,6 +15,33 @@ import {
 import type { EvidenceResourceKey } from '../types.js';
 
 const FENCE_LINE_RE = /^ {0,3}(?:```|~~~)/gm;
+const TITLE_KEY_RE = /title\s*:/g;
+const WHITESPACE_RE = /\s/;
+const LINE_TERMINATOR_RE = /[\n\r\u2028\u2029]/;
+
+/**
+ * `/^\s*title\s*:/m.test(frontmatter)` in linear time: a `title:` key counts when
+ * the whitespace run in front of it reaches the start or holds a line terminator
+ * (a multiline `^`). The regex rescanned the rest of a run of blank lines from
+ * every line start.
+ */
+export function hasTitleKey(frontmatter: string): boolean {
+  const key = new RegExp(TITLE_KEY_RE.source, TITLE_KEY_RE.flags);
+  let match: RegExpExecArray | null;
+  while ((match = key.exec(frontmatter)) !== null) {
+    let start = match.index;
+    let lineStart = start === 0;
+    while (!lineStart && start > 0 && WHITESPACE_RE.test(frontmatter[start - 1])) {
+      start -= 1;
+      lineStart = start === 0 || LINE_TERMINATOR_RE.test(frontmatter[start]);
+    }
+    if (lineStart) {
+      return true;
+    }
+    key.lastIndex = match.index + 1;
+  }
+  return false;
+}
 
 interface ServedFile {
   key: EvidenceResourceKey;
@@ -152,7 +179,7 @@ export const markdownEvaluators: Record<string, EvaluatorEntry> = {
       }
       const withTitle = served.filter((file) => {
         const { frontmatter } = splitFrontmatter(file.view.body);
-        return frontmatter !== null && /^\s*title\s*:/m.test(frontmatter);
+        return frontmatter !== null && hasTitleKey(frontmatter);
       });
       return scored(
         withTitle.length / served.length,

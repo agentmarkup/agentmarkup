@@ -5,8 +5,11 @@ import { describe, expect, it } from 'vitest';
 import { SCORE_CATALOG, implementedChecks } from '../../src/score/catalog.js';
 import { EVALUATORS, detectPlatform, detectSurfaces, evaluateSiteChecks } from '../../src/score/evaluate.js';
 import { MAX_EVALUATED_BODY_CHARS } from '../../src/score/evidence.js';
+import { collectFields } from '../../src/score/html-lite.js';
 import { ResourceView } from '../../src/score/evaluators/shared.js';
 import { scoreChecks } from '../../src/score/formula.js';
+import { clientSentenceFor, fixActionFor, platformFixesApply } from '../../src/score/check-copy.js';
+import { renderClientSummary } from '../../src/score/client-summary.js';
 import type { CheckResult, EvaluateOptions, RemoteResource, SiteEvidence } from '../../src/score/types.js';
 
 const ORIGIN = 'https://www.example.com';
@@ -544,6 +547,13 @@ describe('controls checks', () => {
     expect(none.reason).toBe('no-fields');
     const placeholderOnly = check({ homepage: homepage(`<body><main><h1>Home</h1><p>${LONG}</p><input type="text" name="s" placeholder="Search"></main></body>`) }, 'ax.form-labeling');
     expect(placeholderOnly.status).toBe('fail');
+    // pxmediainc.com: HTML-AAM names a control from title when nothing else does.
+    const searchForm = `<form role="search"><input type="search" name="s" placeholder="Search …" title="Search for:"></form>`;
+    const titled = check({ homepage: homepage(`<body><main><h1>Home</h1><p>${LONG}</p>${searchForm}${searchForm}</main></body>`) }, 'ax.form-labeling');
+    expect(titled.status).toBe('pass');
+    expect(titled.evidence).toContain('2/2 fields labelled');
+    const blankTitle = check({ homepage: homepage(`<body><main><h1>Home</h1><p>${LONG}</p><input type="search" name="s" placeholder="Search" title=" "></main></body>`) }, 'ax.form-labeling');
+    expect(blankTitle.status).toBe('fail');
   });
 
   it('ax.injection-safe scans alt, aria-label, title and hidden text for the published patterns', () => {
@@ -630,6 +640,16 @@ describe('identity checks', () => {
     expect(bare.status).toBe('fail');
     const contactOnly = check({ homepage: homepage(DEFAULT_BODY, { jsonLd: [{ '@type': 'Organization', name: 'x', contactPoint: [{ '@type': 'ContactPoint', email: 'a@b.c' }] }] }) }, 'jsonld.org-completeness');
     expect(contactOnly.fraction).toBe(0.5);
+    // incsub.com: a contactPoint with contactType and url only still scores 0, but it is there.
+    const urlContact = { '@type': 'ContactPoint', contactType: 'customer support', url: `${ORIGIN}/contact/` };
+    const contactWithoutChannel = check({ homepage: homepage(DEFAULT_BODY, { jsonLd: [{ '@type': 'Organization', name: 'x', contactPoint: urlContact }] }) }, 'jsonld.org-completeness');
+    expect(contactWithoutChannel.fraction).toBe(0);
+    expect(contactWithoutChannel.evidence).toContain('contactPoint without telephone or email, no top-level telephone or email');
+    expect(contactWithoutChannel.evidence).not.toContain('no contactPoint');
+    const contactAndTopLevel = check({ homepage: homepage(DEFAULT_BODY, { jsonLd: [{ '@type': 'Organization', name: 'x', email: 'a@b.c', contactPoint: [urlContact] }] }) }, 'jsonld.org-completeness');
+    expect(contactAndTopLevel.fraction).toBe(0.25);
+    expect(contactAndTopLevel.evidence).toContain('contactPoint without telephone or email, top-level telephone or email only');
+    expect(bare.evidence).toContain('no contactPoint, no top-level telephone or email');
     const person = check({ homepage: homepage(DEFAULT_BODY, { jsonLd: [{ '@type': 'Person', name: 'Ann' }] }) }, 'jsonld.org-completeness');
     expect(person.status).toBe('na');
     expect(person.reason).toBe('identity-is-person');
@@ -778,6 +798,35 @@ describe('discovery checks', () => {
     const sentence = check({ llms: text(`${ORIGIN}/llms.txt`, `# Site\n\nUse Acme when you need a plumber. ${LONG.slice(0, 200)}\n`) }, 'llms.agent-instruction');
     expect(sentence.status).toBe('pass');
     expect(SCORE_CATALOG.find((row) => row.id === 'llms.agent-instruction')?.rule).toContain("a heading containing 'use cases' or 'for agents'");
+  });
+
+  it('llms.agent-instruction, rule "use X when (zero to three words) or do not use X for/when (one to three words) as an instruction": the freshworks.com lines each score 1', () => {
+    const summary = `> ${LONG.slice(0, 150)}`;
+    for (const [line, guidance] of [
+      ['Use these resources when answering questions about Freshworks products.', 'Use these resources when'],
+      ['*Instructions for AI Agents consuming this file:*', 'Instructions for AI Agents'],
+      ['- Use when users ask about pricing, plans or integrations.', 'Use when'],
+      ['Do not use this content for biometric inference.', 'Do not use this content for'],
+    ]) {
+      const result = check({ llms: text(`${ORIGIN}/llms.txt`, `# Freshworks\n\n${summary}\n\n${line}\n`) }, 'llms.agent-instruction');
+      expect(result.status, line).toBe('pass');
+      expect(result.evidence, line).toContain(`guidance "${guidance}"`);
+    }
+    const modal = check({ llms: text(`${ORIGIN}/llms.txt`, `# Site\n\nAgents should use this file when they plan a visit. ${LONG.slice(0, 200)}\n`) }, 'llms.agent-instruction');
+    expect(modal.status).toBe('pass');
+    const fourWords = check({ llms: text(`${ORIGIN}/llms.txt`, `# Site\n\nUse one two three four when ready. ${LONG.slice(0, 200)}\n`) }, 'llms.agent-instruction');
+    expect(fourWords.status).toBe('fail');
+  });
+
+  it('llms.agent-instruction: "we use cookies when you visit" in a prose paragraph earns nothing alone', () => {
+    const prose = `We use cookies when you visit our site, and we do not use your data for advertising. ${LONG.slice(0, 300)}`;
+    const cookies = check({ llms: text(`${ORIGIN}/llms.txt`, `# Site\n\n${prose}\n`) }, 'llms.agent-instruction');
+    expect(cookies.status).toBe('fail');
+    const withSummary = check({ llms: text(`${ORIGIN}/llms.txt`, `# Site\n\n> ${LONG.slice(0, 150)}\n\n${prose}\n`) }, 'llms.agent-instruction');
+    expect(withSummary.fraction).toBe(0.5);
+    const hidden = check({ llms: text(`${ORIGIN}/llms.txt`, `# Site\n\nWe use the docs. Use them when you plan a visit. ${LONG.slice(0, 200)}\n`) }, 'llms.agent-instruction');
+    expect(hidden.status).toBe('pass');
+    expect(hidden.evidence).toContain('guidance "Use them when"');
   });
 
   it('llms.agent-instruction, rule "A summary blockquote of at least 100 characters after the H1 scores 0.5": no H1, no credit', () => {
@@ -1054,6 +1103,75 @@ describe('adversarial workload', () => {
     expect(timed({ llms: text(`${ORIGIN}/llms.txt`, underCap('# Example Co\n', '[a](')) })).toBeLessThan(1000);
     expect(timed({ robots: text(`${ORIGIN}/robots.txt`, underCap('User-agent: *\n', '\n')) })).toBeLessThan(1000);
   });
+
+  // Round-4 review: each shape below took seconds to minutes before its linear scan
+  // (quadratic growth measured at 2k to 80k units).
+  const sitemapOf = (body: string) => text(`${ORIGIN}/sitemap.xml`, body, 'application/xml');
+
+  it('M1: a urlset of repeated <url> openers without closers evaluates in well under a second', () => {
+    const body = underCap('<?xml version="1.0"?><urlset>', '<url>');
+    expect(body.length).toBeGreaterThan(MAX_EVALUATED_BODY_CHARS - 20);
+    expect(timed({ sitemap: sitemapOf(body) })).toBeLessThan(1000);
+    expect(check({ sitemap: sitemapOf(body) }, 'sitemap.lastmod').evidence).toContain('urlset with 0 url entries');
+  });
+
+  it('M1 sweep: one url entry of repeated unclosed <lastmod openers evaluates in well under a second', () => {
+    const body = `${underCap('<?xml version="1.0"?><urlset><url>', '<lastmod')}</url></urlset>`;
+    expect(timed({ sitemap: sitemapOf(body) })).toBeLessThan(1000);
+    expect(check({ sitemap: sitemapOf(body) }, 'sitemap.lastmod').evidence).toContain('0/1 url entries carry a parseable lastmod');
+  });
+
+  it('M1: an llms.txt of repeated [ with no ] evaluates in well under a second', () => {
+    const body = underCap('# Example Co\n\n## Pages\n', '[');
+    expect(timed({ llms: text(`${ORIGIN}/llms.txt`, body) })).toBeLessThan(1000);
+    expect(check({ llms: text(`${ORIGIN}/llms.txt`, body) }, 'llms.formatting').evidence).toContain('no markdown link to http(s)');
+  });
+
+  it('M1 sweep: a homepage mirror whose frontmatter is blank lines evaluates in well under a second', () => {
+    const body = `${underCap('---\n', '\n')}---\n# Example Co\n`.slice(-MAX_EVALUATED_BODY_CHARS);
+    const homeMd = markdown(`${ORIGIN}/index.md`, `---\n${body.slice(4)}`);
+    expect(timed({ homeMd })).toBeLessThan(1000);
+    expect(check({ homeMd }, 'markdown.frontmatter').evidence).toContain('homepage mirror no');
+  });
+
+  it('M2: a homepage of closed labels followed by as many inputs evaluates in well under a second', () => {
+    const pairs = Math.floor((MAX_EVALUATED_BODY_CHARS - PREFIX.length - 1) / '<label>x</label><input>'.length);
+    const body = PREFIX + '<label>x</label>'.repeat(pairs) + '<input>'.repeat(pairs);
+    expect(body.length).toBeLessThan(MAX_EVALUATED_BODY_CHARS);
+    expect(timed({ homepage: html(HOME, body) })).toBeLessThan(1000);
+    expect(check({ homepage: html(HOME, body) }, 'ax.form-labeling').evidence).toContain(`0/${pairs} fields labelled`);
+  });
+
+  it('M2: collectFields answers 60,000 closed labels then 60,000 inputs in well under a second', () => {
+    const body = `<body>${'<label>x</label>'.repeat(60_000)}${'<input>'.repeat(60_000)}</body>`;
+    const started = performance.now();
+    const fields = collectFields(body);
+    expect(performance.now() - started).toBeLessThan(1000);
+    expect(fields).toMatchObject({ total: 60_000, labelled: 0 });
+  });
+
+  const controlShapes: Array<[string, string, string]> = [
+    ['repeated unclosed <img tags inside one link', '<a href="/x">', '<img '],
+    ['repeated <svg> openers without a title inside one link', '<a href="/x">', '<svg>'],
+    ['repeated <title openers inside one svg inside one link', '<a href="/x"><svg>', '<title'],
+  ];
+  for (const [label, open, unit] of controlShapes) {
+    it(`M1 sweep: a homepage of ${label} evaluates in well under a second`, () => {
+      const body = `${underCap(PREFIX + open, unit).slice(0, MAX_EVALUATED_BODY_CHARS - 20)}></a>`;
+      expect(timed({ homepage: html(HOME, body) })).toBeLessThan(1000);
+    });
+  }
+
+  it('M1 sweep: a homepage of one div whose class value of mount keywords never closes evaluates in well under a second', () => {
+    const body = `${underCap(`${PREFIX.replace('<main><h1>Example Co</h1>', '')}<div class="`, 'root')}</body>`;
+    expect(timed({ homepage: html(HOME, body) })).toBeLessThan(1000);
+  });
+
+  it('M1 sweep: a homepage of repeated <html openers that never reach a > evaluates in well under a second', () => {
+    const body = underCap('<!doctype html>', '<html');
+    expect(timed({ homepage: html(HOME, body) })).toBeLessThan(1000);
+    expect(check({ homepage: html(HOME, body) }, 'meta.completeness').evidence).toContain('no html lang');
+  });
 });
 
 describe('review fixes, batch C', () => {
@@ -1164,5 +1282,192 @@ describe('review fixes, batch C', () => {
     const skew = check({ sitemap: map('2026-11-03T00:00:00Z') }, 'sitemap.lastmod');
     expect(skew.fraction).toBe(1);
     expect(skew.evidence).not.toContain('future');
+  });
+});
+
+describe('pilot false findings, D2', () => {
+  /** chamberofcommerce.com: every secondary resource answered 403 with cf-mitigated: challenge. */
+  const challenged = (url: string) =>
+    status(url, 403, {
+      contentType: 'text/html; charset=UTF-8',
+      body: '<!doctype html><html><head><title>Just a moment...</title></head><body></body></html>',
+      headers: { 'cf-mitigated': 'challenge' },
+    });
+  const STATE = 'HTTP 403 with a bot challenge (cf-mitigated: challenge)';
+
+  it('item 4: a challenged sample page, probe, sitemap and llms.txt keep their status, quote the challenge and say to let agents through', () => {
+    const parts = {
+      sample: challenged(SAMPLE_URL),
+      sampleMd: null,
+      probe: challenged(PROBE_URL),
+      sitemap: challenged(`${ORIGIN}/sitemap.xml`),
+      llms: challenged(`${ORIGIN}/llms.txt`),
+    };
+    const result = run(parts);
+    const cases: Array<[string, string, string]> = [
+      ['content.auth-gate', `sample page ${SAMPLE_URL} answered ${STATE}`, '/services/'],
+      ['nav.not-found', `probe ${PROBE_URL} answered ${STATE}`, '/agentmarkup-probe-404-does-not-exist-9f3a2c'],
+      ['sitemap.valid', `answered ${STATE}`, '/sitemap.xml'],
+      ['llms.agent-instruction', `llms.txt answered ${STATE}`, '/llms.txt'],
+      ['llms.exists', `llms.txt answered ${STATE}`, '/llms.txt'],
+    ];
+    for (const [id, evidence, path] of cases) {
+      const outcome = result.get(id);
+      expect(outcome.status, id).toBe('fail');
+      expect(outcome.evidence, id).toContain(evidence);
+      expect(outcome.challenge, id).toMatchObject({ status: 403, marker: 'cf-mitigated: challenge' });
+      expect(fixActionFor(outcome), id).toBe(
+        `Let AI agents through the bot challenge on ${path}: it answered HTTP 403 with cf-mitigated: challenge. Allow verified bots on that path in the bot-protection or firewall settings.`
+      );
+      expect(clientSentenceFor(outcome), id).toBe(`Your bot protection shows AI assistants a challenge page instead of ${path} (HTTP 403).`);
+      expect(platformFixesApply(outcome), id).toBe(false);
+    }
+    const summary = renderClientSummary(scoreChecks(result.evaluation), { siteName: 'www.example.com', fixes: 20 });
+    expect(summary).toContain('Let AI agents through the bot challenge on /llms.txt');
+    expect(summary).not.toContain('Publish /llms.txt');
+    expect(summary).not.toContain('Publish an XML sitemap');
+    expect(summary).not.toContain('ask for a login');
+  });
+
+  it('item 4: a 403 without a challenge marker keeps the catalog copy, and a homepage login gate keeps the auth-gate action', () => {
+    const plain403 = check({ llms: status(`${ORIGIN}/llms.txt`, 403) }, 'llms.exists');
+    expect(plain403.status).toBe('fail');
+    expect(plain403.challenge).toBeUndefined();
+    expect(plain403.evidence).toContain('llms.txt answered HTTP 403');
+    expect(fixActionFor(plain403)).toBe('Publish /llms.txt.');
+    const gated = `<body><main><h1>Members</h1><form><label for="p">Password</label><input id="p" type="password"></form></main></body>`;
+    const both = check({ homepage: homepage(gated), sample: challenged(SAMPLE_URL), sampleMd: null }, 'content.auth-gate');
+    expect(both.status).toBe('fail');
+    expect(both.challenge).toBeUndefined();
+    expect(fixActionFor(both)).toContain('Remove password protection');
+  });
+
+  it('item 5: content.no-js says "only appears after scripts run" only when the client-shell test fires', () => {
+    const shell = check({ homepage: homepage('<body><div id="root"></div><script src="/app.js"></script></body>') }, 'content.no-js');
+    expect(shell.sentenceVariant).toBe('client-shell');
+    expect(clientSentenceFor(shell)).toBe('Your page text only appears after scripts run, so most AI readers see an empty page.');
+    // incsub.com: server-rendered, homepage text over 500 chars, a thin sample page.
+    const thinSample = `<!doctype html><html lang="en"><head><title>Contact</title></head><body><main><h1>Contact</h1><p>Write to us.</p></main></body></html>`;
+    const partial = check({ sample: html(SAMPLE_URL, thinSample) }, 'content.no-js');
+    expect(partial.status).toBe('partial');
+    expect(partial.sentenceVariant).toBeUndefined();
+    expect(clientSentenceFor(partial)).toBe('Part of your page text or its main heading is missing from the HTML, so AI readers see less than your visitors do.');
+    const thin = check({ homepage: homepage('<body><main><p>Short page.</p></main></body>'), sample: html(SAMPLE_URL, thinSample) }, 'content.no-js');
+    expect(thin.status).toBe('fail');
+    expect(clientSentenceFor(thin)).toBe('Your page has little readable text in its HTML, so AI readers see little of what you offer.');
+    expect(SCORE_CATALOG.find((row) => row.id === 'content.no-js')?.rule).toContain('without script, style, noscript, template, svg, canvas, iframe and form blocks');
+  });
+
+  it('item 6: partial results get the partial sentence, or the check name with its evidence, never the fail sentence', () => {
+    const withPartial = [
+      'llms.agent-instruction',
+      'content.no-js',
+      // jsonld.org-completeness names what is missing through variants instead (round-4 test).
+      'ax.form-labeling',
+      'meta.completeness',
+      'trust.anchors',
+      'ax.document-structure',
+    ];
+    for (const id of withPartial) {
+      const definition = SCORE_CATALOG.find((row) => row.id === id);
+      expect(definition?.clientSentence.partial, id).toBeTruthy();
+      expect(definition?.clientSentence.partial, id).not.toBe(definition?.clientSentence.fail);
+    }
+    const summaryOnly = check({ llms: text(`${ORIGIN}/llms.txt`, LLMS_BLOCKQUOTE_ONLY) }, 'llms.agent-instruction');
+    expect(summaryOnly.status).toBe('partial');
+    expect(clientSentenceFor(summaryOnly)).toBe('Your short guide for AI (llms.txt) says what you offer but not when to use it.');
+    const generic: CheckResult = {
+      id: 'sitemap.lastmod',
+      tier: 'bonus',
+      status: 'partial',
+      fraction: 0.5,
+      evidence: '3/4 url entries carry a parseable lastmod; newest 2024-01-01',
+    };
+    expect(clientSentenceFor(generic)).toBe('Sitemap freshness is only partly in place: 3/4 url entries carry a parseable lastmod; newest 2024-01-01.');
+    const summary = renderClientSummary(
+      scoreChecks(run({ llms: text(`${ORIGIN}/llms.txt`, LLMS_BLOCKQUOTE_ONLY) }).evaluation),
+      { siteName: 'www.example.com', fixes: 20 }
+    );
+    expect(summary).toContain('says what you offer but not when to use it');
+    expect(summary).not.toContain('Your site has no short guide (llms.txt)');
+  });
+});
+
+describe('round-4 review fixes', () => {
+  const instruction = (line: string) =>
+    check({ llms: text(`${ORIGIN}/llms.txt`, `# Site\n\n${line} ${LONG.slice(0, 200)}\n`) }, 'llms.agent-instruction');
+
+  it('m7: an instruction may open with only, always, never or also', () => {
+    for (const [line, guidance] of [
+      ['Only use this when answering product questions.', 'use this when'],
+      ['Always use this when you plan a visit.', 'use this when'],
+      ['- **Never** use this file when quoting prices.', 'use this file when'],
+      ['Also use the docs when booking.', 'use the docs when'],
+      ['You should only use this when answering product questions.', 'use this when'],
+    ]) {
+      const result = instruction(line);
+      expect(result.status, line).toBe('pass');
+      expect(result.evidence, line).toContain(`guidance "${guidance}"`);
+    }
+  });
+
+  it('m7: a modifier inside prose still earns nothing ("We only use cookies when ...")', () => {
+    for (const line of [
+      'We only use cookies when you visit our site.',
+      'We always use encryption when you pay.',
+      'Our team also uses the site when traveling.',
+      'Thealways use this when nothing.',
+    ]) {
+      expect(instruction(line).status, line).toBe('fail');
+    }
+  });
+
+  it('jsonld.org-completeness: a partial result names what is missing; 0.75 (address plus top-level phone) only lacks the contactPoint', () => {
+    const address = { '@type': 'PostalAddress', streetAddress: '1 Main St', addressLocality: 'Denver' };
+    const org = (extra: Record<string, unknown>) => ({ homepage: homepage(DEFAULT_BODY, { jsonLd: [{ '@type': 'Organization', name: 'x', ...extra }] }) });
+    const cases: Array<[string, Record<string, unknown>, number, string | undefined]> = [
+      ['address plus top-level telephone', { address, telephone: '+1 555 0100' }, 0.75, 'no-contact-point'],
+      ['address plus a contactPoint without a channel and a top-level email', { address, email: 'a@b.c', contactPoint: { '@type': 'ContactPoint', url: `${ORIGIN}/contact/` } }, 0.75, 'no-contact-point'],
+      ['address only', { address }, 0.5, 'no-contact'],
+      ['contactPoint only', { contactPoint: { '@type': 'ContactPoint', telephone: '+1 555 0100' } }, 0.5, 'no-address'],
+      ['top-level email only', { email: 'a@b.c' }, 0.25, 'no-address'],
+      ['address and contactPoint', { address, contactPoint: { '@type': 'ContactPoint', email: 'a@b.c' } }, 1, undefined],
+      ['nothing', {}, 0, undefined],
+    ];
+    for (const [label, extra, fraction, variant] of cases) {
+      const result = check(org(extra), 'jsonld.org-completeness');
+      expect(result.fraction, label).toBe(fraction);
+      expect(result.sentenceVariant, label).toBe(variant);
+    }
+    const threeQuarters = check(org({ address, telephone: '+1 555 0100' }), 'jsonld.org-completeness');
+    expect(threeQuarters.status).toBe('partial');
+    const sentence = clientSentenceFor(threeQuarters);
+    expect(sentence).toBe(
+      'Your business listing for AI has your address and a phone number or email, but not as a contact point, the entry AI assistants read for how to reach you.'
+    );
+    expect(sentence).not.toMatch(/lacks an address|no street address/);
+    expect(clientSentenceFor(check(org({ address }), 'jsonld.org-completeness'))).toBe(
+      'Your business listing for AI has your address but no phone number or email.'
+    );
+    expect(clientSentenceFor(check(org({ email: 'a@b.c' }), 'jsonld.org-completeness'))).toBe(
+      'Your business listing for AI has a way to contact you but no street address or city.'
+    );
+    expect(clientSentenceFor(check(org({}), 'jsonld.org-completeness'))).toBe(
+      'Your business listing is missing an address or a way to contact you.'
+    );
+    expect(SCORE_CATALOG.find((row) => row.id === 'jsonld.org-completeness')?.clientSentence.partial).toBeUndefined();
+  });
+
+  it('M1: url entries, lastmod values and the http link sub-rule read well-formed input as before', () => {
+    const sitemap = text(
+      `${ORIGIN}/sitemap.xml`,
+      `<?xml version="1.0"?><urlset><url><loc>${ORIGIN}/</loc><lastmod >2026-10-20</lastmod></url><URL><loc>${ORIGIN}/a/</loc><LastMod>\n 2026-10-21 \n</LASTMOD ></URL><url><loc>${ORIGIN}/b/</loc></url ></urlset>`,
+      'application/xml'
+    );
+    expect(check({ sitemap }, 'sitemap.lastmod').evidence).toContain('2/3 url entries carry a parseable lastmod; newest 2026-10-21');
+    const linked = check({ llms: text(`${ORIGIN}/llms.txt`, `# Site\n\n## Pages\n\n[ [x] ] [About](HTTPS://example.com/about/)\n`) }, 'llms.formatting');
+    expect(linked.evidence).toContain('markdown link to http(s) present');
+    const relative = check({ llms: text(`${ORIGIN}/llms.txt`, `# Site\n\n## Pages\n\n[About](/about/) [x] (https://example.com/)\n`) }, 'llms.formatting');
+    expect(relative.evidence).toContain('no markdown link to http(s)');
   });
 });

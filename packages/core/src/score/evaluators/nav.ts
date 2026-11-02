@@ -1,5 +1,5 @@
 // navigation: nav.redirect-hygiene, nav.not-found, nav.not-found-markdown.
-import { bodyByteLength, findChallengeMarker } from '../evidence.js';
+import { bodyByteLength } from '../evidence.js';
 import { hasMetaRefresh, normalizeBodyForComparison, scriptBlockContents } from '../html-lite.js';
 import {
   notApplicable,
@@ -86,12 +86,9 @@ export const navEvaluators: Record<string, EvaluatorEntry> = {
         );
       }
       if (status === 401 || status === 403) {
-        const marker = findChallengeMarker(resource);
-        return scored(
-          0,
-          `probe ${url} answered HTTP ${status}${marker ? ` with challenge marker "${marker}"` : ''}`,
-          ['notFoundProbe']
-        );
+        return scored(0, `probe ${url} answered ${probe.challengeState() ?? `HTTP ${status}`}`, ['notFoundProbe'], {
+          challenge: probe.challengeNote('notFoundProbe'),
+        });
       }
       if (probe.outcome === 'challenge') {
         return unverified('probe-challenged', `probe answered HTTP ${status} with a challenge page`, [

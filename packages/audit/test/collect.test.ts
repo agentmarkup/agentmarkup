@@ -329,7 +329,7 @@ describe('collectSiteEvidence', () => {
     expect(evidence.fetchSummary.unverified).toEqual(['llmsTxt']);
   });
 
-  it('counts a challenged not-found probe as unverified in the summary while its outcome stays challenge', async () => {
+  it('counts a 503 challenged not-found probe as unverified in the summary while its outcome stays challenge', async () => {
     const routes = healthySite();
     routes[PROBE_PATH] = () => ({
       status: 503,
@@ -342,6 +342,28 @@ describe('collectSiteEvidence', () => {
     expect(evidence.notFoundProbe?.outcome).toBe('challenge');
     expect(evidence.fetchSummary.unverified).toEqual(['notFoundProbe']);
     expect(evidence.fetchSummary.analysisStatus).toBe('partial');
+  });
+
+  it('treats a 403 challenged not-found probe as a measured answer, as the engine does', async () => {
+    const routes = healthySite();
+    routes[PROBE_PATH] = () => ({
+      status: 403,
+      body: '<html><body>Just a moment...</body></html>',
+      headers: { 'content-type': 'text/html', 'cf-mitigated': 'challenge' },
+    });
+    const stub = createFetchStub(routes);
+    const evidence = await settleWithFakeTimers(
+      collectSiteEvidence('https://example.com', { fetchImpl: stub.fetch, minGapMs: 0 })
+    );
+
+    expect(evidence.notFoundProbe?.outcome).toBe('challenge');
+    expect(evidence.fetchSummary).toMatchObject({ analysisStatus: 'complete', unverified: [] });
+    const callsBefore = stub.calls.length;
+    const retried = await settleWithFakeTimers(
+      refetchUnverified(evidence, { fetchImpl: stub.fetch, minGapMs: 0, sleep: async () => {} })
+    );
+    expect(stub.calls.length).toBe(callsBefore);
+    expect(retried.notFoundProbe?.outcome).toBe('challenge');
   });
 
   it('reports a probe 3xx without Location as its completed answer, not a missing-Location error', async () => {

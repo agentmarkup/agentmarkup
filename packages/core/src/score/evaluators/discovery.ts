@@ -1,5 +1,6 @@
 // discovery: sitemap.valid, sitemap.lastmod, llms.agent-instruction, llms.exists,
 // llms.formatting, llms.modular, llms.discovery-link, link.headers-discovery.
+import { blockPattern, scanBlocks } from '../../html-scan.js';
 import { splitFrontmatter } from '../evidence.js';
 import { collapseWhitespace, collectLinkTags } from '../html-lite.js';
 import {
@@ -27,10 +28,65 @@ const LASTMOD_FUTURE_ALLOWANCE_MS = DAY_MS;
  */
 const GUIDANCE_PATTERNS: ReadonlyArray<RegExp> = [
   /\bwhen to use\b/i,
-  /\buse (?:this|it|[\w.-]+) when\b/i,
-  /\bdo not use [\w.-]+ (?:for|when)\b/i,
   /\bbest fit (?:for|when)\b/i,
+  /\binstructions for (?:ai )?agents\b/i,
 ];
+/**
+ * "use X when" (zero to three words for X) and "do not use X for/when" (one to three).
+ * They count only as an instruction (see `isInstructionAt`), so "we use cookies when
+ * you visit" in a privacy paragraph earns nothing.
+ */
+const INSTRUCTION_PATTERNS: ReadonlyArray<RegExp> = [
+  /\buse(?:\s+[\w.-]+){0,3}\s+when\b/gi,
+  /\bdo not use(?:\s+[\w.-]+){1,3}\s+(?:for|when)\b/gi,
+];
+/** What a list item, quote, heading or emphasis puts in front of an instruction. */
+const INSTRUCTION_DECORATION_RE = /[\s>*_#+\-"'`([]/;
+/** Sentence punctuation, a list number ("1." or "1)") or a modal right before it. */
+const INSTRUCTION_LEAD_RE = /(?:[.!?:;)]|\b(?:should|can|may|must|please))$/i;
+/** One imperative modifier an instruction may open with ("Only use this when ..."). */
+const INSTRUCTION_MODIFIER_RE = /\b(?:only|always|never|also)$/i;
+
+/** Where `index` lands after stepping back over decoration. */
+function skipDecoration(line: string, index: number): number {
+  let end = index;
+  while (end > 0 && INSTRUCTION_DECORATION_RE.test(line[end - 1])) {
+    end -= 1;
+  }
+  return end;
+}
+
+/**
+ * True when the phrase at `index` is an instruction: at the start of the line, a
+ * sentence or a list item (decoration skipped), or right after should, can, may,
+ * must or please. One modifier (only, always, never, also) may stand in front of
+ * it, so "Only use this when" counts while "We only use cookies when" does not.
+ */
+function isInstructionAt(line: string, index: number): boolean {
+  let end = skipDecoration(line, index);
+  // Seven characters hold the longest word plus the one before it, so `\b` is real.
+  const modifier = INSTRUCTION_MODIFIER_RE.exec(line.slice(Math.max(0, end - 7), end));
+  if (modifier) {
+    end = skipDecoration(line, end - modifier[0].length);
+  }
+  return end === 0 || INSTRUCTION_LEAD_RE.test(line.slice(Math.max(0, end - 7), end));
+}
+
+/** The first instruction-position "use X when" or "do not use X for/when" on a line. */
+function findInstruction(line: string): string | null {
+  for (const pattern of INSTRUCTION_PATTERNS) {
+    const search = new RegExp(pattern.source, pattern.flags);
+    let match: RegExpExecArray | null;
+    while ((match = search.exec(line)) !== null) {
+      if (isInstructionAt(line, match.index)) {
+        return match[0];
+      }
+      // A rejected match may hide an instruction inside it ("we use X Use when").
+      search.lastIndex = match.index + 1;
+    }
+  }
+  return null;
+}
 /**
  * Phrases that count only in a heading ("a heading containing 'use cases' or 'for
  * agents'"): in running prose they are common and say nothing about when to use the
@@ -45,6 +101,65 @@ const HEADING_LINE_RE = /^\s*#{1,6}\s+\S/;
  */
 const MARKDOWN_LINK_TARGET_RE = /\]\(\s*<?([^()\s>]+)>?(?:\s+["'][^"']*["'])?\s*\)/g;
 const BARE_URL_RE = /\bhttps?:\/\/[^\s<>()"'\]]+/gi;
+/** `/<url\b[\s\S]*?<\/url\s*>/gi`, scanned in linear time. */
+const SITEMAP_URL_BLOCKS = blockPattern(['url'], { openerEndsAtGt: false, closeAllowsSpace: true });
+const LASTMOD_OPEN_RE = /<lastmod\b/gi;
+const LASTMOD_VALUE_RE = /\s*([^<\s]+)\s*<\/lastmod\s*>/iy;
+const HTTP_LINK_TARGET_RE = /\(https?:\/\//iy;
+
+/**
+ * What `/<lastmod\b[^>]*>\s*([^<\s]+)\s*<\/lastmod\s*>/i` captures in `entry`, in
+ * linear time. Every opener before the same `>` shares that `>` and the same value
+ * test, so one failed opener rules out the rest up to its `>` (the regex retried
+ * each of them up to the end of a body of unclosed `<lastmod` tags).
+ */
+export function firstLastmod(entry: string): string | null {
+  const open = new RegExp(LASTMOD_OPEN_RE.source, LASTMOD_OPEN_RE.flags);
+  const value = new RegExp(LASTMOD_VALUE_RE.source, LASTMOD_VALUE_RE.flags);
+  let from = 0;
+  for (;;) {
+    open.lastIndex = from;
+    const start = open.exec(entry);
+    if (!start) {
+      return null;
+    }
+    const gt = entry.indexOf('>', start.index + start[0].length);
+    if (gt === -1) {
+      return null;
+    }
+    value.lastIndex = gt + 1;
+    const match = value.exec(entry);
+    if (match) {
+      return match[1];
+    }
+    from = gt + 1;
+  }
+}
+
+/**
+ * `/\[[^\]]*\]\(https?:\/\//i.test(body)` in one pass: a `]` closes a link text
+ * when a `[` came after the previous `]`. The regex rescanned the rest of a body of
+ * repeated `[` from each one.
+ */
+export function hasHttpMarkdownLink(body: string): boolean {
+  const target = new RegExp(HTTP_LINK_TARGET_RE.source, HTTP_LINK_TARGET_RE.flags);
+  let open = false;
+  for (let index = 0; index < body.length; index += 1) {
+    const code = body.charCodeAt(index);
+    if (code === 91) {
+      open = true;
+    } else if (code === 93) {
+      if (open) {
+        target.lastIndex = index + 1;
+        if (target.test(body)) {
+          return true;
+        }
+      }
+      open = false;
+    }
+  }
+  return false;
+}
 
 function llmsState(llms: ResourceView): string {
   if (llms.unverified) {
@@ -57,7 +172,7 @@ function llmsState(llms: ResourceView): string {
     return `llms.txt answered HTTP ${llms.status} ${llms.mediaType} with an HTML body (treated as absent)`;
   }
   if (!llms.ok) {
-    return `llms.txt answered HTTP ${llms.status}`;
+    return `llms.txt answered ${llms.challengeState() ?? `HTTP ${llms.status}`}`;
   }
   return 'llms.txt present';
 }
@@ -143,7 +258,12 @@ export const discoveryEvaluators: Record<string, EvaluatorEntry> = {
             ['sitemap', 'robotsTxt']
           );
         }
-        return scored(0, `${sitemapLabel(context)} answered HTTP ${sitemap.status}`, ['sitemap', 'robotsTxt']);
+        return scored(
+          0,
+          `${sitemapLabel(context)} answered ${sitemap.challengeState() ?? `HTTP ${sitemap.status}`}`,
+          ['sitemap', 'robotsTxt'],
+          { challenge: sitemap.challengeNote('sitemap') }
+        );
       }
       const kind = sitemapKind(sitemap.body);
       if (!kind) {
@@ -179,19 +299,20 @@ export const discoveryEvaluators: Record<string, EvaluatorEntry> = {
           ['sitemap']
         );
       }
-      const entries = sitemap.body.match(/<url\b[\s\S]*?<\/url\s*>/gi) ?? [];
+      const body = sitemap.body;
+      const entries = scanBlocks(body, SITEMAP_URL_BLOCKS).map((block) => body.slice(block.start, block.end));
       let withLastmod = 0;
       let newest = Number.NEGATIVE_INFINITY;
       let newestRaw: string | null = null;
       for (const entry of entries) {
-        const match = entry.match(/<lastmod\b[^>]*>\s*([^<\s]+)\s*<\/lastmod\s*>/i);
-        if (!match) continue;
-        const parsed = Date.parse(match[1]);
+        const lastmod = firstLastmod(entry);
+        if (lastmod === null) continue;
+        const parsed = Date.parse(lastmod);
         if (Number.isNaN(parsed)) continue;
         withLastmod += 1;
         if (parsed > newest) {
           newest = parsed;
-          newestRaw = match[1];
+          newestRaw = lastmod;
         }
       }
       if (entries.length === 0) {
@@ -216,7 +337,7 @@ export const discoveryEvaluators: Record<string, EvaluatorEntry> = {
         return unverified('llms-unverified', llmsState(llms), ['llmsTxt']);
       }
       if (!llms.isText) {
-        return scored(0, llmsState(llms), ['llmsTxt']);
+        return scored(0, llmsState(llms), ['llmsTxt'], { challenge: llms.challengeNote('llmsTxt') });
       }
       const body = splitFrontmatter(llms.body).content;
       const text = collapseWhitespace(body);
@@ -228,11 +349,17 @@ export const discoveryEvaluators: Record<string, EvaluatorEntry> = {
         const patterns = HEADING_LINE_RE.test(line)
           ? [...GUIDANCE_PATTERNS, ...HEADING_GUIDANCE_PATTERNS]
           : GUIDANCE_PATTERNS;
+        let guidance: string | null = null;
         for (const pattern of patterns) {
           const match = line.match(pattern);
           if (match) {
-            return scored(1, `guidance "${match[0]}" on line: ${collapseWhitespace(line).slice(0, 100)}`, ['llmsTxt']);
+            guidance = match[0];
+            break;
           }
+        }
+        guidance ??= findInstruction(line);
+        if (guidance) {
+          return scored(1, `guidance "${guidance}" on line: ${collapseWhitespace(line).slice(0, 100)}`, ['llmsTxt']);
         }
       }
       // The summary blockquote must follow an actual H1; without one nothing is credited.
@@ -268,7 +395,7 @@ export const discoveryEvaluators: Record<string, EvaluatorEntry> = {
         return unverified('llms-unverified', llmsState(llms), ['llmsTxt']);
       }
       if (!llms.isText) {
-        return scored(0, llmsState(llms), ['llmsTxt']);
+        return scored(0, llmsState(llms), ['llmsTxt'], { challenge: llms.challengeNote('llmsTxt') });
       }
       const length = collapseWhitespace(llms.body).length;
       return scored(length >= LLMS_MIN_CHARS ? 1 : 0, `llms.txt at ${llms.finalUrl ?? ''}: ${formatCount(length)} chars after whitespace collapse`, [
@@ -289,7 +416,7 @@ export const discoveryEvaluators: Record<string, EvaluatorEntry> = {
       const body = llms.body.replace(/^\uFEFF/, '');
       const firstLine = body.split(/\r?\n/).find((line) => line.trim().length > 0) ?? '';
       const h1 = /^#\s+\S/.test(firstLine.trim());
-      const link = /\[[^\]]*\]\(https?:\/\//i.test(body);
+      const link = hasHttpMarkdownLink(body);
       const size = body.length < LLMS_MAX_CHARS;
       const section = /^##\s+\S/m.test(body);
       const passed = [h1, link, size, section].filter(Boolean).length;

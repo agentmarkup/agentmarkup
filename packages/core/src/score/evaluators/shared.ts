@@ -1,6 +1,7 @@
 // Shared evaluation context and result helpers for the per-check evaluators.
 import {
   classifyResource,
+  findChallengeMarker,
   isHtmlBody,
   isMarkdownResource,
   isTextResource,
@@ -22,6 +23,7 @@ import {
 } from '../html-lite.js';
 import { roundTo } from '../formula.js';
 import type {
+  CheckChallenge,
   CheckResult,
   CheckStatus,
   CheckTier,
@@ -143,6 +145,22 @@ export class ResourceView {
     return `HTTP ${resource.status} ${this.mediaType}`;
   }
 
+  /** The marker reach.bot-detection reads, when this resource answered a challenge page. */
+  get challengeMarker(): string | null {
+    return this.outcome === 'challenge' && this.resource ? findChallengeMarker(this.resource) : null;
+  }
+
+  /** `HTTP 403 with a bot challenge (cf-mitigated: challenge)`, or null without a challenge. */
+  challengeState(): string | null {
+    const marker = this.challengeMarker;
+    return marker ? `HTTP ${this.status} with a bot challenge (${marker})` : null;
+  }
+
+  /** The challenge note for a check this resource decided, or undefined without a challenge. */
+  challengeNote(resource: EvidenceResourceKey): CheckChallenge | undefined {
+    const marker = this.challengeMarker;
+    return marker ? { resource, url: this.finalUrl, status: this.status, marker } : undefined;
+  }
 }
 
 /** Lazily parsed HTML page (homepage or sample page). */
@@ -231,7 +249,12 @@ export interface EvaluatorOutput {
   reason?: string;
   evidence: string;
   resources: EvidenceResourceKey[];
+  challenge?: CheckChallenge;
+  sentenceVariant?: string;
 }
+
+/** Extra result fields a scored output may carry (see `CheckResult`). */
+export type ScoredExtras = Pick<EvaluatorOutput, 'challenge' | 'sentenceVariant'>;
 
 export type Evaluator = (context: EvaluationContext) => EvaluatorOutput;
 
@@ -244,9 +267,13 @@ export interface EvaluatorEntry {
 export function scored(
   fraction: number,
   evidence: string,
-  resources: EvidenceResourceKey[]
+  resources: EvidenceResourceKey[],
+  extras: ScoredExtras = {}
 ): EvaluatorOutput {
-  return { fraction: roundTo(Math.min(1, Math.max(0, fraction)), 3), evidence, resources };
+  const output: EvaluatorOutput = { fraction: roundTo(Math.min(1, Math.max(0, fraction)), 3), evidence, resources };
+  if (extras.challenge) output.challenge = extras.challenge;
+  if (extras.sentenceVariant) output.sentenceVariant = extras.sentenceVariant;
+  return output;
 }
 
 export function notApplicable(
@@ -280,7 +307,7 @@ export function toCheckResult(id: string, tier: CheckTier, output: EvaluatorOutp
   }
   const fraction = output.fraction ?? 0;
   const status: CheckStatus = fraction >= 1 ? 'pass' : fraction <= 0 ? 'fail' : 'partial';
-  return {
+  const result: CheckResult = {
     id,
     tier,
     status,
@@ -288,6 +315,9 @@ export function toCheckResult(id: string, tier: CheckTier, output: EvaluatorOutp
     evidence,
     resources: output.resources,
   };
+  if (output.challenge) result.challenge = output.challenge;
+  if (output.sentenceVariant) result.sentenceVariant = output.sentenceVariant;
+  return result;
 }
 
 /** `about N tokens` at 4 characters per token. */

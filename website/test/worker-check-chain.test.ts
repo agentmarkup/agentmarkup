@@ -430,6 +430,27 @@ describe('worker check chain', () => {
     }
   })
 
+  it('finishes a check whose robots.txt has 1 MB of blank lines and no Sitemap line in well under a second', async () => {
+    // The multiline sitemap regex rescanned the rest of the blank run from every line
+    // start when no Sitemap line followed it: 80,000 blank lines took 10 s.
+    vi.useRealTimers()
+    const routes = healthySite()
+    const robots = `User-agent: *\n${'\n'.repeat(1024 * 1024)}Disallow: /private/\n`
+    routes['/robots.txt'] = () => ({ status: 200, body: robots, headers: { 'content-type': 'text/plain' } })
+    const { calls } = installFetch(routes)
+
+    const started = performance.now()
+    const response = (await worker.fetch(new Request(CHECK_URL), {})) as Response
+    const elapsed = performance.now() - started
+    const payload = (await response.json()) as CheckPayload
+
+    expect(response.status).toBe(200)
+    expect(payload.robotsTxt.outcome).toBe('ok')
+    expect(payload.sitemapSource).toBe('default')
+    expect(calls.some((call) => call.path === '/sitemap.xml')).toBe(true)
+    expect(elapsed).toBeLessThan(1000)
+  })
+
   it('C11: reads a markdown alternate whose attributes have spaces around = or no quotes', async () => {
     const routes = healthySite()
     routes['/'] = () => ({
@@ -697,7 +718,8 @@ describe('worker check chain', () => {
     expect(payload.notFoundProbe?.outcome).toBe('challenge')
     expect(payload.notFoundProbe?.headers?.['cf-mitigated']).toBe('challenge')
     expect(payload.fetchSummary.analysisStatus).toBe('partial')
-    // C3: a challenged probe counts too, as core marks nav.not-found unverified for it.
+    // C3: a 429/503 challenged probe counts too, as core marks nav.not-found
+    // unverified for it; the 403 challenged mirror is a measured answer.
     expect(payload.fetchSummary.unverified).toEqual(['llmsTxt', 'sitemap', 'notFoundProbe'])
   })
 
@@ -718,6 +740,38 @@ describe('worker check chain', () => {
     expect(payload.fetchSummary.unverified).toEqual(['notFoundProbe'])
     expect(db.statements.filter(isCacheWrite)).toEqual([])
     expect(payload.cache.cachedAt).toBeNull()
+  })
+
+  it.each([
+    {
+      name: 'a 403 challenged not-found probe',
+      path: PROBE_PATH,
+      key: 'notFoundProbe' as const,
+    },
+    {
+      name: 'a 403 challenged homepage mirror',
+      path: '/index.md',
+      key: 'homepageMarkdown' as const,
+    },
+  ])('$name is a measured answer: the run is complete, yet it is never cached', async ({ path, key }) => {
+    const routes = healthySite()
+    routes[path] = () => ({
+      status: 403,
+      body: '<html><head><title>Just a moment...</title></head></html>',
+      headers: { 'content-type': 'text/html', 'cf-mitigated': 'challenge' },
+    })
+    installFetch(routes)
+    const db = fakeD1()
+
+    const { payload } = await runCheck({ CHECKS_DB: db })
+
+    expect(payload[key]?.outcome).toBe('challenge')
+    // Same status as core: nav.not-found scores a 401/403 challenge as a fail.
+    expect(payload.fetchSummary.analysisStatus).toBe('complete')
+    expect(payload.fetchSummary.unverified).toEqual([])
+    // A challenge is often per-IP and transient, so the run is not pinned.
+    expect(db.statements.filter(isCacheWrite)).toEqual([])
+    expect(payload.cache).toEqual({ hit: false, cachedAt: null, expiresAt: null })
   })
 
   it('C18: d1Statements counts the cache write, in the live response and in the cached copy', async () => {
@@ -764,6 +818,33 @@ describe('worker check chain', () => {
 
     expect(payload.llmsTxt).toMatchObject({ status: 302, error: 'Redirect response had no Location header.' })
     expect(cancelled).toBe(true)
+  })
+
+  it('cancels the body of a followed 3xx whose Location is unsafe or cannot be parsed', async () => {
+    for (const [location, error] of [
+      ['https://127.0.0.1/llms.txt', 'Request was blocked by checker safety rules.'],
+      ['http://[::1', 'Request failed.'],
+    ]) {
+      let cancelled = false
+      const routes = healthySite()
+      routes['/llms.txt'] = () => ({
+        status: 302,
+        headers: { location },
+        bodyStream: () =>
+          new ReadableStream<Uint8Array>({
+            pull: (controller) => controller.enqueue(new TextEncoder().encode('moved')),
+            cancel: () => {
+              cancelled = true
+            },
+          }),
+      })
+      installFetch(routes)
+
+      const { payload } = await runCheck()
+
+      expect(payload.llmsTxt, location).toMatchObject({ status: 0, error })
+      expect(cancelled, location).toBe(true)
+    }
   })
 
   it('C19: a probe 3xx without a Location header is a completed answer, never an error', async () => {

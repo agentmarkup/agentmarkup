@@ -606,16 +606,37 @@ export async function fetchResource(
 }
 
 /**
- * Whether a resource counts as unverified for the fetch summary. A challenged
- * not-found probe (429/503 with challenge markers) leaves nav.not-found
- * unverified in the score engine, so the run is not complete either and
- * refetchUnverified retries it. classifyResource stays unchanged; same rule and
- * wording as the worker's isUnverifiedForSummary.
+ * Whether a resource counts as unverified for the fetch summary, so the summary
+ * status always equals the score engine's analysisStatus. Outcome `unverified`
+ * counts. A challenged resource is a measured answer, with one exception the
+ * engine makes too: a not-found probe that answers 429/503 with challenge
+ * markers leaves nav.not-found unverified ('probe-challenged'), so it counts
+ * and refetchUnverified retries it. A 401/403 challenged probe scores
+ * nav.not-found as a measured fail and does not count. classifyResource stays
+ * unchanged; same rule as the worker's isUnverifiedForSummary.
  */
 export function isUnverifiedForSummary(key: EvidenceResourceKey, resource: RemoteResource): boolean {
+  if (resource.outcome === 'unverified') return true;
   return (
-    resource.outcome === 'unverified' ||
-    (key === 'notFoundProbe' && resource.outcome === 'challenge')
+    key === 'notFoundProbe' &&
+    resource.outcome === 'challenge' &&
+    resource.status !== 401 &&
+    resource.status !== 403
+  );
+}
+
+/**
+ * Whether the run is `blocked`, exactly when evaluateSiteChecks blocks it: the
+ * homepage is unverified (a re-run may succeed), or its final answer is a
+ * non-2xx other than 401/403 (404, 410, 400, ...: nothing to score). A 401, a
+ * 403 or a challenge page is scored, so it does not block. Same rule as the
+ * worker's isBlockedHomepage.
+ */
+export function isBlockedHomepage(homepage: RemoteResource): boolean {
+  return (
+    homepage.outcome === 'unverified' ||
+    homepage.outcome === 'not-found' ||
+    (homepage.outcome === 'http-error' && homepage.status !== 401 && homepage.status !== 403)
   );
 }
 
@@ -633,12 +654,11 @@ function buildFetchSummary(
     hops += resource.hops ?? 0;
     if (isUnverifiedForSummary(key, resource)) unverified.push(key);
   }
-  const analysisStatus =
-    evidence.homepage.outcome === 'unverified'
-      ? 'blocked'
-      : unverified.length > 0
-        ? 'partial'
-        : 'complete';
+  const analysisStatus = isBlockedHomepage(evidence.homepage)
+    ? 'blocked'
+    : unverified.length > 0
+      ? 'partial'
+      : 'complete';
   return { analysisStatus, unverified, elapsedMs, fetches: budget.fetches, hops, samplePageUrl };
 }
 
@@ -789,7 +809,7 @@ function redirectCapFor(key: EvidenceResourceKey): { maxRedirects: number; accep
 /**
  * Retries the resources that did not complete, `attempts` times with `waitMs`
  * between passes, before a partial reading is accepted (the summary's
- * `unverified` list, so a challenged not-found probe is retried too). A retried
+ * `unverified` list, so a 429/503 challenged not-found probe is retried too). A retried
  * resource replaces the recorded one only when it completed by the same rule. An unverified homepage re-collects the whole site, because the
  * other resources depend on its final URL. A recovered robots.txt re-derives
  * the sitemap URL and a recovered sample page its markdown URL, exactly as a

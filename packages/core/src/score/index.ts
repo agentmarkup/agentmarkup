@@ -7,6 +7,7 @@ export type {
   BonusSummary,
   CheckAvailability,
   CheckBucket,
+  CheckChallenge,
   CheckClientSentence,
   CheckDefinition,
   CheckPlatformFixes,
@@ -99,4 +100,5 @@ export {
   parseContentSignal,
 } from './html-lite.js';
 export { renderClientSummary } from './client-summary.js';
+export { clientSentenceFor, fixActionFor, platformFixesApply } from './check-copy.js';
 export type { ClientSummaryOptions } from './client-summary.js';

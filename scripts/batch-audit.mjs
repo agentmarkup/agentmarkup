@@ -12,7 +12,22 @@
 // Build first: pnpm -C packages/audit build (the script imports the built dist).
 // Politeness: 4 in-flight requests per site, a 1 s gap between request starts
 // per hostname (shared across agencies), 25 s per site, 30 requests per site,
+// and client discovery at most 12 requests and 40 s per agency (portfolio
+// pages and client liveness checks included),
 // User-Agent agentmarkup-checker/<version> (+https://agentmarkup.dev; batch).
+//
+// Client claims, first claim wins across the run (no client is audited for two
+// agencies): (1) under --resume, the picks of every agency already finished on
+// disk, since its files are not rewritten; (2) the --manual list of each other
+// agency, in CSV row order, one client at a time until three are kept, so a
+// client another agency already holds is dropped with a shared_with note and the
+// next listed client takes its place; (3) discovered picks, in the order the
+// agencies finish discovery. A dropped pick that leaves fewer than three adds
+// the `shared-client` needs_manual reason. Steps 1 and 2 run in row order before
+// any agency starts, so they never vary. Step 3 is first-finished-wins: with
+// --agencies-parallel above 1, two runs over the same rows can attach a client
+// both agencies link to different agencies; --agencies-parallel 1 makes it
+// row order and deterministic.
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -20,43 +35,45 @@ import { fileURLToPath } from 'node:url';
 import {
   COLLECTOR_USER_AGENT,
   COLLECTOR_VERSION,
+  DISCOVERY_DEFAULTS,
   canonicalizeAgencyUrl,
+  claimClientDomains,
   collectSiteEvidence,
   createHostGate,
   createLimiter,
-  exclusionReasonFor,
-  extractLinks,
-  fetchResource,
-  findPortfolioLocs,
-  findPortfolioPages,
-  rankClientCandidates,
+  discoverAgencyClients,
   refetchUnverified,
   registrableDomain,
-  safeFetch,
-  sitemapLocs,
   stripEvidenceBodies,
 } from '../packages/audit/dist/index.js';
 import {
   SCORE_CATALOG_VERSION,
   SCORE_FORMULA_VERSION,
+  clientSentenceFor,
   evaluateSiteChecks,
+  fixActionFor,
   getCheckDefinition,
+  platformFixesApply,
   renderClientSummary,
   scoreChecks,
 } from '../packages/core/dist/score/index.js';
 import { optionValue } from './lib/args.mjs';
+import {
+  applyClientClaims,
+  discoverySkipNote,
+  discoverySummaryLines,
+  emptyDiscovery,
+  manualDiscoveryWithClaims,
+  seedClientClaims,
+} from './lib/batch-discovery.mjs';
 import { readSavedAgency, siteStat, statsFromSaved, summarizeSites } from './lib/batch-summary.mjs';
 import { parseCsv, stringifyCsv } from './lib/csv.mjs';
 import { bullets, md, table } from './lib/markdown.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-const LIVENESS_CAP = 5;
-const LIVENESS_TIMEOUT_MS = 10_000;
-const LIVENESS_MAX_BYTES = 64 * 1024;
-const PORTFOLIO_PAGE_MAX_BYTES = 1024 * 1024;
-const MAX_PORTFOLIO_PAGES = 2;
-const MAX_CLIENTS = 3;
+const MAX_CLIENTS = DISCOVERY_DEFAULTS.maxClients;
+const DISCOVERY_OPTIONS = { maxClients: MAX_CLIENTS, maxFetches: DISCOVERY_DEFAULTS.maxFetches };
 /** A finished run directory holds these; an ordinary rerun must not overwrite it. */
 const FINISHED_RUN_FILES = ['run-summary.json', 'index.csv'];
 const INDEX_HEADER = [
@@ -267,109 +284,26 @@ async function collectAndScore(url, options) {
   };
 }
 
-function checkFraction(score, id) {
-  return score.checks.find((check) => check.id === id) ?? null;
-}
-
-/** Agency -> client discovery (spec 8.2); returns the discovery.json payload. */
+/**
+ * Agency -> client discovery (spec 8.2); returns the discovery.json payload.
+ * The fetching and ranking live in @agentmarkup/audit's discoverAgencyClients
+ * (12 fetches and 40 s per agency); this keeps the gates that skip it.
+ */
 async function discoverClients(agencyRun, agencyDomain, collectOptions) {
-  const pagesFetched = [];
-  const discovery = {
-    agency: agencyDomain,
-    pagesFetched,
-    candidates: [],
-    excluded: [],
-    picked: [],
-    liveness: [],
-    needs_manual: true,
-    note: null,
-  };
   const { evidence, score } = agencyRun;
   const homepage = evidence.homepage;
-  if (score.analysisStatus === 'blocked' || homepage.outcome !== 'ok' || !homepage.body) {
-    discovery.note = 'agency homepage could not be read; discovery skipped';
-    return discovery;
-  }
-  const noJs = checkFraction(score, 'content.no-js');
-  if (noJs && (noJs.status === 'fail' || noJs.fraction === 0)) {
-    discovery.note = 'agency homepage is a JavaScript shell (content.no-js 0); discovery skipped';
-    return discovery;
-  }
-
-  const base = homepage.finalUrl || evidence.targetUrl;
-  const origin = new URL(base).origin;
-  // Links come from the final homepage, so an agency that redirected to another
-  // registrable domain must have that domain excluded too, or its own site
-  // ranks as a client.
-  const finalDomain = registrableDomain(new URL(base).hostname);
-  const agencyDomains = [...new Set([agencyDomain, finalDomain].filter(Boolean))];
-  if (finalDomain && finalDomain !== agencyDomain) discovery.agencyFinalDomain = finalDomain;
-  const links = extractLinks(homepage.body, base).map((link) => ({ ...link, sourceUrl: base, portfolio: false }));
-  pagesFetched.push({ url: base, role: 'homepage', status: homepage.status });
-
-  let portfolioUrls = findPortfolioPages(links, origin, MAX_PORTFOLIO_PAGES);
-  if (portfolioUrls.length === 0 && evidence.sitemap?.outcome === 'ok' && evidence.sitemap.body) {
-    let locs = sitemapLocs(evidence.sitemap.body);
-    if (/<sitemapindex/i.test(evidence.sitemap.body) && locs.length > 0) {
-      const child = await fetchResource(locs[0], { ...collectOptions, maxRedirects: 2, maxResponseBytes: PORTFOLIO_PAGE_MAX_BYTES });
-      pagesFetched.push({ url: locs[0], role: 'sitemap-child', status: child.status });
-      locs = child.outcome === 'ok' && child.body ? sitemapLocs(child.body) : [];
-    }
-    portfolioUrls = findPortfolioLocs(locs, origin, MAX_PORTFOLIO_PAGES);
-  }
-
-  for (const url of portfolioUrls) {
-    const page = await fetchResource(url, { ...collectOptions, maxRedirects: 3, maxResponseBytes: PORTFOLIO_PAGE_MAX_BYTES });
-    pagesFetched.push({ url, role: 'portfolio', status: page.status, outcome: page.outcome });
-    if (page.outcome !== 'ok' || !page.body) continue;
-    const pageBase = page.finalUrl || url;
-    for (const link of extractLinks(page.body, pageBase)) {
-      links.push({ ...link, sourceUrl: pageBase, portfolio: true });
-    }
-  }
-
-  const ranking = rankClientCandidates(links, agencyDomains);
-  discovery.candidates = ranking.candidates;
-  discovery.excluded = ranking.excluded;
-
-  let gets = 0;
-  for (const candidate of ranking.candidates) {
-    if (discovery.picked.length >= MAX_CLIENTS || gets >= LIVENESS_CAP) break;
-    const url = `https://${candidate.domain}/`;
-    await collectOptions.hostGate.wait(candidate.domain);
-    gets += 1;
-    const live = await safeFetch(url, {
-      userAgent: COLLECTOR_USER_AGENT,
-      timeoutMs: LIVENESS_TIMEOUT_MS,
-      maxBytes: LIVENESS_MAX_BYTES,
-      readBody: true,
-    });
-    const finalHost = hostOf(live.finalUrl);
-    const finalDomain = finalHost ? registrableDomain(finalHost) : candidate.domain;
-    const excludedReason = finalHost ? exclusionReasonFor(finalHost, agencyDomains) : 'not-a-domain';
-    const ok = live.status !== null && live.status >= 200 && live.status < 300 && !excludedReason;
-    discovery.liveness.push({
-      domain: candidate.domain,
-      url,
-      status: live.status,
-      finalUrl: live.finalUrl,
-      error: live.error ?? null,
-      accepted: ok,
-      reason: ok ? null : excludedReason ?? (live.error ? `fetch ${live.error}` : `status ${live.status}`),
-    });
-    if (!ok) continue;
-    if (discovery.picked.some((pick) => pick.domain === finalDomain)) continue;
-    discovery.picked.push({
-      domain: finalDomain,
-      url: canonicalizeAgencyUrl(live.finalUrl || url),
-      score: candidate.score,
-      signals: candidate.signals,
-      sourcePages: candidate.sourcePages,
-      source: 'discovery',
-    });
-  }
-  discovery.needs_manual = discovery.picked.length < MAX_CLIENTS;
-  return discovery;
+  const skipNote = discoverySkipNote(score, homepage);
+  if (skipNote) return emptyDiscovery(agencyDomain, { note: skipNote, maxFetches: DISCOVERY_OPTIONS.maxFetches });
+  return discoverAgencyClients(
+    {
+      agencyDomain,
+      homepageUrl: homepage.finalUrl || evidence.targetUrl,
+      homepageStatus: homepage.status,
+      homepageHtml: homepage.body,
+      sitemapXml: evidence.sitemap?.outcome === 'ok' ? evidence.sitemap.body : null,
+    },
+    collectOptions
+  );
 }
 
 function siteRow(label, domain, run) {
@@ -403,11 +337,19 @@ function siteRow(label, domain, run) {
   ];
 }
 
+/**
+ * One care-plan line: the client sentence and fix line from core's check copy, so
+ * a partial result or a bot-challenge answer reads as it does in the client
+ * summary. The platform recipe applies only when no bot challenge decided the
+ * result; a recipe of `same` (or none) falls back to the catalog action.
+ */
 function platformFixLine(check, platform) {
   const definition = getCheckDefinition(check.id);
   if (!definition) return '';
-  const fix = platform && definition.fixes[platform] ? definition.fixes[platform] : definition.action;
-  return `${md(definition.name)} (${md(check.id)}): ${md(definition.clientSentence.fail)} ${platform ? `[${md(platform)}] ` : ''}${md(fix)}`;
+  const recipe = platform && platformFixesApply(check) ? (definition.fixes[platform] ?? null) : null;
+  const fix = recipe && recipe !== 'same' ? recipe : (fixActionFor(check) ?? definition.action);
+  const tag = recipe ? `[${md(platform)}] ` : '';
+  return `${md(definition.name)} (${md(check.id)}): ${md(clientSentenceFor(check))} ${tag}${md(fix)}`;
 }
 
 function renderSummary({ agencyDomain, agencyRun, clientRuns, discovery, generatedAt }) {
@@ -462,21 +404,7 @@ function renderSummary({ agencyDomain, agencyRun, clientRuns, discovery, generat
   }
   lines.push('## Discovery');
   lines.push('');
-  if (discovery.note) lines.push(`Note: ${md(discovery.note)}`);
-  lines.push(`Picked ${discovery.picked.length} client site(s)${discovery.needs_manual ? '; needs manual review (fewer than 3 confirmed)' : ''}.`);
-  if (discovery.picked.length > 0) {
-    lines.push('');
-    lines.push(bullets(discovery.picked.map((pick) => `${md(pick.domain)} (score ${pick.score}, ${md(pick.signals.join(', '))}, ${md(pick.source)})`)));
-  }
-  if (discovery.excluded.length > 0) {
-    lines.push('');
-    lines.push(`Excluded candidates: ${discovery.excluded.map((entry) => `${md(entry.domain)} (${md(entry.reason)})`).join(', ')}`);
-  }
-  const rejected = discovery.liveness.filter((entry) => !entry.accepted);
-  if (rejected.length > 0) {
-    lines.push('');
-    lines.push(`Liveness rejected: ${rejected.map((entry) => `${md(entry.domain)} (${md(entry.reason)})`).join(', ')}`);
-  }
+  lines.push(...discoverySummaryLines(discovery, { maxClients: MAX_CLIENTS, registrableDomain }));
   lines.push('');
   lines.push('## Provenance');
   lines.push('');
@@ -486,7 +414,7 @@ function renderSummary({ agencyDomain, agencyRun, clientRuns, discovery, generat
 }
 
 async function processAgency(row, context) {
-  const { args, outDir, hostGate, manual, previous, log } = context;
+  const { args, outDir, hostGate, previous, claims, log } = context;
   const startedAt = Date.now();
   const collectedAt = new Date().toISOString();
   let canonicalUrl;
@@ -497,7 +425,7 @@ async function processAgency(row, context) {
   }
   const agencyDomain = agencyKeyFor(canonicalUrl);
   const agencyDir = join(outDir, agencyDomain);
-  if (args.resume && existsSync(join(agencyDir, 'summary.md')) && existsSync(join(agencyDir, 'agency.json'))) {
+  if (args.resume && isFinishedAgency(outDir, agencyDomain)) {
     log(`skip ${agencyDomain} (resume)`);
     const saved = readSavedAgency(agencyDir);
     const stats = statsFromSaved(saved);
@@ -514,20 +442,24 @@ async function processAgency(row, context) {
   log(`agency ${agencyDomain}: ${agencyRun.score.analysisStatus} score ${agencyRun.score.score ?? 'n/a'} in ${agencyRun.durationMs} ms`);
 
   let discovery;
-  const manualPicks = manual.get(agencyDomain);
-  if (manualPicks) {
-    discovery = {
-      agency: agencyDomain,
-      pagesFetched: [],
-      candidates: [],
-      excluded: [],
-      picked: manualPicks.slice(0, MAX_CLIENTS).map((pick) => ({ ...pick, score: null, signals: ['manual'], sourcePages: [] })),
-      liveness: [],
-      needs_manual: manualPicks.length < MAX_CLIENTS,
-      note: 'clients taken from the --manual list',
-    };
+  const manualClaim = claims.manual.get(agencyDomain);
+  if (manualClaim) {
+    // Claimed in main() before any discovery (see the header for the order).
+    discovery = manualDiscoveryWithClaims(agencyDomain, manualClaim, DISCOVERY_OPTIONS);
+    for (const entry of manualClaim.shared) {
+      log(`agency ${agencyDomain}: manual ${entry.domain} already claimed by ${entry.shared_with}; dropped`);
+    }
   } else {
-    discovery = await discoverClients(agencyRun, agencyDomain, collectOptions);
+    const discovered = await discoverClients(agencyRun, agencyDomain, collectOptions);
+    // First claim wins across the run. Read and written with no await in
+    // between, so agencies finishing discovery in parallel cannot both claim
+    // one client.
+    const claim = claimClientDomains(discovered.picked, claims.registry, agencyDomain);
+    claims.registry = claim.registry;
+    discovery = applyClientClaims(discovered, claim, DISCOVERY_OPTIONS);
+    for (const entry of claim.shared) {
+      log(`agency ${agencyDomain}: ${entry.domain} already claimed by ${entry.shared_with}; dropped`);
+    }
   }
   log(`agency ${agencyDomain}: ${discovery.picked.length} client(s) picked${discovery.note ? ` (${discovery.note})` : ''}`);
 
@@ -628,6 +560,40 @@ function rowFromSaved(saved, agencyDomain) {
   });
 }
 
+/** An agency directory a previous run finished (summary.md and agency.json both written). */
+function isFinishedAgency(outDir, agencyDomain) {
+  const agencyDir = join(outDir, agencyDomain);
+  return existsSync(join(agencyDir, 'summary.md')) && existsSync(join(agencyDir, 'agency.json'));
+}
+
+/**
+ * Client claims made before any discovery runs, in the order the header states:
+ * finished agencies' picks under --resume, then --manual lists in row order.
+ * Rows with an invalid website are skipped here; processAgency reports them.
+ */
+function initialClaims(rows, { args, outDir, manual }) {
+  const agencies = [];
+  for (const row of rows) {
+    try {
+      agencies.push(agencyKeyFor(canonicalizeAgencyUrl(row.website)));
+    } catch {
+      // invalid website URL
+    }
+  }
+  const resumedPicks = new Map();
+  if (args.resume) {
+    for (const agencyDomain of agencies) {
+      if (!isFinishedAgency(outDir, agencyDomain)) continue;
+      resumedPicks.set(agencyDomain, readSavedAgency(join(outDir, agencyDomain)).discovery?.picked ?? []);
+    }
+  }
+  const { registry, manualClaims } = seedClientClaims(
+    { agencies, resumedPicks, manualPicks: manual, maxClients: MAX_CLIENTS },
+    claimClientDomains
+  );
+  return { registry, manual: manualClaims };
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const outDir = resolve(args.out);
@@ -660,12 +626,15 @@ async function main() {
   log(`batch-audit: ${rows.length} agencies, parallel ${args.agenciesParallel}, host gap ${args.minGapMs} ms, out ${outDir}`);
   log(`user-agent ${COLLECTOR_USER_AGENT}`);
 
+  const manual = readManual(args.manual);
   const context = {
     args,
     outDir,
     hostGate: createHostGate(args.minGapMs),
-    manual: readManual(args.manual),
+    manual,
     previous: previousRun(args.samplePins ? resolve(args.samplePins) : null),
+    // One client registry for the whole run, shared by every --agencies-parallel slot.
+    claims: initialClaims(rows, { args, outDir, manual }),
     log,
   };
   const limit = createLimiter(args.agenciesParallel);

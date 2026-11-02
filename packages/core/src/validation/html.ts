@@ -1,4 +1,4 @@
-import { blockPattern, replaceBlocks, replaceTags, scanBlocks } from '../html-scan.js';
+import { blockPattern, isLoneMountNode, replaceBlocks, replaceTags, scanBlocks } from '../html-scan.js';
 import type { ValidationResult } from '../types.js';
 
 /** `/<body\b[^>]*>([\s\S]*?)<\/body>/i`, in linear time (see html-scan.ts). */
@@ -52,7 +52,5 @@ function looksLikeClientShell(body: string): boolean {
     return true;
   }
 
-  return /^<(div|main|section)\b[^>]*(id|class)="[^"]*(root|app|__next|svelte|mount)[^"]*"[^>]*>\s*<\/\1>$/.test(
-    normalized
-  );
+  return isLoneMountNode(normalized);
 }

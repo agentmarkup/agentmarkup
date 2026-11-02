@@ -68,12 +68,20 @@ export function resolveSitemapDeclaration(candidate: string, baseUrl: string): s
   }
 }
 
+// robots.txt directives are single lines (RFC 9309), so the declaration is read one
+// line at a time; a multiline `^\s*` rescanned every following blank line from each
+// line start (10 s on 80,000 blank lines). Lines end at CRLF, LF, CR, U+2028 or
+// U+2029, the terminators the multiline `^` and `$` used.
+const ROBOTS_LINE_BREAK_RE = /\r\n|[\n\r\u2028\u2029]/;
+const SITEMAP_LINE_RE = /^\s*Sitemap:\s*(\S+)\s*$/i;
+
 /** The first `Sitemap:` declaration in robots.txt on the same registrable domain, or null. */
 export function findSitemapUrl(robotsTxt: string, baseUrl: string): string | null {
-  const sitemapPattern = /^\s*Sitemap:\s*(\S+)\s*$/gim;
-  let match: RegExpExecArray | null;
-
-  while ((match = sitemapPattern.exec(robotsTxt)) !== null) {
+  for (const line of robotsTxt.split(ROBOTS_LINE_BREAK_RE)) {
+    const match = SITEMAP_LINE_RE.exec(line);
+    if (!match) {
+      continue;
+    }
     const candidate = resolveSitemapDeclaration(match[1], baseUrl);
     if (candidate) {
       return candidate;

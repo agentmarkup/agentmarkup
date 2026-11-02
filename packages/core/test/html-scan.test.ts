@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import { extractJsonLdScriptContents } from '../src/html.js';
-import { blockPattern, replaceBlocks, replaceComments, replaceTags, scanBlocks, type BlockPattern } from '../src/html-scan.js';
+import {
+  blockPattern,
+  isLoneMountNode,
+  replaceBlocks,
+  replaceComments,
+  replaceTags,
+  scanBlocks,
+  type BlockPattern,
+} from '../src/html-scan.js';
 import { tokenizeTags } from '../src/score/html-lite.js';
 
 // The scanners must return exactly what the regexes they replaced returned. Each
@@ -180,3 +188,42 @@ describe('tokenizeTags raw-text skipping', () => {
     expect(tokens[2].attrs.id).toBe('after');
   });
 });
+
+describe('isLoneMountNode', () => {
+  const SHELL_RE = /^<(div|main|section)\b[^>]*(id|class)="[^"]*(root|app|__next|svelte|mount)[^"]*"[^>]*>\s*<\/\1>$/;
+
+  it('answers the client-shell regex on seeded openers', () => {
+    const random = seeded(71);
+    const pick = (items: string[]) => items[Math.floor(random() * items.length)];
+    const openers = ['<div', '<main', '<section', '<divx', '<DIV', '</div', '<span'];
+    const middle = [' ', ' ', 'id="', 'id="root', 'class="', 'data-id="', 'root', 'root"', 'app', '__next', 'mount', 'x', '"', '"', '>', "'", '<'];
+    const closers = ['></div>', '> </div>', '></main>', '></section>', '"></div>', '</div>', '>  </div>', '><div></div>', ''];
+    let shells = 0;
+    for (let run = 0; run < 20000; run += 1) {
+      let value = pick(openers);
+      const count = Math.floor(random() * 9);
+      for (let i = 0; i < count; i += 1) value += pick(middle);
+      value += pick(closers);
+      const expected = SHELL_RE.test(value);
+      if (expected) shells += 1;
+      expect(isLoneMountNode(value), JSON.stringify(value)).toBe(expected);
+    }
+    expect(shells).toBeGreaterThan(50);
+  });
+
+  it('reads an id value of 250,000 keywords that never closes in well under a second', () => {
+    const value = `<div class="${'root'.repeat(250_000)}></div>`;
+    const started = performance.now();
+    expect(isLoneMountNode(value)).toBe(false);
+    expect(performance.now() - started).toBeLessThan(1000);
+  });
+
+  it('recognises the usual mount nodes', () => {
+    expect(isLoneMountNode('<div id="root"></div>')).toBe(true);
+    expect(isLoneMountNode('<div id="__next" class="x"> </div>')).toBe(true);
+    expect(isLoneMountNode('<main class="app-shell"></main>')).toBe(true);
+    expect(isLoneMountNode('<div id="root"><p>hi</p></div>')).toBe(false);
+    expect(isLoneMountNode('<div id="root"></main>')).toBe(false);
+  });
+});
+

@@ -6,7 +6,15 @@
 // `../html-scan.ts`, which returns exactly what the documented regexes match but in
 // linear time.
 import { extractJsonLdScriptContents } from '../html.js';
-import { asciiLower, blockPattern, replaceBlocks, replaceComments, replaceTags, scanBlocks } from '../html-scan.js';
+import {
+  asciiLower,
+  blockPattern,
+  isLoneMountNode,
+  replaceBlocks,
+  replaceComments,
+  replaceTags,
+  scanBlocks,
+} from '../html-scan.js';
 import { findBlockedCrawlers } from '../generators/robots-txt.js';
 import type { AiCrawlersConfig } from '../types.js';
 
@@ -41,8 +49,6 @@ const HEADING_BLOCKS = blockPattern(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'], {
 const COMPARISON_HEAD_BLOCKS = blockPattern(['head'], { openerEndsAtGt: false, closeAllowsSpace: false });
 const COMPARISON_SCRIPT_BLOCKS = blockPattern(['script'], { openerEndsAtGt: false, closeAllowsSpace: false });
 const COMPARISON_STYLE_BLOCKS = blockPattern(['style'], { openerEndsAtGt: false, closeAllowsSpace: false });
-const CLIENT_SHELL_RE =
-  /^<(div|main|section)\b[^>]*(id|class)="[^"]*(root|app|__next|svelte|mount)[^"]*"[^>]*>\s*<\/\1>$/;
 
 /** Contents of every `<script>` element, as `/<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi` captures them. */
 export function scriptBlockContents(html: string): string[] {
@@ -134,7 +140,7 @@ export function looksLikeClientShell(html: string): boolean {
   if (!normalized) {
     return true;
   }
-  return CLIENT_SHELL_RE.test(normalized);
+  return isLoneMountNode(normalized);
 }
 
 export function structuralBodyHtml(html: string): string {
@@ -476,20 +482,90 @@ function hasText(value: string | undefined): boolean {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
-function innerHasImageAlt(inner: string): boolean {
-  const pattern = /<img\b[^>]*\balt\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi;
-  let match: RegExpExecArray | null;
-  while ((match = pattern.exec(inner)) !== null) {
+const IMG_OPEN_RE = /<img\b/gi;
+const IMG_ALT_RE = /<img\b[^>]*\balt\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/iy;
+
+/**
+ * The matches of `/<img\b[^>]*\balt\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi`, in
+ * linear time. Every opener before the same `>` tries a subset of the same `alt`
+ * positions, so one failed opener rules out the rest up to that `>`; the global
+ * regex retried each of them up to the end of a run of unclosed `<img` tags.
+ */
+export function innerHasImageAlt(inner: string): boolean {
+  const open = new RegExp(IMG_OPEN_RE.source, IMG_OPEN_RE.flags);
+  const tag = new RegExp(IMG_ALT_RE.source, IMG_ALT_RE.flags);
+  let from = 0;
+  for (;;) {
+    open.lastIndex = from;
+    const start = open.exec(inner);
+    if (!start) {
+      return false;
+    }
+    tag.lastIndex = start.index;
+    const match = tag.exec(inner);
+    if (!match) {
+      const gt = inner.indexOf('>', start.index);
+      if (gt === -1) {
+        return false;
+      }
+      from = gt + 1;
+      continue;
+    }
     const alt = match[1] ?? match[2] ?? match[3] ?? '';
     if (decodeEntities(alt).trim()) {
       return true;
     }
+    from = tag.lastIndex;
   }
-  return false;
 }
 
-function innerHasSvgTitle(inner: string): boolean {
-  return /<svg\b[^>]*>[\s\S]*?<title\b[^>]*>\s*[^<\s][\s\S]*?<\/title\s*>/i.test(inner);
+const SVG_OPEN_RE = /<svg\b/i;
+const TITLE_OPEN_RE = /<title\b/gi;
+const TITLE_TEXT_RE = /\s*[^<\s]/y;
+const TITLE_CLOSE_RE = /<\/title\s*>/gi;
+
+/**
+ * `/<svg\b[^>]*>[\s\S]*?<title\b[^>]*>\s*[^<\s][\s\S]*?<\/title\s*>/i.test(inner)`
+ * in linear time: after the first svg opener's `>`, some title opener whose `>` is
+ * followed by text, with a closing title tag after that text. Openers before the
+ * same `>` share the same text test, and a later text start only makes the closing
+ * tag harder to find, so each failure skips ahead.
+ */
+export function innerHasSvgTitle(inner: string): boolean {
+  const svg = SVG_OPEN_RE.exec(inner);
+  if (!svg) {
+    return false;
+  }
+  const svgGt = inner.indexOf('>', svg.index + svg[0].length);
+  if (svgGt === -1) {
+    return false;
+  }
+  const close = new RegExp(TITLE_CLOSE_RE.source, TITLE_CLOSE_RE.flags);
+  let lastClose = -1;
+  let closeMatch: RegExpExecArray | null;
+  while ((closeMatch = close.exec(inner)) !== null) {
+    lastClose = closeMatch.index;
+  }
+  const open = new RegExp(TITLE_OPEN_RE.source, TITLE_OPEN_RE.flags);
+  const text = new RegExp(TITLE_TEXT_RE.source, TITLE_TEXT_RE.flags);
+  let from = svgGt + 1;
+  for (;;) {
+    open.lastIndex = from;
+    const start = open.exec(inner);
+    if (!start) {
+      return false;
+    }
+    const gt = inner.indexOf('>', start.index + start[0].length);
+    if (gt === -1) {
+      return false;
+    }
+    text.lastIndex = gt + 1;
+    if (text.test(inner)) {
+      // The text character sits at lastIndex - 1; the closing tag must start after it.
+      return lastClose >= text.lastIndex;
+    }
+    from = gt + 1;
+  }
 }
 
 /** Controls per the catalog: button, a[href], input[type=submit|button|image], [role=button]. */
@@ -561,6 +637,7 @@ export function collectFields(html: string): FieldSummary {
   const source = controlBodyHtml(html);
   const tokens = tokenizeTags(source);
   const labelFor = new Set<string>();
+  // In document order of the label openers, so `from` ascends.
   const wrappedRanges: Array<[number, number]> = [];
   tokens.forEach((token, index) => {
     if (token.closing || token.name !== 'label') {
@@ -575,9 +652,19 @@ export function collectFields(html: string): FieldSummary {
     }
   });
   const summary: FieldSummary = { total: 0, labelled: 0, unlabelled: [] };
+  // One forward sweep instead of testing every range per field: fields come in
+  // document order, so a range whose `from` is behind the field stays behind, and
+  // the field is wrapped exactly when the furthest `to` among those passes it
+  // (nested labels included).
+  let nextRange = 0;
+  let furthestTo = -1;
   for (const token of tokens) {
     if (token.closing) {
       continue;
+    }
+    while (nextRange < wrappedRanges.length && wrappedRanges[nextRange][0] <= token.start) {
+      furthestTo = Math.max(furthestTo, wrappedRanges[nextRange][1]);
+      nextRange += 1;
     }
     const attrs = token.attrs;
     let isField = false;
@@ -590,12 +677,15 @@ export function collectFields(html: string): FieldSummary {
       continue;
     }
     const id = hasText(attrs.id) ? attrs.id.trim() : null;
-    const wrapped = wrappedRanges.some(([from, to]) => token.start >= from && token.start < to);
+    const wrapped = token.start < furthestTo;
+    // title last, as HTML-AAM 4.1.1 names a control from it when nothing else does
+    // (the same attribute ax.accessible-names counts); a placeholder never counts.
     const labelled =
       (id !== null && labelFor.has(id)) ||
       wrapped ||
       hasText(attrs['aria-label']) ||
-      hasText(attrs['aria-labelledby']);
+      hasText(attrs['aria-labelledby']) ||
+      hasText(attrs.title);
     summary.total += 1;
     if (labelled) {
       summary.labelled += 1;
@@ -630,12 +720,19 @@ export function countNonNativeClickables(html: string): number {
 
 // --------------------------------------------------------------------- head
 
+const HTML_OPEN_RE = /<html\b/i;
+
+/** The lang of the first `/<html\b[^>]*>/i` tag; without a `>` after the first opener none matches. */
 export function findHtmlLang(html: string): string | null {
-  const match = html.match(/<html\b[^>]*>/i);
-  if (!match) {
+  const open = HTML_OPEN_RE.exec(html);
+  if (!open) {
     return null;
   }
-  const token = tokenizeTags(match[0])[0];
+  const gt = html.indexOf('>', open.index + open[0].length);
+  if (gt === -1) {
+    return null;
+  }
+  const token = tokenizeTags(html.slice(open.index, gt + 1))[0];
   const lang = token?.attrs.lang;
   return hasText(lang) ? lang.trim() : null;
 }
