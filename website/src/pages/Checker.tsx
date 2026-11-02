@@ -1,11 +1,21 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 
+import { SCORE_CATALOG_VERSION } from '@agentmarkup/core/score';
+
 import { analyzeSiteCheck } from '../checker/analyze';
+import { findingKey } from '../checker/check-copy';
 import { normalizeWebsiteInput } from '../normalizeWebsiteInput';
 import { StatusIcon } from '../ui/Status';
-import { getOverallVerdict, levelToStatus, statusLabels } from '../ui/status-model';
-import { FindingFilter, OverallVerdictPanel, ResultCount } from '../ui/ToolResults';
+import {
+  levelToStatus,
+  statusLabels,
+  verdictExplanationForGrade,
+  verdictFromGrade,
+} from '../ui/status-model';
+import { FindingFilter, ResultCount } from '../ui/ToolResults';
+import { ScorePanel } from '../ui/ScorePanel';
+import { TopFixes } from '../ui/TopFixes';
 import { ContextualFaq } from '../ui/ContextualFaq';
 import { checkerFaqs } from '../data/page-faqs';
 import type {
@@ -220,7 +230,9 @@ function Checker() {
   const initialCheckStartedRef = useRef(false);
 
   const showResults = Boolean(analysis && result);
-  const verdict = analysis ? getOverallVerdict(analysis.counts) : null;
+  const verdict = analysis
+    ? verdictFromGrade(analysis.report.grade, analysis.report.analysisStatus)
+    : null;
   const visibleItems = analysis
     ? analysis.items.filter((item) => findingFilter === 'all' || item.level === findingFilter)
     : [];
@@ -502,7 +514,7 @@ function Checker() {
                   {fieldError ? <p className="field-error" id="checker-url-error" role="alert"><StatusIcon status="action" />{fieldError}</p> : null}
                 </form>
                 <p className="checker-note">
-                  No score or account. One homepage and one internal page are sampled. Also looking for public security issues? <a href="/security-scan/">Use the security scan</a>. <a href="/blog/website-checker/">How this check works</a>.
+                  A 0-100 agent-readiness score from a published formula, no account. One homepage and one internal page are sampled. Also looking for public security issues? <a href="/security-scan/">Use the security scan</a>. <a href="/score/">How the score is computed</a>. <a href="/blog/website-checker/">How this check works</a>.
                 </p>
               </div>
             </section>
@@ -540,15 +552,15 @@ function Checker() {
             <article>
               <h3>Pages and discovery</h3>
               <p>
-                Your homepage, one internal page, sitemap discovery, canonical URLs, and the links
-                machines can use to find important content.
+                Your homepage, one internal page, the sitemap XML, the canonical URL, About,
+                Contact and Privacy links, and how a path that does not exist is answered.
               </p>
             </article>
             <article>
               <h3>Content and structured data</h3>
               <p>
-                Page titles, descriptions, readable HTML, and JSON-LD structured data that helps
-                search engines and AI systems interpret a page.
+                Readable HTML without JavaScript, document structure and control labelling, and
+                the JSON-LD identity that helps search engines and AI systems interpret a page.
               </p>
             </article>
             <article>
@@ -561,8 +573,9 @@ function Checker() {
             <article>
               <h3>Crawler access</h3>
               <p>
-                <code>robots.txt</code> rules and live responses for common AI crawlers, so you can
-                see what is allowed, blocked, or difficult to retrieve.
+                <code>robots.txt</code> access for AI search and agent user agents, bot-detection
+                challenges on the homepage, and Content-Signal declarations. Blocking training
+                crawlers is reported as a policy note and never lowers the score.
               </p>
             </article>
           </div>
@@ -570,11 +583,13 @@ function Checker() {
           <aside className="checker-method" aria-labelledby="checker-method-title">
             <h3 id="checker-method-title">How the result is decided</h3>
             <p>
-              Every finding is based on a response the checker received. Results are labelled
-              <strong> looks good</strong>, <strong>needs attention</strong>, or
-              <strong> action required</strong>. There is no invented score. The checker samples one
-              homepage and one internal page, so it gives a useful first view without crawling your
-              whole site.
+              Every finding is based on a response the checker received. The score is a
+              deterministic 0-100 number computed from a published formula (catalog v{SCORE_CATALOG_VERSION}):
+              every point is traceable to a check you can see, with no LLM, no heuristics and no
+              off-site search. A check whose evidence did not arrive in time leaves the denominator
+              instead of lowering the number. The checker samples one homepage and one internal
+              page, so it gives a useful first view without crawling your whole site.{' '}
+              <a href="/score/">Read the methodology</a>.
             </p>
           </aside>
         </section>
@@ -610,7 +625,7 @@ function Checker() {
         {loading ? (
           <section className="checker-state" role="status" aria-live="polite">
             <h2>Fetching public metadata</h2>
-            <p>The checker is requesting the homepage, markdown mirrors, llms.txt, robots.txt, sitemap, and one sampled internal page right now.</p>
+            <p>The checker is requesting the homepage, markdown mirrors, llms.txt, robots.txt, the sitemap, a path that cannot exist, and one sampled internal page right now.</p>
           </section>
         ) : null}
 
@@ -626,12 +641,32 @@ function Checker() {
               </button>
             </div>
 
+            <ScorePanel
+              report={analysis.report}
+              siteName={siteNameOf(analysis.normalizedUrl)}
+              onRerun={() => void performCheck(analysis.normalizedUrl)}
+              rerunDisabled={loading}
+            />
+
             <section className="checker-summary">
               <div>
                 <h2 ref={resultsHeadingRef} tabIndex={-1}>
                   Results for {analysis.normalizedUrl}
                 </h2>
-                {verdict ? <OverallVerdictPanel status={verdict} /> : null}
+                {verdict ? (
+                  <div className={`overall-verdict overall-verdict-${verdict}`}>
+                    <StatusIcon status={verdict} size={28} />
+                    <div>
+                      <p className="overall-verdict-label">{statusLabels[verdict]}</p>
+                      <p>
+                        {verdictExplanationForGrade(
+                          analysis.report.grade,
+                          analysis.report.analysisStatus
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
                 <p className="checker-summary-text">
                   Checked at {new Date(result.fetchedAt).toLocaleString()}.
                   {analysis.normalizedFrom ? (
@@ -664,6 +699,8 @@ function Checker() {
               </div>
             </section>
 
+            <TopFixes report={analysis.report} />
+
             <section className="checker-findings">
               <h2>Findings</h2>
               <div className="finding-filters" aria-label="Filter findings">
@@ -674,8 +711,8 @@ function Checker() {
               </div>
               <p className="sr-only" role="status" aria-live="polite">{visibleItems.length} finding{visibleItems.length === 1 ? '' : 's'} shown.</p>
               <div className="checker-finding-list">
-                {visibleItems.length ? visibleItems.map((item, index) => (
-                  <FindingCard key={`${item.level}-${item.title}-${index}`} item={item} />
+                {visibleItems.length ? visibleItems.map((item) => (
+                  <FindingCard key={findingKey(item)} item={item} />
                 )) : <p className="finding-empty">No findings in this category.</p>}
               </div>
             </section>
@@ -693,6 +730,14 @@ function Checker() {
       </article>
     </main>
   );
+}
+
+function siteNameOf(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
 }
 
 function ResourceCard({ resource }: { resource: ResourceStatus }) {
@@ -724,7 +769,7 @@ function ResourceCard({ resource }: { resource: ResourceStatus }) {
 
 function FindingCard({ item }: { item: AuditItem }) {
   return (
-    <article className={`checker-finding checker-finding-${item.level}`}>
+    <article className={`checker-finding checker-finding-${item.level}`} data-check-id={item.checkId ?? item.id}>
       <div className="checker-finding-top">
         <span className={`checker-level checker-level-${item.level}`}><StatusIcon status={levelToStatus(item.level)} size={15} />{statusLabels[levelToStatus(item.level)]}</span>
         <h3>{item.title}</h3>

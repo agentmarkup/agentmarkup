@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      (function(){var t=localStorage.getItem('theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.style.backgroundColor=t==='light'?'#fffefc':'#10121a';document.documentElement.style.colorScheme=t})()
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>How the agent-readiness score is computed - agentmarkup</title>
+    <meta
+      name="description"
+      content="The published formula behind the agentmarkup website checker score: the check catalog, pools, grade bands, status rules, estimated gains and every divergence from Ora, rendered from the code that computes it."
+    />
+    <meta name="keywords" content="agent readiness score, ai readiness score, website checker methodology, llms.txt score, json-ld score, robots.txt ai crawlers, deterministic score, geo score" />
+    <meta name="author" content="Sebastian Cochinescu" />
+    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
+    <link rel="preload" href="/fonts/manrope-latin-variable.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/source-serif-4-latin-variable.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="canonical" href="https://agentmarkup.dev/score/" />
+    <meta property="og:title" content="How the agent-readiness score is computed - agentmarkup" />
+    <meta property="og:description" content="A deterministic 0-100 score from a published formula: the check catalog, pools, grade bands, status rules and estimated gains behind the agentmarkup website checker." />
+    <meta property="og:url" content="https://agentmarkup.dev/score/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="agentmarkup" />
+    <meta property="og:image" content="https://agentmarkup.dev/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM-readable site summary" />
+    <link rel="service-desc" type="application/openapi+json" href="/openapi.json" title="OpenAPI description of the agentmarkup public tools API" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/entries/score.tsx"></script>
+  </body>
+</html>

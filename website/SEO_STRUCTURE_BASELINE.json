@@ -75,7 +75,56 @@
     ],
     "internalLinks": [
       "/blog/website-checker/",
+      "/score/",
       "/security-scan/"
+    ],
+    "prerendered": true,
+    "rawH1Count": 1
+  },
+  {
+    "route": "/score/",
+    "title": "How the agent-readiness score is computed - agentmarkup",
+    "description": "The published formula behind the agentmarkup website checker score: the check catalog, pools, grade bands, status rules, estimated gains and every divergence from Ora, rendered from the code that computes it.",
+    "canonical": "https://agentmarkup.dev/score/",
+    "robots": "index,follow,max-image-preview:large,max-snippet:-1",
+    "h1": [
+      "How the agent-readiness score is computed"
+    ],
+    "h2": [
+      "What the score is",
+      "The lens",
+      "Status semantics",
+      "The catalog",
+      "Formula v1.0.0 and grade bands",
+      "Estimated gain and top fixes",
+      "Divergences from Ora",
+      "Sampling, caps and published lists",
+      "Versioning",
+      "Reproduce it yourself",
+      "Change log"
+    ],
+    "sectionIds": [
+      "what",
+      "lens",
+      "statuses",
+      "catalog",
+      "formula",
+      "gain",
+      "divergences",
+      "sampling",
+      "versioning",
+      "reproduce",
+      "changelog"
+    ],
+    "schemaTypes": [
+      "ContactPoint",
+      "Organization",
+      "PostalAddress",
+      "WebPage",
+      "WebSite"
+    ],
+    "internalLinks": [
+      "/checker/"
     ],
     "prerendered": true,
     "rawH1Count": 1
@@ -730,7 +779,8 @@
       "/blog/when-markdown-mirrors-help/",
       "/blog/why-llms-txt-matters/",
       "/checker/",
-      "/docs/llms-txt/"
+      "/docs/llms-txt/",
+      "/score/"
     ],
     "prerendered": true,
     "rawH1Count": 1
@@ -1094,7 +1144,7 @@
       "The bug was real, and the blind spot was ours",
       "In Claude's plugin catalogs, most of these tools stop at the report",
       "What a build integration does instead",
-      "No score is part of the honesty",
+      "A score with a published formula",
       "Why I built it this way",
       "Use the plugin where you already work",
       "More from the blog"
@@ -1116,7 +1166,8 @@
       "/blog/ai-crawler-audit-500-companies/",
       "/blog/nextjs-llms-txt-json-ld/",
       "/blog/nuxt-llms-txt-json-ld/",
-      "/blog/website-checker/"
+      "/blog/website-checker/",
+      "/score/"
     ],
     "prerendered": true,
     "rawH1Count": 1

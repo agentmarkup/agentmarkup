@@ -1,16 +1,31 @@
+import type {
+  AnalysisStatus,
+  FetchSummary,
+  Grade,
+  RemoteResource as CoreRemoteResource,
+  ResourceOutcome,
+  ScoreReport,
+  ScoredCheck,
+  SiteEvidence,
+} from '@agentmarkup/core/score';
+
 export type AuditLevel = 'pass' | 'warning' | 'error';
 export type ResourceLevel = AuditLevel | 'info';
 
-export interface RemoteResource {
-  requestedUrl: string;
-  finalUrl: string;
-  status: number;
-  ok: boolean;
-  contentType: string | null;
-  body: string | null;
-  error?: string;
-  xRobotsTag?: string | null;
-}
+// The checker payload's resource shape is the score engine's evidence shape:
+// the worker adds `outcome`, `durationMs`, `hops`, `skipped`, `headers`,
+// `bodyBytes` and `bodyDropped` on top of the original fields.
+export type RemoteResource = CoreRemoteResource;
+
+export type {
+  AnalysisStatus,
+  FetchSummary,
+  Grade,
+  ResourceOutcome,
+  ScoreReport,
+  ScoredCheck,
+  SiteEvidence,
+};
 
 export interface CheckerCacheStatus {
   hit: boolean;
@@ -26,21 +41,9 @@ export interface CheckerProtectionStatus {
   turnstileVerified: boolean;
 }
 
-export interface SiteCheckResponse {
-  targetUrl: string;
-  origin: string;
-  fetchedAt: string;
+/** The `/api/check` payload: a `SiteEvidence` plus cache and protection facts. */
+export interface SiteCheckResponse extends SiteEvidence {
   normalizedFrom: string | null;
-  homepage: RemoteResource;
-  homepageMarkdown: RemoteResource | null;
-  llmsTxt: RemoteResource;
-  robotsTxt: RemoteResource;
-  sitemap: RemoteResource | null;
-  sitemapUrl: string | null;
-  sitemapSource: 'robots' | 'default' | null;
-  notFoundProbe?: RemoteResource | null;
-  samplePage: RemoteResource | null;
-  samplePageMarkdown: RemoteResource | null;
   cache?: CheckerCacheStatus;
   protection?: CheckerProtectionStatus;
 }
@@ -53,6 +56,10 @@ export interface CheckerErrorResponse {
 }
 
 export interface AuditItem {
+  /** Stable key: the catalog check id, or `unverified-<resource>` for a grouped transport failure. */
+  id: string;
+  /** The catalog check this finding reports, absent on grouped transport failures. */
+  checkId?: string;
   level: AuditLevel;
   title: string;
   detail: string;
@@ -68,6 +75,7 @@ export interface ResourceStatus {
     | 'llmsTxt'
     | 'robotsTxt'
     | 'sitemap'
+    | 'notFoundProbe'
     | 'samplePage'
     | 'samplePageMarkdown';
   level: ResourceLevel;
@@ -86,4 +94,6 @@ export interface SiteAnalysis {
   resources: ResourceStatus[];
   counts: Record<AuditLevel, number>;
   jsonLdTypes: string[];
+  /** The agent-readiness score computed in the browser from the payload. */
+  report: ScoreReport;
 }

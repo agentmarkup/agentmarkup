@@ -1,4 +1,6 @@
 import CodeBlock from '../CodeBlock'
+import { SCORE_CATALOG_VERSION } from '@agentmarkup/core/score'
+
 import Byline from '../Byline'
 import BlogFooter from '../BlogFooter'
 
@@ -149,26 +151,36 @@ function Soft404DiscoverabilityTools() {
         </section>
 
         <section>
-          <h2>No score is part of the honesty</h2>
+          <h2>A score with a published formula</h2>
           <p>
-            agentmarkup deliberately does not produce a readiness score, grade,
-            or percentage. A missing required field is an error. A missing
-            recommended field is a warning. That is the entire scale.
+            The website checker now reports a 0-100 agent-readiness score with a
+            letter grade. It is a deterministic number from a published formula
+            (catalog v{SCORE_CATALOG_VERSION}): every point is traceable to a
+            check you can see; no LLM, no heuristics, no off-site search. The
+            build-time validators keep their two-level scale: a missing required
+            field is an error, a missing recommended field is a warning.
           </p>
           <p>
-            Collapsing unrelated checks into one number requires hidden choices
-            about how much each item is worth. It also invites a much larger
-            inference: that a higher number predicts inclusion, ranking, traffic,
-            or citation by an AI system. We do not have evidence for that, so the
-            tool does not make the claim.
+            Collapsing unrelated checks into one number requires choices about
+            how much each item is worth, so those choices are public: required
+            checks share one pool at even weight, recommended checks share a
+            smaller one, bonus signals add a capped extra that never subtracts,
+            and a fetch that did not complete leaves the denominator instead of
+            lowering the score. What the number still does not claim is the
+            larger inference: that a higher score predicts inclusion, ranking,
+            traffic, or citation by an AI system. We do not have evidence for
+            that, so the tool does not make the claim. The{' '}
+            <a href="/score/">methodology page</a> renders the formula, the
+            grade bands, and every check from the same code that computes it.
           </p>
           <p>
-            What it can establish is narrower and useful: whether an artifact
-            exists, whether it parses, whether required fields are present,
-            whether crawler rules conflict, whether final HTML contains real
-            content, and whether the build stays valid in CI. When a check does
-            not exist, as with our soft-404 probe, the right response is to say
-            so plainly.
+            What the tool can establish is narrower and useful: whether an
+            artifact exists, whether it parses, whether required fields are
+            present, whether crawler rules conflict, whether final HTML contains
+            real content, and whether the build stays valid in CI. When a check
+            did not exist, as with our soft-404 probe at the time, the right
+            response was to say so plainly. Today that probe is a required check:
+            a path that cannot exist has to answer 404 or 410.
           </p>
         </section>
 

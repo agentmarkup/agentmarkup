@@ -1,98 +1,94 @@
 // @vitest-environment node
-import { describe, expect, it } from 'vitest'
+// The missing-path probe is scored by the engine's `nav.not-found` check; the
+// adapter turns that result into the finding the page renders.
+import { describe, expect, it } from 'vitest';
 
-import { auditNotFoundHandling } from '../src/checker/analyze'
-import type { AuditItem, RemoteResource } from '../src/checker/types'
+import { analyzeSiteCheck } from '../src/checker/analyze';
+import type { AuditItem, RemoteResource } from '../src/checker/types';
+import { HOME, PROBE_URL, notFound, page, resource, siteCheck, status, timedOut } from './helpers/score-fixture';
 
-const HOMEPAGE_HTML =
-  '<html><head><title>Home</title></head><body><main><h1>Home</h1><p>Real content.</p></main></body></html>'
-
-function resource(overrides: Partial<RemoteResource> = {}): RemoteResource {
+function findings(probe: RemoteResource | null): { item: AuditItem | undefined; unverified: AuditItem | undefined } {
+  const analysis = analyzeSiteCheck(siteCheck({ probe }));
   return {
-    requestedUrl: 'https://example.com/agentmarkup-probe-404-does-not-exist-9f3a2c',
-    finalUrl: 'https://example.com/agentmarkup-probe-404-does-not-exist-9f3a2c',
-    status: 404,
-    ok: false,
-    contentType: 'text/html',
-    body: null,
-    ...overrides,
-  }
+    item: analysis.items.find((candidate) => candidate.id === 'nav.not-found'),
+    unverified: analysis.items.find((candidate) => candidate.id === 'unverified-notFoundProbe'),
+  };
 }
 
-const homepage = resource({
-  requestedUrl: 'https://example.com/',
-  finalUrl: 'https://example.com/',
-  status: 200,
-  ok: true,
-  body: HOMEPAGE_HTML,
-})
-
-function run(probe: RemoteResource | null | undefined): AuditItem[] {
-  const items: AuditItem[] = []
-  auditNotFoundHandling(items, homepage, probe)
-  return items
+function probe200(body: string): RemoteResource {
+  return status(PROBE_URL, 200, { body });
 }
 
 describe('checker soft-404 detection', () => {
   it('reports an error when a nonexistent path returns the homepage with 200', () => {
-    const [item] = run(resource({ status: 200, ok: true, body: HOMEPAGE_HTML }))
+    const { item } = findings(probe200(page()));
 
-    expect(item.level).toBe('error')
-    expect(item.title).toContain('Soft-404')
-  })
+    expect(item?.level).toBe('error');
+    expect(item?.detail).toContain('soft-404');
+    expect(item?.title).toContain('pretends it does');
+  });
 
   it('ignores cosmetic differences like a changed nonce or hashed asset name', () => {
-    const shellWithDifferentAssets = HOMEPAGE_HTML.replace(
+    const shellWithDifferentAssets = page().replace(
       '</body>',
       '<script nonce="abc123" src="/assets/main-9f3a2c.js"></script></body>'
-    )
-    const [item] = run(resource({ status: 200, ok: true, body: shellWithDifferentAssets }))
+    );
+    const { item } = findings(probe200(shellWithDifferentAssets));
 
-    expect(item.level).toBe('error')
-  })
+    expect(item?.level).toBe('error');
+    expect(item?.detail).toContain('soft-404');
+  });
 
-  it('downgrades to a warning when the 200 body differs from the homepage', () => {
-    const [item] = run(
-      resource({
-        status: 200,
-        ok: true,
-        body: '<html><body><main><h1>Not found</h1><p>Sorry.</p></main></body></html>',
-      })
-    )
+  it('still fails, with a different evidence string, when the 200 body differs from the homepage', () => {
+    const { item } = findings(probe200('<html><body><main><h1>Not found</h1><p>Sorry.</p></main></body></html>'));
 
-    expect(item.level).toBe('warning')
-    expect(item.title).toContain('not 404')
-  })
+    expect(item?.level).toBe('error');
+    expect(item?.detail).toContain('missing paths answer 200');
+    expect(item?.detail).not.toContain('<');
+  });
 
   it('passes when the path returns a real 404 or 410', () => {
-    for (const status of [404, 410]) {
-      const [item] = run(resource({ status }))
-      expect(item.level).toBe('pass')
+    for (const code of [404, 410]) {
+      const { item } = findings(resource(PROBE_URL, { status: code, ok: false, body: null }));
+      expect(item?.level).toBe('pass');
+      expect(item?.detail).toContain(`HTTP ${code}`);
     }
-  })
+  });
 
   it('warns rather than erroring when the probe never completed', () => {
-    const [timedOut] = run(resource({ status: 0, error: 'timeout' }))
-    expect(timedOut.level).toBe('warning')
-    expect(timedOut.title).toContain('Could not check')
-  })
+    const { item, unverified } = findings(timedOut(PROBE_URL));
 
-  it('flags a non-2xx, non-404 status as ambiguous rather than a soft-404', () => {
-    const [item] = run(resource({ status: 302 }))
+    expect(item).toBeUndefined();
+    expect(unverified?.level).toBe('warning');
+    expect(unverified?.title).toBe('Missing-path probe could not be verified in time');
+    expect(unverified?.detail).toContain('Missing paths return a real 404');
+  });
 
-    expect(item.level).toBe('warning')
-    expect(item.title).toContain('302')
-  })
+  it('fails a redirect, quoting the status and the Location', () => {
+    const { item } = findings(status(PROBE_URL, 302, { headers: { location: HOME } }));
 
-  it('reports nothing when the probe is absent, so older payloads stay valid', () => {
-    expect(run(undefined)).toHaveLength(0)
-    expect(run(null)).toHaveLength(0)
-  })
+    expect(item?.level).toBe('error');
+    expect(item?.detail).toContain('redirect');
+    expect(item?.detail).toContain('302');
+    expect(item?.detail).toContain(HOME);
+  });
+
+  it('reports an older payload without a probe as unverified, never as a failure', () => {
+    const { item, unverified } = findings(null);
+    const analysis = analyzeSiteCheck(siteCheck({ probe: null }));
+
+    expect(item).toBeUndefined();
+    expect(unverified?.level).toBe('warning');
+    expect(unverified?.detail).toContain('the missing-path probe was not run');
+    expect(analysis.report.analysisStatus).toBe('partial');
+    expect(analysis.report.unverifiedChecks).toContain('nav.not-found');
+  });
 
   it('always carries an agentmarkup explainer, including on the pass state', () => {
-    for (const probe of [resource({ status: 404 }), resource({ status: 200, ok: true, body: HOMEPAGE_HTML })]) {
-      const [item] = run(probe)
-      expect(item.agentmarkupHelp).toBeTruthy()
+    for (const probe of [notFound(PROBE_URL), probe200(page())]) {
+      const { item } = findings(probe);
+      expect(item?.agentmarkupHelp).toBeTruthy();
+      expect(item?.docUrl).toContain('/score/#nav.not-found');
     }
-  })
-})
+  });
+});

@@ -49,7 +49,7 @@ export const homeFaqs: PageFaqItem[] = [
 export const checkerFaqs: PageFaqItem[] = [
   {
     question: 'What does the website checker inspect?',
-    answer: 'It reads your public homepage and one internal page, then checks discovery links, sitemap and canonical signals, readable HTML, JSON-LD, llms.txt and markdown alternatives, robots.txt rules, and live responses for common AI crawlers.',
+    answer: 'It reads your public homepage and one internal page, their markdown mirrors, llms.txt, robots.txt, the sitemap and a path that cannot exist, then scores bot detection, readable HTML, document structure and labelling, redirect and 404 hygiene, canonical and language metadata, JSON-LD identity, trust pages, llms.txt guidance, and robots.txt access for AI search and agent user agents.',
   },
   {
     question: 'Does the checker change or install anything on my website?',
@@ -60,8 +60,8 @@ export const checkerFaqs: PageFaqItem[] = [
     answer: 'No. The website checker focuses on whether machines can find, understand, and access your content. The security scan focuses on public safety signals such as HTTPS, response headers, cookie flags, mixed content, security.txt, and public DNS records.',
   },
   {
-    question: 'Why does the checker not give a score?',
-    answer: 'A single score can hide the issue that matters. The checker reports evidence-based findings as looks good, needs attention, or action required, and gives a practical next step for each result.',
+    question: 'How is the score computed?',
+    answer: 'From a published formula, not a hidden weighting. Required checks share the largest pool at even weight, recommended checks share a smaller pool, bonus signals add a capped extra and never subtract, and a check whose evidence did not arrive in time leaves the denominator instead of lowering the number. Every point is traceable to a check you can see, each finding keeps its evidence and a practical next step, and the full method is published at agentmarkup.dev/score/.',
   },
 ];
 

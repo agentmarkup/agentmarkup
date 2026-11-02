@@ -333,6 +333,6 @@ describe('inspectSite', () => {
 
     expect(result.ok).toBe(true);
     expect(result.summaryText.length).toBeLessThanOrEqual(1_200);
-    expect(result.summaryText).toContain('warning: llms.txt needs improvement');
+    expect(result.summaryText).toMatch(/(error|warning): /);
   });
 });

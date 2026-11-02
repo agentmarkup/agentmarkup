@@ -1,5 +1,17 @@
+import { SCORE_CATALOG_VERSION, implementedChecks } from '@agentmarkup/core/score'
+import type { CheckTier } from '@agentmarkup/core/score'
+
 import Byline from '../Byline'
 import BlogFooter from '../BlogFooter'
+
+// Rendered from the catalog so the post cannot drift from the checks that run.
+const scoredChecks = implementedChecks()
+const checksFor = (tier: CheckTier) => scoredChecks.filter((definition) => definition.tier === tier)
+const TIER_SECTIONS: ReadonlyArray<{ tier: CheckTier; title: string; intro: string }> = [
+  { tier: 'required', title: 'Required checks', intro: 'Each one is a gap an agent trips over on the first fetch. A failing required check is reported as an error.' },
+  { tier: 'recommended', title: 'Recommended checks', intro: 'Each one makes the site easier to understand or cite. A failing recommended check is reported as a warning.' },
+  { tier: 'bonus', title: 'Bonus signals', intro: 'Extra credit that never subtracts: a missing bonus signal is a warning that points at an upside, not a penalty.' },
+]
 
 function WebsiteCheckerGuide() {
   return (
@@ -31,67 +43,39 @@ function WebsiteCheckerGuide() {
         <section>
           <h2>What the checker audits</h2>
           <p>
-            Enter any public URL at <a href="/checker/">agentmarkup.dev/checker</a> and the tool fetches your homepage, llms.txt, robots.txt, sitemap, markdown mirrors, and a sample internal page. It runs 20+ deterministic checks and categorizes each as a pass, warning, or error.
+            Enter any public URL at <a href="/checker/">agentmarkup.dev/checker</a> and the tool fetches your homepage, llms.txt, robots.txt, sitemap, markdown mirrors, a sample internal page, and a path that cannot exist. It runs {scoredChecks.length} deterministic checks from a published catalog (v{SCORE_CATALOG_VERSION}), reports each as a pass, warning, or error, and adds them up into a 0-100 agent-readiness score. The lists below are rendered from that catalog.
           </p>
 
-          <h3>Homepage structure</h3>
-          <ul>
-            <li>Is your homepage publicly reachable over HTTPS?</li>
-            <li>Does it have a canonical URL tag?</li>
-            <li>Is there a meta description?</li>
-            <li>Is the HTML lang attribute set?</li>
-            <li>Does it have an H1 heading?</li>
-            <li>Does the X-Robots-Tag header block indexing?</li>
-          </ul>
-
-          <h3>JSON-LD structured data</h3>
-          <ul>
-            <li>Are there any JSON-LD blocks in the page?</li>
-            <li>Is the JSON-LD syntactically valid?</li>
-            <li>Is there a WebSite schema identifying your site?</li>
-            <li>Is there an Organization schema with your brand name and logo?</li>
-          </ul>
-
-          <h3>llms.txt</h3>
-          <ul>
-            <li>Does <code>/llms.txt</code> exist and is it accessible?</li>
-            <li>Is the file structurally valid?</li>
-            <li>Does your homepage advertise it via a link tag?</li>
-          </ul>
-
-          <h3>Markdown mirrors</h3>
-          <ul>
-            <li>If the raw HTML is thin, does your homepage have a markdown alternate link?</li>
-            <li>Is the markdown file accessible and substantial (not empty or raw HTML)?</li>
-            <li>If a linked page also serves thin HTML, is there a useful markdown fallback there too?</li>
-          </ul>
-
-          <h3>Robots.txt and AI crawlers</h3>
-          <ul>
-            <li>Does robots.txt exist?</li>
-            <li>Are there explicit rules for GPTBot, ClaudeBot, PerplexityBot, Google-Extended, and CCBot?</li>
-            <li>Does robots.txt reference your sitemap?</li>
-          </ul>
-
-          <h3>Sitemap</h3>
-          <ul>
-            <li>Is a sitemap available at <code>/sitemap.xml</code> or referenced in robots.txt?</li>
-            <li>Is the sitemap valid XML?</li>
-          </ul>
+          {TIER_SECTIONS.map(({ tier, title, intro }) => (
+            <div key={tier}>
+              <h3>{title}</h3>
+              <p>{intro}</p>
+              <ul>
+                {checksFor(tier).map((definition) => (
+                  <li key={definition.id}>
+                    <strong>{definition.name}</strong>: {definition.rule}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </section>
 
         <section>
           <h2>How to read the results</h2>
           <p>
-            Results use three levels. There are no scores, no percentages, no arbitrary numbers. Just deterministic checks with clear outcomes:
+            The report opens with a deterministic 0-100 score from a published formula (catalog v{SCORE_CATALOG_VERSION}): every point is traceable to a check you can see; no LLM, no heuristics, no off-site search. Required checks share the largest pool, recommended checks share a smaller one, and bonus signals add a capped extra that never subtracts. The <a href="/score/">methodology page</a> renders the whole formula, the grade bands, and every check from the same code that computes the number.
+          </p>
+          <p>
+            Under the score, each check lands in one of three levels:
           </p>
           <ul>
-            <li><strong>Error</strong> - something is blocking AI access. Homepage unreachable, noindex header present, invalid JSON-LD.</li>
-            <li><strong>Warning</strong> - something important is missing. No Organization schema, no explicit AI crawler rules, or thin HTML without adequate markdown coverage.</li>
-            <li><strong>Pass</strong> - a best practice is met. Homepage reachable, canonical URL present, llms.txt valid.</li>
+            <li><strong>Error</strong> - a required check fails. The homepage answers a bot challenge, a path that cannot exist answers 200, there is no readable HTML without JavaScript, or the JSON-LD identity is missing.</li>
+            <li><strong>Warning</strong> - a recommended check or bonus signal fails, a check earns only partial credit, or a resource could not be verified in time. A fetch that never completed leaves the denominator instead of lowering the score, and the run is marked provisional with a range.</li>
+            <li><strong>Pass</strong> - the check is met, with the evidence it read: counts, ids, URLs, attribute and header values.</li>
           </ul>
           <p>
-            Each finding includes a title, a detail explaining why it matters, and an action step telling you what to do. Where relevant, findings link to the documentation guides on this site.
+            Each finding includes the sentence a client would understand, the evidence the rule read, the estimated gain in points, and an action step telling you what to do. The top five fixes by estimated gain are listed first, and a plain-text client summary is one click away.
           </p>
         </section>
 
@@ -135,7 +119,7 @@ function WebsiteCheckerGuide() {
             <li><strong>llms.txt</strong> is not checked by any SEO tool. It is AI-specific.</li>
             <li><strong>Markdown mirrors</strong> are irrelevant to Google but useful when the raw HTML is thin, heavily client-rendered, or cluttered with layout noise.</li>
             <li><strong>AI crawler rules</strong> (GPTBot, ClaudeBot) are separate from Googlebot rules. You might have perfect Google indexing while being completely invisible to ChatGPT.</li>
-            <li><strong>No scores.</strong> SEO tools love to give you a number out of 100. The checker gives you specific, actionable findings. "Your robots.txt does not include explicit rules for GPTBot" is more useful than "Your AI readiness score is 47."</li>
+            <li><strong>A score you can audit.</strong> SEO tools give you a number out of 100 from a weighting you never see. The checker&apos;s score comes from a <a href="/score/">published formula</a>: every point is traceable to a check you can see, and each finding still names the exact change, so &quot;your robots.txt blocks PerplexityBot&quot; sits next to the points it would recover.</li>
           </ul>
         </section>
 

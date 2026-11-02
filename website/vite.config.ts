@@ -2,6 +2,7 @@ import { resolve } from 'path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { agentmarkup } from '@agentmarkup/vite'
+import { SCORE_CATALOG_VERSION } from '@agentmarkup/core/score'
 
 import { MARKDOWN_EXCLUDED_PAGES, websitePrerender } from './prerender-plugin'
 import { author, blogPosts } from './src/data/editorial'
@@ -287,6 +288,8 @@ const informationalPages = [
 export default defineConfig({
   resolve: {
     alias: {
+      // The subpath alias must come first: a string alias also matches `<find>/...`.
+      '@agentmarkup/core/score': resolve(__dirname, '../packages/core/dist/score/index.js'),
       '@agentmarkup/core': resolve(__dirname, '../packages/core/dist/index.js'),
       '@agentmarkup/vite': resolve(__dirname, '../packages/vite/dist/index.js'),
     },
@@ -298,6 +301,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         checker: resolve(__dirname, 'checker/index.html'),
+        score: resolve(__dirname, 'score/index.html'),
         studio: resolve(__dirname, 'studio/index.html'),
         'security-scan': resolve(__dirname, 'security-scan/index.html'),
         'docs-llms-txt': resolve(__dirname, 'docs/llms-txt/index.html'),
@@ -334,6 +338,7 @@ export default defineConfig({
         'not-found': resolve(__dirname, '404.html'),
         'prerender-main': resolve(__dirname, 'src/main.tsx'),
         'prerender-checker': resolve(__dirname, 'src/entries/checker.tsx'),
+        'prerender-score': resolve(__dirname, 'src/entries/score.tsx'),
         'prerender-studio': resolve(__dirname, 'src/entries/studio.tsx'),
         'prerender-security-scan': resolve(__dirname, 'src/entries/security-scan.tsx'),
         'prerender-docs-llms-txt': resolve(__dirname, 'src/entries/llms-txt.tsx'),
@@ -379,14 +384,14 @@ export default defineConfig({
       description: 'Make your markup agent-ready. Build-time llms.txt, optional llms-full.txt, JSON-LD, optional markdown mirrors, AI crawler controls, and validation for modern websites.',
 
       llmsTxt: {
-        instructions: 'agentmarkup is an open-source package family for Vite, Astro, Next.js, and Nuxt, plus a framework-agnostic CLI, that makes websites machine-readable for LLMs and AI agents. It generates llms.txt, optional llms-full.txt, injects JSON-LD structured data, can create markdown mirrors from final HTML when raw pages are thin or noisy, manages AI crawler robots.txt directives, and validates everything at build time.',
+        instructions: 'agentmarkup is an open-source package family for Vite, Astro, Next.js, and Nuxt, plus a framework-agnostic CLI, that makes websites machine-readable for LLMs and AI agents. It generates llms.txt, optional llms-full.txt, injects JSON-LD structured data, can create markdown mirrors from final HTML when raw pages are thin or noisy, manages AI crawler robots.txt directives, and validates everything at build time. The hosted website checker scores any public site 0-100 from a published formula.',
         whenToUse: [
-          'Someone asks whether a specific public website is readable by AI crawlers and agents. Use the website checker at /checker/, or run `npx @agentmarkup/audit <url>` to fetch that URL as each major AI crawler and diff the result against a browser fetch.',
+          'Someone asks whether a specific public website is readable by AI crawlers and agents. Use the website checker at /checker/, which reports a deterministic 0-100 agent-readiness score from the published formula at /score/, or run `npx @agentmarkup/audit <url>` to fetch that URL as each major AI crawler and diff the result against a browser fetch.',
           'Someone needs llms.txt, llms-full.txt, JSON-LD, markdown mirrors, AI crawler robots.txt rules, or Content-Signal headers generated for their own site. Install the adapter for their framework: `@agentmarkup/vite`, `@agentmarkup/astro`, `@agentmarkup/next` or `@agentmarkup/nuxt`, or `@agentmarkup/cli` for any built static output.',
           'Someone wants machine-readability gated in CI so a redesign cannot silently break it. `agentmarkup check ./dist` from `@agentmarkup/cli` and `npx @agentmarkup/audit <url>` both exit non-zero on error-level findings.',
           'Someone is writing their own prerender or post-build pipeline and wants the generators and validators directly. Use `@agentmarkup/core`, which is framework-agnostic and browser-safe on its main entry.',
           'Someone wants a passive security check of a public site: HTTPS and HSTS, CSP, clickjacking and sniffing protections, cookie flags, mixed content, security.txt, and SPF, DMARC and DNSSEC records. Use the security scan at /security-scan/.',
-          'Do not use agentmarkup for a readiness score, a letter grade, or a ranking guarantee. Validation here is deterministic: missing required fields are errors, missing recommended fields are warnings, and no score is produced. Do not point the checker or the scan at a site the user does not own or is not authorized to test.',
+          `Do not read the score as a ranking, traffic, or citation guarantee. The checker score is a deterministic 0-100 number from a published formula (catalog v${SCORE_CATALOG_VERSION}, see /score/): every point is traceable to a check you can see, no LLM, no heuristics, no off-site search. Build-time validation stays deterministic too: missing required fields are errors, missing recommended fields are warnings. Do not point the checker or the scan at a site the user does not own or is not authorized to test.`,
         ],
         sections: [
           {
@@ -412,7 +417,8 @@ export default defineConfig({
             title: 'Guides',
             entries: [
               { title: 'Learning center', url: '/learn/', description: 'Plain-language paths for understanding whether AI can find, understand, and access your website' },
-              { title: 'Website checker', url: '/checker/', description: 'Check any public site for llms.txt, JSON-LD, robots.txt, sitemap discovery, markdown mirrors, and machine-readable basics' },
+              { title: 'Website checker', url: '/checker/', description: 'Check any public site for llms.txt, JSON-LD, robots.txt, sitemap discovery, markdown mirrors, and machine-readable basics, with a deterministic 0-100 agent-readiness score from a published formula' },
+              { title: 'Score methodology', url: '/score/', description: 'How the agent-readiness score is computed: the check catalog, pools, grade bands, status rules, estimated gains and every divergence from Ora, rendered from the code that computes it' },
               { title: 'Security scan', url: '/security-scan/', description: 'Passive security scan for public sites: HTTPS/HSTS, CSP, clickjacking and sniffing protections, cookies, mixed content, security.txt, and SPF/DMARC/DNSSEC' },
               { title: 'How to audit AI crawler access', url: '/docs/audit/', description: 'Fetch any live URL as each major AI crawler with @agentmarkup/audit, diff against a browser, and gate machine-readability in CI' },
               { title: 'How to generate llms.txt', url: '/docs/llms-txt/', description: 'Generate a spec-compliant llms.txt file at build time for AI model discovery' },
@@ -526,6 +532,17 @@ export default defineConfig({
               description: 'Check any public website for llms.txt, JSON-LD structured data, markdown mirrors, robots.txt AI crawler rules, sitemap discovery, and thin client-rendered HTML.',
             },
             { preset: 'faqPage' as const, url: `${siteUrl}/checker/`, questions: checkerFaqs },
+          ],
+        },
+        {
+          path: '/score/',
+          schemas: [
+            {
+              '@type': 'WebPage',
+              name: 'How the agent-readiness score is computed',
+              url: `${siteUrl}/score/`,
+              description: 'The published formula behind the agentmarkup website checker score: the check catalog, pools, grade bands, status rules, estimated gains and every divergence from Ora.',
+            },
           ],
         },
         {
