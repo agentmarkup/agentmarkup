@@ -9,14 +9,22 @@
 //   node scripts/score-panel.mjs [--runs 3] [--interval 600] [--worker https://<preview>.pages.dev] \
 //     [--sites a.com,b.com] [--fixtures packages/core/test/fixtures/score] [--out <file.json>]
 //
-// Exit 1 on any false finding (a fail/partial the expected contract does not
-// list), any score delta between complete runs of one site through one source,
-// or a complete-run share under 95%.
+// Exit 1 (spec 9.4 and the 9.5 parity run) on any false finding (a fail or
+// partial the expected contract does not list), any score delta between complete
+// runs of one site through one source, any collector-versus-worker score
+// mismatch for the same site and run when both are complete, or a complete-run
+// share under 95%. Also exit 1 when a complete agentmarkup.dev run is more than
+// 2 points from Ora's Essentials headline (an addition to the 9.4 list; blocked
+// or partial runs are not judged). Drift against expected.json (a listed check
+// whose outcome moved, an unexpected unverified or not-applicable check, a score
+// that differs from the fixture's) is printed, never an exit condition: 9.4 makes
+// only the conditions above fatal.
 
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { collectSiteEvidence } from '../packages/audit/dist/index.js';
 import { evaluateSiteChecks, getCheckDefinition, scoreChecks } from '../packages/core/dist/score/index.js';
+import { optionValue } from './lib/args.mjs';
 
 const DEFAULT_FIXTURES = 'packages/core/test/fixtures/score';
 /** Mirrors test/score/ora-comparison.test.ts: known direction differences with a reason. */
@@ -33,12 +41,17 @@ function parseArgs(argv) {
   const args = { runs: 3, interval: 600, worker: null, sites: null, fixtures: DEFAULT_FIXTURES, out: null };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
-    if (arg === '--runs') args.runs = Number.parseInt(argv[++i], 10);
-    else if (arg === '--interval') args.interval = Number.parseFloat(argv[++i]);
-    else if (arg === '--worker') args.worker = argv[++i];
-    else if (arg === '--sites') args.sites = argv[++i].split(',').map((value) => value.trim()).filter(Boolean);
-    else if (arg === '--fixtures') args.fixtures = argv[++i];
-    else if (arg === '--out') args.out = argv[++i];
+    const value = () => {
+      const taken = optionValue(argv, i, usage);
+      i += 1;
+      return taken;
+    };
+    if (arg === '--runs') args.runs = Number.parseInt(value(), 10);
+    else if (arg === '--interval') args.interval = Number.parseFloat(value());
+    else if (arg === '--worker') args.worker = value();
+    else if (arg === '--sites') args.sites = value().split(',').map((site) => site.trim()).filter(Boolean);
+    else if (arg === '--fixtures') args.fixtures = value();
+    else if (arg === '--out') args.out = value();
     else if (arg === '--help') usage();
     else usage(`unknown argument ${arg}`);
   }
@@ -67,11 +80,18 @@ function loadPanel(dir, only) {
   return panel.sort((a, b) => a.site.localeCompare(b.site));
 }
 
-/** False findings = non-pass checks the contract does not list; drift = listed checks whose outcome moved. */
+/**
+ * False findings = non-pass checks the contract does not list (fatal); drift =
+ * listed checks whose outcome moved, plus a score that differs from the
+ * fixture's expected score (printed only: live content may change).
+ */
 function diffAgainstExpected(report, expected) {
   if (!expected) return { falseFindings: [], drift: [], note: 'no expected.json for this site' };
   const falseFindings = [];
   const drift = [];
+  if (typeof expected.score === 'number' && report.score !== expected.score) {
+    drift.push({ id: 'score', expected: `${expected.score}`, actual: `${report.score ?? 'n/a'}` });
+  }
   for (const check of report.checks) {
     const listed = expected.nonPass?.[check.id];
     if (check.status === 'fail' || check.status === 'partial') {
@@ -223,17 +243,37 @@ async function main() {
     const scores = new Set(entries.map((entry) => entry.score));
     if (scores.size > 1) {
       const changed = new Set();
-      const first = entries[0].checks ?? [];
       for (const other of entries.slice(1)) {
-        for (const check of other.checks ?? []) {
-          const base = first.find((candidate) => candidate.id === check.id);
-          if (!base || base.status !== check.status || base.fraction !== check.fraction) changed.add(check.id);
-        }
+        for (const id of changedCheckIds(entries[0].checks, other.checks)) changed.add(id);
       }
-      deltas.push({ key, scores: [...scores], changedChecks: [...changed] });
+      deltas.push({ key, scores: [...scores], changedChecks: [...changed].sort() });
     }
   }
-  const oraHeadlineOk = results.every((entry) => !entry.ora?.available || entry.ora.headlineWithin2);
+  // Live parity (spec 9.4 / 9.5): the collector and the worker must agree on
+  // the same site in the same run whenever both readings are complete.
+  const parity = [];
+  for (const entry of results) {
+    if (entry.source !== 'collector' || entry.status !== 'complete') continue;
+    const worker = results.find(
+      (other) => other.source === 'worker' && other.site === entry.site && other.run === entry.run && other.status === 'complete'
+    );
+    if (!worker) continue;
+    const changed = changedCheckIds(entry.checks, worker.checks);
+    parity.push({
+      site: entry.site,
+      run: entry.run,
+      collectorScore: entry.score,
+      workerScore: worker.score,
+      equal: entry.score === worker.score,
+      changedChecks: changed,
+    });
+  }
+  const parityMismatches = parity.filter((pair) => !pair.equal);
+  // Judged on complete runs only: a blocked run has no score and a partial one
+  // is provisional, so neither says anything about the headline.
+  const oraHeadlineOk = results.every(
+    (entry) => entry.status !== 'complete' || !entry.ora?.available || entry.ora.headlineWithin2
+  );
   const summary = {
     runs: args.runs,
     sites: panel.map((entry) => entry.site),
@@ -243,18 +283,41 @@ async function main() {
     completeShare: Number(completeShare.toFixed(4)),
     falseFindings: falseFindingCount,
     scoreDeltasBetweenCompleteRuns: deltas,
+    parity: { pairs: parity.length, mismatches: parityMismatches },
     oraHeadlineWithin2: oraHeadlineOk,
     p95ElapsedMs: percentile(results.map((entry) => entry.elapsedMs).filter((value) => typeof value === 'number'), 95),
   };
   log('');
   log(`summary: ${complete}/${results.length} complete (${(completeShare * 100).toFixed(1)}%), ${falseFindingCount} false finding(s), ${deltas.length} site/source pair(s) with a score delta between complete runs, p95 elapsed ${summary.p95ElapsedMs} ms`);
   for (const delta of deltas) log(`  delta ${delta.key}: scores ${delta.scores.join(' / ')} changed checks [${delta.changedChecks.join(', ')}]`);
+  if (sources.includes('worker')) {
+    log(`parity: ${parity.length} complete collector/worker pair(s), ${parityMismatches.length} mismatch(es)`);
+    for (const pair of parity) {
+      if (pair.changedChecks.length === 0 && pair.equal) continue;
+      log(`  ${pair.equal ? 'checks differ' : 'PARITY MISMATCH'} ${pair.site} run ${pair.run}: collector ${pair.collectorScore} vs worker ${pair.workerScore}, changed checks [${pair.changedChecks.join(', ')}]`);
+    }
+  }
+  if (!oraHeadlineOk) log('ora: a complete agentmarkup.dev run is more than 2 points from the Essentials headline');
   if (args.out) {
     writeFileSync(resolve(args.out), `${JSON.stringify({ summary, results }, null, 2)}\n`);
     log(`wrote ${resolve(args.out)}`);
   }
-  const failed = falseFindingCount > 0 || deltas.length > 0 || completeShare < 0.95 || !oraHeadlineOk;
+  const failed =
+    falseFindingCount > 0 || deltas.length > 0 || parityMismatches.length > 0 || completeShare < 0.95 || !oraHeadlineOk;
   process.exit(failed ? 1 : 0);
+}
+
+/** Check ids whose status or fraction differs between two check lists (either side missing counts). */
+function changedCheckIds(left, right) {
+  const before = new Map((left ?? []).map((check) => [check.id, check]));
+  const after = new Map((right ?? []).map((check) => [check.id, check]));
+  const changed = [];
+  for (const id of new Set([...before.keys(), ...after.keys()])) {
+    const a = before.get(id);
+    const b = after.get(id);
+    if (!a || !b || a.status !== b.status || a.fraction !== b.fraction) changed.push(id);
+  }
+  return changed.sort();
 }
 
 function percentile(values, p) {

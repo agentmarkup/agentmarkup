@@ -9,6 +9,7 @@ import {
   sitemapLocs,
   type SourcedLink,
 } from '../src/clients.js';
+import { registrableDomainOf } from '@agentmarkup/core/score';
 import { registrableDomain } from '../src/registrable-domain.js';
 
 const AGENCY = 'https://www.agency.com/';
@@ -51,7 +52,7 @@ describe('canonicalizeAgencyUrl', () => {
 });
 
 describe('registrableDomain', () => {
-  it('cuts to the last two labels, or three under a listed two-level TLD', () => {
+  it('cuts to the last two labels, or three under a listed second-level label and two-letter TLD', () => {
     expect(registrableDomain('www.example.com')).toBe('example.com');
     expect(registrableDomain('a.b.example.com')).toBe('example.com');
     expect(registrableDomain('www.example.co.uk')).toBe('example.co.uk');
@@ -59,6 +60,27 @@ describe('registrableDomain', () => {
     expect(registrableDomain('example.com')).toBe('example.com');
     expect(registrableDomain('Example.COM.')).toBe('example.com');
     expect(registrableDomain('localhost')).toBe('localhost');
+    // The core rule: any of co/com/net/org/gov/edu/ac under a two-letter TLD.
+    expect(registrableDomain('www.example.org.uk')).toBe('example.org.uk');
+    expect(registrableDomain('shop.example.net.au')).toBe('example.net.au');
+    expect(registrableDomain('dept.uni.ac.uk')).toBe('uni.ac.uk');
+    expect(registrableDomain('www.example.co.za')).toBe('example.co.za');
+    expect(registrableDomain('www.example.com.br')).toBe('example.com.br');
+    // Not two letters, or not a listed label: last two labels.
+    expect(registrableDomain('www.example.co.museum')).toBe('co.museum');
+    expect(registrableDomain('www.example.info.uk')).toBe('info.uk');
+    // IP literals only ever match exactly.
+    expect(registrableDomain('93.184.216.34')).toBe('93.184.216.34');
+    expect(registrableDomain('[::1]')).toBe('[::1]');
+  });
+
+  it('agrees with core registrableDomainOf on every host', () => {
+    const hosts = [
+      'www.example.com', 'a.b.example.com', 'www.example.co.uk', 'shop.example.com.au', 'example.org.uk',
+      'x.example.gov.uk', 'x.example.edu.au', 'dept.uni.ac.uk', 'www.example.co.museum', 'www.example.info.uk',
+      'example.com', 'Example.COM.', 'localhost', '93.184.216.34', '[::1]', 'a.b.c.d.example.net.nz',
+    ];
+    expect(hosts.map((host) => registrableDomain(host))).toEqual(hosts.map((host) => registrableDomainOf(host)));
   });
 });
 
@@ -212,6 +234,31 @@ describe('rankClientCandidates', () => {
     const ranking = rankClientCandidates(links, 'agency.com');
     expect(ranking.candidates.map((candidate) => candidate.domain)).toEqual(['client.example']);
     expect(ranking.excluded).toEqual([]);
+  });
+
+  it('excludes the final homepage domain too when the agency redirected to another registrable domain', () => {
+    // agency-old.com redirects to agencynew.com; the homepage links are gathered
+    // from the final origin, so its own pages carry the new domain.
+    const finalBase = 'https://www.agencynew.com/';
+    const links = extractLinks(
+      '<a href="https://www.agencynew.com/work/" target="_blank"><img src="/x.png" alt=""></a>' +
+        '<a href="https://shop.agencynew.com/">Visit the live site</a>' +
+        '<a href="https://agency-old.com/legacy/">Old site</a>' +
+        '<a href="https://clientone.com/" target="_blank">clientone.com</a>',
+      finalBase
+    ).map((link): SourcedLink => ({ ...link, sourceUrl: finalBase, portfolio: false }));
+
+    const requestedOnly = rankClientCandidates(links, 'agency-old.com');
+    expect(requestedOnly.candidates.map((candidate) => candidate.domain)).toContain('agencynew.com');
+
+    const both = rankClientCandidates(links, ['agency-old.com', 'agencynew.com']);
+    expect(both.candidates.map((candidate) => candidate.domain)).toEqual(['clientone.com']);
+    expect(both.excluded).toEqual([
+      { domain: 'agency-old.com', reason: 'agency-domain' },
+      { domain: 'agencynew.com', reason: 'agency-domain' },
+    ]);
+    expect(exclusionReasonFor('www.agencynew.com', ['agency-old.com', 'AgencyNew.com'])).toBe('agency-domain');
+    expect(exclusionReasonFor('clientone.com', ['agency-old.com', 'agencynew.com'])).toBeNull();
   });
 
   it('caps the extra-source-page bonus at two', () => {

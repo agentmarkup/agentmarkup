@@ -16,6 +16,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { collectSiteEvidence, registrableDomain } from '../packages/audit/dist/index.js';
 import { evaluateSiteChecks, scoreChecks } from '../packages/core/dist/score/index.js';
+import { optionValue } from './lib/args.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const RESOURCE_KEYS = [
@@ -40,10 +41,17 @@ function parseArgs(argv) {
   const args = { url: null, out: null, rerecord: false, compare: null, sample: null };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
-    if (arg === '--out') args.out = argv[++i];
+    // A missing value is a usage error before any network or file access: a
+    // trailing --compare must never fall through to a capture.
+    const value = () => {
+      const taken = optionValue(argv, i, usage);
+      i += 1;
+      return taken;
+    };
+    if (arg === '--out') args.out = value();
     else if (arg === '--rerecord') args.rerecord = true;
-    else if (arg === '--compare') args.compare = argv[++i];
-    else if (arg === '--sample') args.sample = argv[++i];
+    else if (arg === '--compare') args.compare = value();
+    else if (arg === '--sample') args.sample = value();
     else if (arg === '--help') usage();
     else if (arg.startsWith('-')) usage(`unknown argument ${arg}`);
     else if (!args.url) args.url = arg;

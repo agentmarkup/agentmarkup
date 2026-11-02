@@ -329,6 +329,40 @@ describe('collectSiteEvidence', () => {
     expect(evidence.fetchSummary.unverified).toEqual(['llmsTxt']);
   });
 
+  it('counts a challenged not-found probe as unverified in the summary while its outcome stays challenge', async () => {
+    const routes = healthySite();
+    routes[PROBE_PATH] = () => ({
+      status: 503,
+      body: '<html><body>Just a moment...</body></html>',
+      headers: { 'content-type': 'text/html', 'cf-mitigated': 'challenge' },
+    });
+    const { result } = collect(routes);
+    const evidence = await result;
+
+    expect(evidence.notFoundProbe?.outcome).toBe('challenge');
+    expect(evidence.fetchSummary.unverified).toEqual(['notFoundProbe']);
+    expect(evidence.fetchSummary.analysisStatus).toBe('partial');
+  });
+
+  it('reports a probe 3xx without Location as its completed answer, not a missing-Location error', async () => {
+    const routes = healthySite();
+    routes[PROBE_PATH] = () => ({ status: 302, body: 'moved' });
+    const { result } = collect(routes);
+    const evidence = await result;
+
+    expect(evidence.notFoundProbe).toMatchObject({ status: 302, ok: false, body: null, hops: 0 });
+    expect(evidence.notFoundProbe).not.toHaveProperty('error');
+    expect(evidence.notFoundProbe?.outcome).not.toBe('unverified');
+    expect(evidence.fetchSummary.unverified).toEqual([]);
+
+    // A followed chain without Location still fails as before.
+    const stub = createFetchStub({ '/hop': () => ({ status: 302, body: 'moved' }) });
+    const followed = await settleWithFakeTimers(
+      fetchResource('https://example.com/hop', { fetchImpl: stub.fetch, minGapMs: 0, maxRedirects: 2 })
+    );
+    expect(followed.error).toBe('Redirect response had no Location header.');
+  });
+
   it('refuses non-default ports on the target and on a redirect hop', async () => {
     expect(() => normalizeTargetUrl('https://example.com:8080/')).toThrow(InvalidTargetUrlError);
     expect(() => normalizeTargetUrl('ftp://example.com/')).toThrow(InvalidTargetUrlError);
@@ -386,6 +420,84 @@ describe('collectSiteEvidence', () => {
       outcome: 'unverified',
       headers: { link: '<a>; rel="x"' },
     });
+  });
+
+  it('cancels the body when Content-Length is over the cap, before reading it', async () => {
+    const stub = createFetchStub({
+      '/big': () => ({
+        status: 200,
+        body: 'x'.repeat(256),
+        headers: { 'content-type': 'text/plain', 'content-length': '999999' },
+        stream: true,
+      }),
+    });
+    const resource = await settleWithFakeTimers(
+      fetchResource('https://example.com/big', { fetchImpl: stub.fetch, maxResponseBytes: 1024, minGapMs: 0 })
+    );
+    expect(resource).toMatchObject({
+      status: 200,
+      body: null,
+      error: 'Response exceeded the checker size limit.',
+      outcome: 'unverified',
+    });
+    expect(callFor(stub.calls, '/big').bodyCancelled).toBe(true);
+  });
+
+  it('cancels the body when the stream crosses the cap and when a redirect target is blocked', async () => {
+    const stub = createFetchStub({
+      '/stream': () => ({ status: 200, body: 'y'.repeat(4096), headers: { 'content-type': 'text/plain' }, stream: true }),
+      '/hop': () => ({ status: 302, body: 'moved', headers: { location: 'http://127.0.0.1/' }, stream: true }),
+    });
+    const streamed = await settleWithFakeTimers(
+      fetchResource('https://example.com/stream', { fetchImpl: stub.fetch, maxResponseBytes: 1024, minGapMs: 0 })
+    );
+    expect(streamed.error).toBe('Response exceeded the checker size limit.');
+    expect(callFor(stub.calls, '/stream').bodyCancelled).toBe(true);
+
+    const blocked = await settleWithFakeTimers(
+      fetchResource('https://example.com/hop', { fetchImpl: stub.fetch, minGapMs: 0 })
+    );
+    expect(blocked.error).toBe('Request was blocked by checker safety rules.');
+    expect(callFor(stub.calls, '/hop').bodyCancelled).toBe(true);
+  });
+
+  it('refuses a host-gate slot past the run deadline instead of waiting for it', async () => {
+    // A 10 s gap puts the wave's slots at 10, 20, 30, 40 s; the 25 s deadline
+    // admits the first two and refuses the rest at once.
+    const { stub, result } = collect(healthySite(), { minGapMs: 10_000 });
+    const evidence = await result;
+
+    expect(stub.calls.map((call) => call.path)).toEqual(['/', '/robots.txt', PROBE_PATH]);
+    expect(evidence.llmsTxt).toMatchObject({
+      status: 0,
+      skipped: true,
+      error: 'Checker time budget exhausted.',
+      outcome: 'unverified',
+    });
+    expect(evidence.fetchSummary.elapsedMs).toBeLessThan(25_000);
+    expect(evidence.fetchSummary.analysisStatus).toBe('partial');
+  });
+
+  it('host gate: a deadline-refused slot is not reserved', async () => {
+    const sleeps: number[] = [];
+    let clock = 0;
+    const gate = createHostGate(
+      1000,
+      () => clock,
+      async (ms) => {
+        sleeps.push(ms);
+        clock += ms;
+      }
+    );
+    expect(await gate.wait('a.example', 1500)).toBe(true);
+    expect(await gate.wait('a.example', 1500)).toBe(true);
+    expect(clock).toBe(1000);
+    expect(await gate.wait('a.example', 1500)).toBe(false);
+    expect(sleeps).toEqual([1000]);
+    expect(await gate.wait('a.example', 1000)).toBe(false);
+    // The refused calls reserved nothing: the next slot is still 2000.
+    expect(await gate.wait('a.example')).toBe(true);
+    expect(sleeps).toEqual([1000, 1000]);
   });
 });
 
@@ -458,6 +570,132 @@ describe('refetchUnverified', () => {
     expect(retried.fetchSummary.analysisStatus).toBe('partial');
     expect(retried.fetchSummary.unverified).toEqual(['llmsTxt']);
     expect(stub.hits.get('/llms.txt')).toBe(3);
+  });
+
+  it('rediscovers the sitemap from a recovered robots.txt and fetches the declared URL', async () => {
+    const routes = healthySite();
+    const robots = routes['/robots.txt'];
+    routes['/robots.txt'] = (url, hit) => (hit === 0 ? { status: 0, never: true } : robots(url, hit));
+    const stub = createFetchStub(routes);
+    const first = await settleWithFakeTimers(
+      collectSiteEvidence('https://example.com', { fetchImpl: stub.fetch, minGapMs: 0 })
+    );
+    // robots.txt timed out, so the first run fell back to /sitemap.xml (a 404).
+    expect(first.fetchSummary.unverified).toEqual(['robotsTxt']);
+    expect(first.sitemapUrl).toBe('https://example.com/sitemap.xml');
+    expect(first.sitemapSource).toBe('default');
+    expect(first.sitemap?.outcome).toBe('not-found');
+    const callsBefore = stub.calls.length;
+
+    const retried = await settleWithFakeTimers(
+      refetchUnverified(first, { fetchImpl: stub.fetch, minGapMs: 0, sleep: async () => {} })
+    );
+
+    expect(stub.calls.slice(callsBefore).map((call) => call.path)).toEqual(['/robots.txt', '/sitemap_index.xml']);
+    expect(retried.robotsTxt.outcome).toBe('ok');
+    expect(retried.sitemapUrl).toBe('https://example.com/sitemap_index.xml');
+    expect(retried.sitemapSource).toBe('robots');
+    expect(retried.sitemap).toMatchObject({ requestedUrl: 'https://example.com/sitemap_index.xml', outcome: 'ok' });
+    expect(retried.fetchSummary).toMatchObject({ analysisStatus: 'complete', unverified: [], fetches: callsBefore + 2 });
+
+    // Same chain as a fresh run against the recovered site.
+    const fresh = await settleWithFakeTimers(
+      collectSiteEvidence('https://example.com', { fetchImpl: createFetchStub(healthySite()).fetch, minGapMs: 0 })
+    );
+    expect(retried.sitemapUrl).toBe(fresh.sitemapUrl);
+    expect(retried.sitemapSource).toBe(fresh.sitemapSource);
+  });
+
+  it('keeps the sitemap when a recovered robots.txt points at the URL already fetched', async () => {
+    const routes = healthySite();
+    routes['/robots.txt'] = (_url, hit) =>
+      hit === 0 ? { status: 503, body: 'down' } : { status: 200, body: 'User-agent: *\nAllow: /\n', headers: { 'content-type': 'text/plain' } };
+    routes['/sitemap.xml'] = () => ({ status: 200, body: '<?xml version="1.0"?><urlset></urlset>', headers: { 'content-type': 'application/xml' } });
+    const stub = createFetchStub(routes);
+    const first = await settleWithFakeTimers(
+      collectSiteEvidence('https://example.com', { fetchImpl: stub.fetch, minGapMs: 0 })
+    );
+    const callsBefore = stub.calls.length;
+    const retried = await settleWithFakeTimers(
+      refetchUnverified(first, { fetchImpl: stub.fetch, minGapMs: 0, sleep: async () => {} })
+    );
+    expect(stub.calls.slice(callsBefore).map((call) => call.path)).toEqual(['/robots.txt']);
+    expect(retried.sitemap).toBe(first.sitemap);
+    expect(retried.sitemapSource).toBe('default');
+    expect(retried.fetchSummary.analysisStatus).toBe('complete');
+  });
+
+  it('rediscovers the sample markdown from a recovered sample page', async () => {
+    const routes = healthySite();
+    const aboutWithAlternate =
+      '<!doctype html><html lang="en"><head><title>About</title><link rel="alternate" type="text/markdown" href="/docs/about-page.md"></head><body><main><h1>About</h1><p>About us.</p></main></body></html>';
+    routes['/about/'] = (_url, hit) =>
+      hit === 0
+        ? { status: 503, body: 'busy' }
+        : { status: 200, body: aboutWithAlternate, headers: { 'content-type': 'text/html; charset=utf-8' } };
+    routes['/docs/about-page.md'] = () => ({ status: 200, body: '# About\n\nAbout us.\n', headers: { 'content-type': 'text/markdown' } });
+    const stub = createFetchStub(routes);
+    const first = await settleWithFakeTimers(
+      collectSiteEvidence('https://example.com', { fetchImpl: stub.fetch, minGapMs: 0 })
+    );
+    expect(first.fetchSummary.unverified).toEqual(['samplePage']);
+    expect(first.samplePageMarkdown?.requestedUrl).toBe('https://example.com/about.md');
+    const callsBefore = stub.calls.length;
+
+    const retried = await settleWithFakeTimers(
+      refetchUnverified(first, { fetchImpl: stub.fetch, minGapMs: 0, sleep: async () => {} })
+    );
+
+    expect(stub.calls.slice(callsBefore).map((call) => call.path)).toEqual(['/about/', '/docs/about-page.md']);
+    expect(retried.samplePage?.outcome).toBe('ok');
+    expect(retried.samplePageMarkdown).toMatchObject({
+      requestedUrl: 'https://example.com/docs/about-page.md',
+      status: 200,
+      outcome: 'ok',
+    });
+    expect(retried.fetchSummary).toMatchObject({ analysisStatus: 'complete', samplePageUrl: 'https://example.com/about/' });
+  });
+
+  it('retries a challenged not-found probe and accepts the completed answer', async () => {
+    const routes = healthySite();
+    const probe = routes[PROBE_PATH];
+    routes[PROBE_PATH] = (url, hit) =>
+      hit === 0
+        ? { status: 429, body: '<html><body>Just a moment...</body></html>', headers: { 'content-type': 'text/html', 'cf-mitigated': 'challenge' } }
+        : probe(url, hit);
+    const stub = createFetchStub(routes);
+    const first = await settleWithFakeTimers(
+      collectSiteEvidence('https://example.com', { fetchImpl: stub.fetch, minGapMs: 0 })
+    );
+    expect(first.fetchSummary.unverified).toEqual(['notFoundProbe']);
+    const callsBefore = stub.calls.length;
+
+    const retried = await settleWithFakeTimers(
+      refetchUnverified(first, { fetchImpl: stub.fetch, minGapMs: 0, sleep: async () => {} })
+    );
+    expect(stub.calls.slice(callsBefore).map((call) => call.path)).toEqual([PROBE_PATH]);
+    expect(stub.calls.at(-1)?.init.headers).toMatchObject({ accept: PROBE_ACCEPT });
+    expect(retried.notFoundProbe).toMatchObject({ status: 404, outcome: 'not-found' });
+    expect(retried.fetchSummary).toMatchObject({ analysisStatus: 'complete', unverified: [] });
+  });
+
+  it('keeps retrying a probe that is still challenged and leaves the run partial', async () => {
+    const routes = healthySite();
+    routes[PROBE_PATH] = () => ({
+      status: 503,
+      body: '<html><body>Just a moment...</body></html>',
+      headers: { 'content-type': 'text/html', 'cf-mitigated': 'challenge' },
+    });
+    const stub = createFetchStub(routes);
+    const first = await settleWithFakeTimers(
+      collectSiteEvidence('https://example.com', { fetchImpl: stub.fetch, minGapMs: 0 })
+    );
+    const retried = await settleWithFakeTimers(
+      refetchUnverified(first, { fetchImpl: stub.fetch, minGapMs: 0, attempts: 2, sleep: async () => {} })
+    );
+    expect(stub.hits.get(PROBE_PATH)).toBe(3);
+    expect(retried.notFoundProbe?.outcome).toBe('challenge');
+    expect(retried.fetchSummary).toMatchObject({ analysisStatus: 'partial', unverified: ['notFoundProbe'] });
   });
 
   it('re-collects the whole site when the homepage was unverified', async () => {

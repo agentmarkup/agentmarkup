@@ -102,8 +102,13 @@ export const COLLECTOR_VERSION = resolvePackageVersion();
 export const COLLECTOR_USER_AGENT = `agentmarkup-checker/${COLLECTOR_VERSION} (+https://agentmarkup.dev; batch)`;
 
 export interface HostGate {
-  /** Resolves when a request to `hostname` may start. */
-  wait(hostname: string): Promise<void>;
+  /**
+   * Resolves when a request to `hostname` may start. With a `deadline` (epoch
+   * ms), a slot that would start at or after it is not reserved and the call
+   * resolves `false` at once instead of waiting; otherwise it resolves `true`
+   * (a gate that resolves nothing counts as admitted).
+   */
+  wait(hostname: string, deadline?: number): Promise<boolean | void>;
 }
 
 type Sleep = (ms: number) => Promise<void>;
@@ -124,15 +129,20 @@ export function createHostGate(
 ): HostGate {
   const nextAllowed = new Map<string, number>();
   return {
-    async wait(hostname: string): Promise<void> {
-      if (minGapMs <= 0) return;
-      const key = hostname.toLowerCase();
+    async wait(hostname: string, deadline?: number): Promise<boolean> {
       const current = now();
+      if (deadline !== undefined && current >= deadline) return false;
+      if (minGapMs <= 0) return true;
+      const key = hostname.toLowerCase();
       const slot = Math.max(current, nextAllowed.get(key) ?? 0);
+      // Refused before reserving: a queued slot past the run deadline would
+      // hold the run past its advertised budget and push later requests back.
+      if (deadline !== undefined && slot >= deadline) return false;
       nextAllowed.set(key, slot + minGapMs);
       if (slot > current) {
         await sleep(slot - current);
       }
+      return true;
     },
   };
 }
@@ -275,6 +285,20 @@ function mapFetchError(error: unknown): string {
   return 'Request failed.';
 }
 
+async function cancelResponseBody(response: Response): Promise<void> {
+  try {
+    await response.body?.cancel();
+  } catch {
+    // A body that cannot be cancelled was already consumed or closed.
+  }
+}
+
+/**
+ * Reads at most `maxResponseBytes`. Every early rejection (an oversized
+ * Content-Length, the cap crossed mid-stream, a read that throws) cancels the
+ * body before rethrowing, so no stream stays open after the limiter slot that
+ * started it is released.
+ */
 async function readBoundedBody(
   response: Response,
   maxResponseBytes: number
@@ -283,6 +307,7 @@ async function readBoundedBody(
   if (contentLengthHeader) {
     const contentLength = Number.parseInt(contentLengthHeader, 10);
     if (Number.isFinite(contentLength) && contentLength > maxResponseBytes) {
+      await cancelResponseBody(response);
       throw new Error('Response exceeded the checker size limit.');
     }
   }
@@ -293,27 +318,28 @@ async function readBoundedBody(
   const decoder = new TextDecoder();
   let totalBytes = 0;
   let text = '';
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (!value) continue;
-    totalBytes += value.byteLength;
-    if (totalBytes > maxResponseBytes) {
-      await reader.cancel();
-      throw new Error('Response exceeded the checker size limit.');
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+      totalBytes += value.byteLength;
+      if (totalBytes > maxResponseBytes) {
+        throw new Error('Response exceeded the checker size limit.');
+      }
+      text += decoder.decode(value, { stream: true });
     }
-    text += decoder.decode(value, { stream: true });
+  } catch (error) {
+    try {
+      // The reader holds the stream lock, so cancel through it.
+      await reader.cancel();
+    } catch {
+      // An errored stream is already closed.
+    }
+    throw error;
   }
   text += decoder.decode();
   return { text, bytes: totalBytes };
-}
-
-async function cancelResponseBody(response: Response): Promise<void> {
-  try {
-    await response.body?.cancel();
-  } catch {
-    // A body that cannot be cancelled was already consumed or closed.
-  }
 }
 
 function captureDiscoveryHeaders(headers: Headers): Record<string, string> {
@@ -416,7 +442,14 @@ export async function fetchResource(
       if (budget.fetches >= budget.maxFetches) {
         throw new Error('Checker request budget exhausted.');
       }
-      await hostGate.wait(parsed.hostname);
+      // Deadline-aware admission: a host-gate slot that would start after the
+      // run deadline is refused instead of awaited, so the run never waits
+      // past its budget; the resource reports the budget error (and, before
+      // its first request, `skipped`).
+      const admitted = await hostGate.wait(parsed.hostname, runStartedAt + resolved.deadlineMs);
+      if (admitted === false) {
+        throw new Error('Checker time budget exhausted.');
+      }
       if (redirectCount === 0) {
         trace.startedAt = now();
         invocationDeadline = trace.startedAt + resolved.perFetchMs;
@@ -440,87 +473,97 @@ export async function fetchResource(
           headers: { 'user-agent': resolved.userAgent, accept },
         });
 
-        if (response.status >= 300 && response.status < 400) {
-          const location = response.headers.get('location');
-          if (!location) {
-            await cancelResponseBody(response);
-            return finalize(
-              {
-                requestedUrl: targetUrl,
-                finalUrl: currentUrl,
-                status: response.status,
-                ok: false,
-                contentType: response.headers.get('content-type'),
-                body: null,
-                xRobotsTag: response.headers.get('x-robots-tag'),
-                error: 'Redirect response had no Location header.',
-              },
-              response,
-              trace,
-              now
-            );
-          }
-          // A resource that follows no redirects (the probe) reports the 3xx as
-          // its completed answer, Location included through the headers.
-          if (maxRedirects === 0) {
-            await cancelResponseBody(response);
-            return finalize(
-              {
-                requestedUrl: targetUrl,
-                finalUrl: currentUrl,
-                status: response.status,
-                ok: false,
-                contentType: response.headers.get('content-type'),
-                body: null,
-                xRobotsTag: response.headers.get('x-robots-tag'),
-              },
-              response,
-              trace,
-              now
-            );
-          }
-          let nextUrl: URL;
-          try {
-            nextUrl = new URL(location, currentUrl);
-          } catch {
-            throw new Error('Request was blocked by checker safety rules.');
-          }
-          if (!isFetchableUrl(nextUrl)) {
-            throw new Error('Request was blocked by checker safety rules.');
-          }
-          await cancelResponseBody(response);
-          currentUrl = nextUrl.toString();
-          continue;
-        }
-
-        // Metadata before the body: a body-read failure keeps status, final URL
-        // and headers so transport checks still run (partial results).
-        let body: string | null = null;
-        let bodyBytes: number | undefined;
-        let bodyError: string | undefined;
         try {
-          const read = await readBoundedBody(response, resolved.maxResponseBytes);
-          body = read.text;
-          bodyBytes = read.bytes;
+          if (response.status >= 300 && response.status < 400) {
+            // A resource that follows no redirects (the not-found probe) reports
+            // the 3xx it received as its completed answer, with or without a
+            // Location header (kept through the discovery headers when present),
+            // before the missing-Location failure a followed chain gets. Same
+            // order as the worker's fetchText.
+            if (maxRedirects === 0) {
+              await cancelResponseBody(response);
+              return finalize(
+                {
+                  requestedUrl: targetUrl,
+                  finalUrl: currentUrl,
+                  status: response.status,
+                  ok: false,
+                  contentType: response.headers.get('content-type'),
+                  body: null,
+                  xRobotsTag: response.headers.get('x-robots-tag'),
+                },
+                response,
+                trace,
+                now
+              );
+            }
+            const location = response.headers.get('location');
+            if (!location) {
+              await cancelResponseBody(response);
+              return finalize(
+                {
+                  requestedUrl: targetUrl,
+                  finalUrl: currentUrl,
+                  status: response.status,
+                  ok: false,
+                  contentType: response.headers.get('content-type'),
+                  body: null,
+                  xRobotsTag: response.headers.get('x-robots-tag'),
+                  error: 'Redirect response had no Location header.',
+                },
+                response,
+                trace,
+                now
+              );
+            }
+            let nextUrl: URL;
+            try {
+              nextUrl = new URL(location, currentUrl);
+            } catch {
+              throw new Error('Request was blocked by checker safety rules.');
+            }
+            if (!isFetchableUrl(nextUrl)) {
+              throw new Error('Request was blocked by checker safety rules.');
+            }
+            await cancelResponseBody(response);
+            currentUrl = nextUrl.toString();
+            continue;
+          }
+
+          // Metadata before the body: a body-read failure keeps status, final URL
+          // and headers so transport checks still run (partial results).
+          let body: string | null = null;
+          let bodyBytes: number | undefined;
+          let bodyError: string | undefined;
+          try {
+            const read = await readBoundedBody(response, resolved.maxResponseBytes);
+            body = read.text;
+            bodyBytes = read.bytes;
+          } catch (error) {
+            bodyError = mapFetchError(error);
+          }
+          return finalize(
+            {
+              requestedUrl: targetUrl,
+              finalUrl: currentUrl,
+              status: response.status,
+              ok: response.ok,
+              contentType: response.headers.get('content-type'),
+              body,
+              xRobotsTag: response.headers.get('x-robots-tag'),
+              ...(bodyError ? { error: bodyError } : {}),
+              ...(bodyBytes === undefined ? {} : { bodyBytes }),
+            },
+            response,
+            trace,
+            now
+          );
         } catch (error) {
-          bodyError = mapFetchError(error);
+          // Any throw after the response arrived (a blocked or unparseable
+          // redirect target) releases the body before the error propagates.
+          await cancelResponseBody(response);
+          throw error;
         }
-        return finalize(
-          {
-            requestedUrl: targetUrl,
-            finalUrl: currentUrl,
-            status: response.status,
-            ok: response.ok,
-            contentType: response.headers.get('content-type'),
-            body,
-            xRobotsTag: response.headers.get('x-robots-tag'),
-            ...(bodyError ? { error: bodyError } : {}),
-            ...(bodyBytes === undefined ? {} : { bodyBytes }),
-          },
-          response,
-          trace,
-          now
-        );
       } finally {
         clearTimeout(timer);
       }
@@ -562,6 +605,20 @@ export async function fetchResource(
   }
 }
 
+/**
+ * Whether a resource counts as unverified for the fetch summary. A challenged
+ * not-found probe (429/503 with challenge markers) leaves nav.not-found
+ * unverified in the score engine, so the run is not complete either and
+ * refetchUnverified retries it. classifyResource stays unchanged; same rule and
+ * wording as the worker's isUnverifiedForSummary.
+ */
+export function isUnverifiedForSummary(key: EvidenceResourceKey, resource: RemoteResource): boolean {
+  return (
+    resource.outcome === 'unverified' ||
+    (key === 'notFoundProbe' && resource.outcome === 'challenge')
+  );
+}
+
 function buildFetchSummary(
   evidence: Omit<SiteEvidence, 'fetchSummary'>,
   samplePageUrl: string | null,
@@ -574,7 +631,7 @@ function buildFetchSummary(
     const resource = evidence[key];
     if (!resource) continue;
     hops += resource.hops ?? 0;
-    if (resource.outcome === 'unverified') unverified.push(key);
+    if (isUnverifiedForSummary(key, resource)) unverified.push(key);
   }
   const analysisStatus =
     evidence.homepage.outcome === 'unverified'
@@ -583,6 +640,28 @@ function buildFetchSummary(
         ? 'partial'
         : 'complete';
   return { analysisStatus, unverified, elapsedMs, fetches: budget.fetches, hops, samplePageUrl };
+}
+
+/** The sitemap a run fetches: the one robots.txt declares, else /sitemap.xml. */
+function discoverSitemap(
+  robotsTxt: RemoteResource,
+  targetUrl: string
+): { sitemapUrl: string; sitemapSource: 'robots' | 'default' } {
+  const declared =
+    robotsTxt.ok && robotsTxt.body ? findSitemapUrl(robotsTxt.body, targetUrl) : null;
+  return {
+    sitemapUrl: declared ?? new URL('/sitemap.xml', targetUrl).toString(),
+    sitemapSource: declared ? 'robots' : 'default',
+  };
+}
+
+/** The sample page's markdown URL: its alternate link, else the `.md` twin of its final URL. */
+function discoverSampleMarkdownUrl(samplePage: RemoteResource, samplePageUrl: string): string {
+  const base = samplePage.finalUrl || samplePageUrl;
+  return (
+    (samplePage.ok && samplePage.body ? findMarkdownAlternateUrl(samplePage.body, base) : null) ??
+    buildMarkdownUrl(base)
+  );
 }
 
 /**
@@ -642,22 +721,12 @@ export async function collectSiteEvidence(
     ? run(samplePageUrl, { ...shared, maxRedirects: SAMPLE_PAGE_MAX_REDIRECTS })
     : Promise.resolve(null);
   const sitemapPromise = robotsPromise.then((robotsTxt) => {
-    const declared =
-      robotsTxt.ok && robotsTxt.body ? findSitemapUrl(robotsTxt.body, targetUrl) : null;
-    const sitemapUrl = declared ?? new URL('/sitemap.xml', targetUrl).toString();
-    return run(sitemapUrl, secondary).then((sitemap) => ({
-      sitemap,
-      sitemapUrl,
-      sitemapSource: (declared ? 'robots' : 'default') as 'robots' | 'default',
-    }));
+    const { sitemapUrl, sitemapSource } = discoverSitemap(robotsTxt, targetUrl);
+    return run(sitemapUrl, secondary).then((sitemap) => ({ sitemap, sitemapUrl, sitemapSource }));
   });
   const sampleMarkdownPromise = samplePromise.then((samplePage) => {
     if (!samplePage || !samplePageUrl) return null;
-    const base = samplePage.finalUrl || samplePageUrl;
-    const sampleMarkdownUrl =
-      (samplePage.ok && samplePage.body ? findMarkdownAlternateUrl(samplePage.body, base) : null) ??
-      buildMarkdownUrl(base);
-    return run(sampleMarkdownUrl, secondary);
+    return run(discoverSampleMarkdownUrl(samplePage, samplePageUrl), secondary);
   });
 
   const [robotsTxt, notFoundProbe, llmsTxt, homepageMarkdown, samplePage, sitemapResult, samplePageMarkdown] =
@@ -719,10 +788,14 @@ function redirectCapFor(key: EvidenceResourceKey): { maxRedirects: number; accep
 
 /**
  * Retries the resources that did not complete, `attempts` times with `waitMs`
- * between passes, before a partial reading is accepted. A retried resource
- * replaces the recorded one only when it completed (any outcome other than
- * `unverified`). An unverified homepage re-collects the whole site, because the
- * other resources depend on its final URL. Returns a new evidence object.
+ * between passes, before a partial reading is accepted (the summary's
+ * `unverified` list, so a challenged not-found probe is retried too). A retried
+ * resource replaces the recorded one only when it completed by the same rule. An unverified homepage re-collects the whole site, because the
+ * other resources depend on its final URL. A recovered robots.txt re-derives
+ * the sitemap URL and a recovered sample page its markdown URL, exactly as a
+ * fresh run chains them; a dependent whose URL changed is refetched and its
+ * result replaces the stale record whatever the outcome. Returns a new
+ * evidence object.
  */
 export async function refetchUnverified(
   evidence: CollectedEvidence,
@@ -759,10 +832,9 @@ export async function refetchUnverified(
     const budget: FetchBudget = { fetches: 0, maxFetches: resolved.maxFetches };
     const runStartedAt = resolved.now();
     const next: CollectedEvidence = { ...current };
-    for (const key of pending) {
-      const previous = current[key];
-      if (!previous) continue;
-      const retried = await fetchResource(previous.requestedUrl, {
+    const recovered = new Set<EvidenceResourceKey>();
+    const retry = (url: string, key: EvidenceResourceKey) =>
+      fetchResource(url, {
         ...options,
         hostGate: resolved.hostGate,
         now: resolved.now,
@@ -771,9 +843,50 @@ export async function refetchUnverified(
         runStartedAt,
         ...redirectCapFor(key),
       });
-      if (retried.outcome !== 'unverified') {
+    const retryInPlace = async (key: EvidenceResourceKey) => {
+      const previous = current[key];
+      if (!previous) return;
+      const retried = await retry(previous.requestedUrl, key);
+      if (!isUnverifiedForSummary(key, retried)) {
         next[key] = retried;
+        recovered.add(key);
       }
+    };
+
+    // Parents first: the sitemap URL comes from robots.txt and the sample
+    // markdown URL from the sample page, so each dependent is re-derived after
+    // its parent with the same helpers a fresh run uses.
+    for (const key of pending) {
+      if (key === 'sitemap' || key === 'samplePageMarkdown') continue;
+      await retryInPlace(key);
+    }
+
+    if (recovered.has('robotsTxt')) {
+      const { sitemapUrl, sitemapSource } = discoverSitemap(next.robotsTxt, next.targetUrl);
+      next.sitemapSource = sitemapSource;
+      if (sitemapUrl !== (current.sitemapUrl ?? current.sitemap?.requestedUrl ?? null)) {
+        // The recorded sitemap answers a URL a fresh run would not ask for, so
+        // the rediscovered one replaces it whatever its outcome (an unverified
+        // result is retried by the next pass).
+        next.sitemap = await retry(sitemapUrl, 'sitemap');
+        next.sitemapUrl = sitemapUrl;
+      } else if (pending.includes('sitemap')) {
+        await retryInPlace('sitemap');
+      }
+    } else if (pending.includes('sitemap')) {
+      await retryInPlace('sitemap');
+    }
+
+    const samplePageUrl = current.fetchSummary.samplePageUrl ?? current.samplePage?.requestedUrl ?? null;
+    if (recovered.has('samplePage') && next.samplePage && samplePageUrl) {
+      const markdownUrl = discoverSampleMarkdownUrl(next.samplePage, samplePageUrl);
+      if (markdownUrl !== (current.samplePageMarkdown?.requestedUrl ?? null)) {
+        next.samplePageMarkdown = await retry(markdownUrl, 'samplePageMarkdown');
+      } else if (pending.includes('samplePageMarkdown')) {
+        await retryInPlace('samplePageMarkdown');
+      }
+    } else if (pending.includes('samplePageMarkdown')) {
+      await retryInPlace('samplePageMarkdown');
     }
     const { fetchSummary: previousSummary, ...rest } = next;
     const fetchSummary = buildFetchSummary(

@@ -10,12 +10,23 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { evaluateSiteChecks, scoreChecks } from '../packages/core/dist/score/index.js';
+import { optionValue } from './lib/args.mjs';
+
+function fail(message) {
+  process.stderr.write(`measure-score-cpu: ${message}\n`);
+  process.exit(2);
+}
 
 function parseArgs(argv) {
   const args = { iterations: 50, fixtures: 'packages/core/test/fixtures/score' };
   for (let i = 0; i < argv.length; i += 1) {
-    if (argv[i] === '--iterations') args.iterations = Number.parseInt(argv[++i], 10);
-    else if (argv[i] === '--fixtures') args.fixtures = argv[++i];
+    const value = () => {
+      const taken = optionValue(argv, i, fail);
+      i += 1;
+      return taken;
+    };
+    if (argv[i] === '--iterations') args.iterations = Number.parseInt(value(), 10);
+    else if (argv[i] === '--fixtures') args.fixtures = value();
     else if (argv[i] === '--help') {
       process.stdout.write('usage: node scripts/measure-score-cpu.mjs [--iterations 50] [--fixtures <dir>]\n');
       process.exit(0);

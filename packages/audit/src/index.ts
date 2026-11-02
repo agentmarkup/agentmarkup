@@ -36,6 +36,7 @@ export {
   findPortfolioPages,
   rankClientCandidates,
   sitemapLocs,
+  type AgencyDomains,
   type CandidateRanking,
   type ClientCandidate,
   type ExcludedDomain,
@@ -50,7 +51,7 @@ export {
   type ExclusionLists,
   type ExclusionReason,
 } from './clients-exclusions.js';
-export { TWO_LEVEL_TLDS, registrableDomain } from './registrable-domain.js';
+export { SECOND_LEVEL_LABELS, registrableDomain } from './registrable-domain.js';
 export {
   countByLevel,
   worstLevel,

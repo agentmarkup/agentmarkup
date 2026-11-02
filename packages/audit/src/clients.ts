@@ -221,9 +221,21 @@ function matchesList(hostname: string, domain: string, list: ReadonlyArray<strin
   return false;
 }
 
+/**
+ * The agency's own registrable domains: one, or several when the requested
+ * homepage redirected to another registrable domain (pass both, so the final
+ * site is never ranked as its own client).
+ */
+export type AgencyDomains = string | ReadonlyArray<string>;
+
+function agencyDomainSet(agencyDomain: AgencyDomains): Set<string> {
+  const list = typeof agencyDomain === 'string' ? [agencyDomain] : agencyDomain;
+  return new Set(list.filter(Boolean).map((domain) => domain.toLowerCase()));
+}
+
 export function exclusionReasonFor(
   hostname: string,
-  agencyDomain: string,
+  agencyDomain: AgencyDomains,
   lists: ExclusionLists = DEFAULT_EXCLUSIONS
 ): ExcludedDomain['reason'] | null {
   const host = hostname.toLowerCase();
@@ -231,7 +243,7 @@ export function exclusionReasonFor(
   if (!domain.includes('.') || /^\d+\.\d+\.\d+\.\d+$/.test(host) || host.includes(':')) {
     return 'not-a-domain';
   }
-  if (domain === agencyDomain.toLowerCase()) return 'agency-domain';
+  if (agencyDomainSet(agencyDomain).has(domain)) return 'agency-domain';
   if (matchesList(host, domain, lists.socialDirectory)) return 'social-directory';
   if (matchesList(host, domain, lists.cdnAsset)) return 'cdn-asset';
   if (matchesList(host, domain, lists.platformVendor)) return 'platform-vendor';
@@ -253,10 +265,10 @@ const SHARE_PATH = /\/(share|sharer|submit|intent|shareArticle|share-offsite)(\.
  */
 export function rankClientCandidates(
   links: SourcedLink[],
-  agencyDomain: string,
+  agencyDomain: AgencyDomains,
   lists: ExclusionLists = DEFAULT_EXCLUSIONS
 ): CandidateRanking {
-  const agency = agencyDomain.toLowerCase();
+  const agency = [...agencyDomainSet(agencyDomain)];
   const excluded = new Map<string, ExcludedDomain['reason']>();
   const perDomain = new Map<
     string,

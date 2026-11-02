@@ -87,6 +87,8 @@ describe('--score on the audit CLI', () => {
       catalogVersion: '1.0.0',
       formulaVersion: '1.0.0',
       analysisStatus: 'blocked',
+      blockedKind: 'unverified',
+      blockedReason: 'homepage could not be verified in time (Request timed out)',
       score: null,
       grade: null,
       label: null,
@@ -97,6 +99,7 @@ describe('--score on the audit CLI', () => {
       checks: [],
       topFixes: [],
       unverifiedChecks: [],
+      unverifiedResources: [],
       naChecks: [],
       notMeasured: [],
       range: null,
@@ -107,20 +110,42 @@ describe('--score on the audit CLI', () => {
       surfaces: null,
     };
     expect(renderScoreLines(base).join('\n')).toContain('could not reach the site in time');
+    const notFoundLines = renderScoreLines({ ...base, blockedKind: 'http-status', blockedReason: 'homepage answered HTTP 404' }).join('\n');
+    expect(notFoundLines).toContain('the homepage answered HTTP 404, so there is nothing to score');
+    expect(notFoundLines).not.toContain('in time');
+    expect(notFoundLines).not.toContain('re-run');
 
     const partial: ScoreReport = {
       ...base,
       analysisStatus: 'partial',
+      blockedKind: null,
+      blockedReason: null,
       score: 83,
       grade: 'B',
       label: 'Readable, with fixable gaps',
       raw: 83.12,
       unverifiedChecks: ['sitemap.valid'],
+      unverifiedResources: ['sitemap'],
       range: { pessimistic: 81, optimistic: 83 },
     };
     const lines = renderScoreLines(partial).join('\n');
     expect(lines).toContain('83/100');
     expect(lines).toContain('between 81 and 83');
-    expect(lines).toContain('sitemap.valid');
+    expect(lines).toContain('1 check(s) could not be verified in time (sitemap.valid)');
+    expect(lines).toContain('1 resource(s) did not complete in time (sitemap)');
+
+    // A timed-out sample page: partial with no unverified check, so the line
+    // names the resource instead of "0 check(s)".
+    const sampleOnly = renderScoreLines({
+      ...partial,
+      unverifiedChecks: [],
+      unverifiedResources: ['samplePage'],
+      range: { pessimistic: 83, optimistic: 83 },
+    }).join('\n');
+    expect(sampleOnly).toContain('provisional');
+    expect(sampleOnly).toContain('1 resource(s) did not complete in time (samplePage)');
+    expect(sampleOnly).toContain('the score is 83 either way');
+    expect(sampleOnly).not.toContain('0 check(s)');
+    expect(sampleOnly).not.toContain('status: complete');
   });
 });

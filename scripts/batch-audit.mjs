@@ -44,6 +44,8 @@ import {
   renderClientSummary,
   scoreChecks,
 } from '../packages/core/dist/score/index.js';
+import { optionValue } from './lib/args.mjs';
+import { readSavedAgency, siteStat, statsFromSaved, summarizeSites } from './lib/batch-summary.mjs';
 import { parseCsv, stringifyCsv } from './lib/csv.mjs';
 import { bullets, md, table } from './lib/markdown.mjs';
 
@@ -55,16 +57,8 @@ const LIVENESS_MAX_BYTES = 64 * 1024;
 const PORTFOLIO_PAGE_MAX_BYTES = 1024 * 1024;
 const MAX_PORTFOLIO_PAGES = 2;
 const MAX_CLIENTS = 3;
-const RESOURCE_KEYS = [
-  'homepage',
-  'homepageMarkdown',
-  'llmsTxt',
-  'robotsTxt',
-  'sitemap',
-  'notFoundProbe',
-  'samplePage',
-  'samplePageMarkdown',
-];
+/** A finished run directory holds these; an ordinary rerun must not overwrite it. */
+const FINISHED_RUN_FILES = ['run-summary.json', 'index.csv'];
 const INDEX_HEADER = [
   'agency_domain',
   'agency_score',
@@ -87,11 +81,12 @@ const INDEX_HEADER = [
 ];
 
 function usage(message) {
+  // No message: --help, so the usage line goes to stdout and the exit code is 0.
   if (message) process.stderr.write(`batch-audit: ${message}\n`);
-  process.stderr.write(
-    'usage: node scripts/batch-audit.mjs --csv <file> [--filter key=value ...] [--reason <text>] [--limit <n>] --out <dir> [--agencies-parallel <n>] [--resume] [--manual <csv>] [--sample-pins <dir>] [--urls a.com,b.com]\n'
+  (message ? process.stderr : process.stdout).write(
+    'usage: node scripts/batch-audit.mjs --csv <file> [--filter key=value ...] [--reason <text>] [--limit <n>] --out <dir> [--agencies-parallel <n>] [--resume] [--manual <csv>] [--sample-pins <dir>] [--urls a.com,b.com] [--host-gap-ms <ms>]\n'
   );
-  process.exit(2);
+  process.exit(message ? 2 : 0);
 }
 
 function parseArgs(argv) {
@@ -111,8 +106,7 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     const next = () => {
-      const value = argv[i + 1];
-      if (value === undefined) usage(`${arg} expects a value`);
+      const value = optionValue(argv, i, usage);
       i += 1;
       return value;
     };
@@ -217,13 +211,6 @@ function writeJson(path, value) {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-function percentile(values, p) {
-  if (values.length === 0) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  const index = Math.min(sorted.length - 1, Math.max(0, Math.ceil((p / 100) * sorted.length) - 1));
-  return sorted[index];
-}
-
 function hostOf(url) {
   try {
     return new URL(url).hostname;
@@ -310,6 +297,12 @@ async function discoverClients(agencyRun, agencyDomain, collectOptions) {
 
   const base = homepage.finalUrl || evidence.targetUrl;
   const origin = new URL(base).origin;
+  // Links come from the final homepage, so an agency that redirected to another
+  // registrable domain must have that domain excluded too, or its own site
+  // ranks as a client.
+  const finalDomain = registrableDomain(new URL(base).hostname);
+  const agencyDomains = [...new Set([agencyDomain, finalDomain].filter(Boolean))];
+  if (finalDomain && finalDomain !== agencyDomain) discovery.agencyFinalDomain = finalDomain;
   const links = extractLinks(homepage.body, base).map((link) => ({ ...link, sourceUrl: base, portfolio: false }));
   pagesFetched.push({ url: base, role: 'homepage', status: homepage.status });
 
@@ -334,7 +327,7 @@ async function discoverClients(agencyRun, agencyDomain, collectOptions) {
     }
   }
 
-  const ranking = rankClientCandidates(links, agencyDomain);
+  const ranking = rankClientCandidates(links, agencyDomains);
   discovery.candidates = ranking.candidates;
   discovery.excluded = ranking.excluded;
 
@@ -352,7 +345,7 @@ async function discoverClients(agencyRun, agencyDomain, collectOptions) {
     });
     const finalHost = hostOf(live.finalUrl);
     const finalDomain = finalHost ? registrableDomain(finalHost) : candidate.domain;
-    const excludedReason = finalHost ? exclusionReasonFor(finalHost, agencyDomain) : 'not-a-domain';
+    const excludedReason = finalHost ? exclusionReasonFor(finalHost, agencyDomains) : 'not-a-domain';
     const ok = live.status !== null && live.status >= 200 && live.status < 300 && !excludedReason;
     discovery.liveness.push({
       domain: candidate.domain,
@@ -454,6 +447,11 @@ function renderSummary({ agencyDomain, agencyRun, clientRuns, discovery, generat
     for (const id of site.run.score.unverifiedChecks) {
       recheck.push(`${md(site.domain)}: ${md(id)} could not be verified in time`);
     }
+    // A resource can be unverified with no unverified check (a timed-out
+    // sample page), and it still makes the reading provisional.
+    for (const key of site.run.score.unverifiedResources ?? []) {
+      recheck.push(`${md(site.domain)}: the ${md(key)} fetch did not complete in time`);
+    }
   }
   if (recheck.length > 0) {
     lines.push('## Re-check');
@@ -500,7 +498,10 @@ async function processAgency(row, context) {
   const agencyDir = join(outDir, agencyDomain);
   if (args.resume && existsSync(join(agencyDir, 'summary.md')) && existsSync(join(agencyDir, 'agency.json'))) {
     log(`skip ${agencyDomain} (resume)`);
-    return { agencyDomain, resumed: true, row: rowFromDisk(agencyDir, agencyDomain) };
+    const saved = readSavedAgency(agencyDir);
+    const stats = statsFromSaved(saved);
+    if (!stats) return { agencyDomain, error: 'resumed agency.json holds no score report', row: null };
+    return { agencyDomain, resumed: true, row: rowFromSaved(saved, agencyDomain), stats };
   }
 
   const collectOptions = { hostGate, minGapMs: args.minGapMs };
@@ -579,13 +580,7 @@ async function processAgency(row, context) {
     agencyDomain,
     row: indexRow,
     stats: {
-      sites: [agencyRun, ...clientRuns.map((client) => client.run)].map((run) => ({
-        status: run.score.analysisStatus,
-        score: run.score.score,
-        grade: run.score.grade,
-        elapsedMs: run.evidence.fetchSummary.elapsedMs ?? null,
-        unverifiedResources: run.evidence.fetchSummary.unverified,
-      })),
+      sites: [agencyRun, ...clientRuns.map((client) => client.run)].map((run) => siteStat(run.score, run.evidence)),
       needsManual: discovery.needs_manual,
       durationMs,
     },
@@ -607,19 +602,19 @@ function buildIndexRow({ agencyDomain, agencyRun, clientRuns, discovery, duratio
     (sum, run) => sum + run.score.unverifiedChecks.length,
     0
   );
-  row.push(discovery.needs_manual ? 'true' : 'false', unverifiedCount, durationMs, collectedAt, SCORE_CATALOG_VERSION);
+  // The report's own catalog version: a resumed row keeps the version it was scored under.
+  row.push(discovery.needs_manual ? 'true' : 'false', unverifiedCount, durationMs, collectedAt, agencyRun.score.catalogVersion ?? SCORE_CATALOG_VERSION);
   return row;
 }
 
 /** Rebuilds the index row of a finished agency directory (for --resume). */
-function rowFromDisk(agencyDir, agencyDomain) {
-  const agencyJson = readJson(join(agencyDir, 'agency.json'));
-  const discovery = readJson(join(agencyDir, 'discovery.json')) ?? { picked: [], needs_manual: true };
+function rowFromSaved(saved, agencyDomain) {
+  const { agencyJson } = saved;
+  const discovery = saved.discovery ?? { picked: [], needs_manual: true };
   if (!agencyJson?.score) return null;
   const clientRuns = [];
-  for (const pick of discovery.picked ?? []) {
-    const clientJson = readJson(join(agencyDir, 'clients', `${pick.domain}.json`));
-    if (clientJson?.score) clientRuns.push({ domain: pick.domain, run: { score: clientJson.score, provisional: clientJson.provisional } });
+  for (const clientJson of saved.clientJsons) {
+    if (clientJson?.score) clientRuns.push({ domain: clientJson.site, run: { score: clientJson.score, provisional: clientJson.provisional } });
   }
   return buildIndexRow({
     agencyDomain,
@@ -634,6 +629,12 @@ function rowFromDisk(agencyDir, agencyDomain) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const outDir = resolve(args.out);
+  // Before any network request or file write: a finished run is never
+  // overwritten by an ordinary rerun.
+  const finishedFiles = FINISHED_RUN_FILES.filter((name) => existsSync(join(outDir, name)));
+  if (finishedFiles.length > 0 && !args.resume) {
+    usage(`${outDir} already holds a finished run (${finishedFiles.join(', ')}); pass --resume to continue it, or choose a new --out`);
+  }
   mkdirSync(outDir, { recursive: true });
   const log = (message) => process.stderr.write(`[${new Date().toISOString()}] ${message}\n`);
 
@@ -689,32 +690,26 @@ async function main() {
   for (const result of results) {
     if (result.error) {
       errors.push({ agency: result.agencyDomain, error: result.error });
-      indexRows.push([result.agencyDomain, '', '', 'error', '', '', '', '', '', '', '', '', '', 'true', '', '', startedAt, SCORE_CATALOG_VERSION]);
+      // A stored report (left by an earlier run) names its own catalog version.
+      const domain = String(result.agencyDomain);
+      const stored = /^[a-z0-9.-]+$/i.test(domain) ? readSavedAgency(join(outDir, domain)).agencyJson : null;
+      const catalogVersion = stored?.score?.catalogVersion ?? SCORE_CATALOG_VERSION;
+      indexRows.push([result.agencyDomain, '', '', 'error', '', '', '', '', '', '', '', '', '', 'true', '', '', startedAt, catalogVersion]);
       continue;
     }
     if (result.row) indexRows.push(result.row);
-    if (result.resumed) {
-      resumed += 1;
-      continue;
-    }
-    processed += 1;
+    if (result.resumed) resumed += 1;
+    else processed += 1;
+    // Resumed agencies count too, from their saved reports, so the summary
+    // covers every agency in index.csv.
     siteStats.push(...result.stats.sites);
     if (result.stats.needsManual) needsManual += 1;
   }
   indexRows.sort((a, b) => String(a[0]).localeCompare(String(b[0])));
   writeFileSync(join(outDir, 'index.csv'), stringifyCsv(INDEX_HEADER, indexRows));
 
-  const byStatus = { complete: 0, partial: 0, blocked: 0 };
-  const unverifiedPerResource = Object.fromEntries(RESOURCE_KEYS.map((key) => [key, 0]));
-  const grades = {};
-  const scores = [];
-  for (const site of siteStats) {
-    byStatus[site.status] = (byStatus[site.status] ?? 0) + 1;
-    for (const key of site.unverifiedResources) unverifiedPerResource[key] = (unverifiedPerResource[key] ?? 0) + 1;
-    if (site.grade) grades[site.grade] = (grades[site.grade] ?? 0) + 1;
-    if (typeof site.score === 'number') scores.push(site.score);
-  }
-  const elapsed = siteStats.map((site) => site.elapsedMs).filter((value) => typeof value === 'number');
+  const siteSummary = summarizeSites(siteStats);
+  const scoredAgencies = processed + resumed;
   const runSummary = {
     startedAt,
     finishedAt: new Date().toISOString(),
@@ -733,28 +728,22 @@ async function main() {
     versions: { collector: COLLECTOR_VERSION, catalog: SCORE_CATALOG_VERSION, formula: SCORE_FORMULA_VERSION },
     userAgent: COLLECTOR_USER_AGENT,
     agencies: { selected: rows.length, processed, resumed, errors: errors.length },
-    sites: { total: siteStats.length, byStatus },
-    unverified: {
-      perResource: unverifiedPerResource,
-      resourcesChecked: siteStats.length * RESOURCE_KEYS.length,
-      rate:
-        siteStats.length > 0
-          ? Number((Object.values(unverifiedPerResource).reduce((a, b) => a + b, 0) / (siteStats.length * RESOURCE_KEYS.length)).toFixed(4))
-          : null,
-    },
-    durationMsPerSite: { p50: percentile(elapsed, 50), p95: percentile(elapsed, 95), max: elapsed.length ? Math.max(...elapsed) : null },
-    needsManual: { count: needsManual, share: processed > 0 ? Number((needsManual / processed).toFixed(4)) : null },
-    scoreDistribution: {
-      grades,
-      min: scores.length ? Math.min(...scores) : null,
-      median: percentile(scores, 50),
-      max: scores.length ? Math.max(...scores) : null,
-    },
+    sites: siteSummary.sites,
+    unverified: siteSummary.unverified,
+    durationMsPerSite: siteSummary.durationMsPerSite,
+    needsManual: { count: needsManual, share: scoredAgencies > 0 ? Number((needsManual / scoredAgencies).toFixed(4)) : null },
+    scoreDistribution: siteSummary.scoreDistribution,
     errors,
   };
   writeJson(join(outDir, 'run-summary.json'), runSummary);
   log(`done: ${processed} processed, ${resumed} resumed, ${errors.length} errors; run-summary.json written`);
   process.stdout.write(`${JSON.stringify(runSummary, null, 2)}\n`);
+  // Outputs are kept; a run with failed agencies still exits non-zero so a
+  // pilot with errors cannot look green.
+  if (errors.length > 0) {
+    log(`batch-audit: ${errors.length} agenc${errors.length === 1 ? 'y' : 'ies'} failed; exit 1`);
+    process.exitCode = 1;
+  }
 }
 
 main().catch((error) => {

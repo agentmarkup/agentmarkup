@@ -13,6 +13,13 @@ export interface Reply {
   delayMs?: number;
   /** Never resolve: only the request's abort signal ends the call. */
   never?: boolean;
+  /**
+   * Serve the body as a pull-based stream in `chunkBytes` chunks whose
+   * cancellation is recorded on the call (`bodyCancelled`), so tests can assert
+   * the collector released it.
+   */
+  stream?: boolean;
+  chunkBytes?: number;
 }
 
 /** `hit` counts earlier requests for the same pathname. */
@@ -25,6 +32,8 @@ export interface Call {
   init: RequestInit;
   startedAt: number;
   endedAt: number | null;
+  /** Set when a `stream: true` reply's body was cancelled by the client. */
+  bodyCancelled: boolean;
 }
 
 export const PROBE_PATH = '/agentmarkup-probe-404-does-not-exist-9f3a2c';
@@ -45,8 +54,27 @@ function abortError() {
   return error;
 }
 
-function toResponse(reply: Reply) {
+function toResponse(reply: Reply, call: Call) {
   const body = reply.body === undefined ? null : reply.body;
+  if (reply.stream && body !== null) {
+    const bytes = new TextEncoder().encode(body);
+    const chunk = reply.chunkBytes ?? 512;
+    let offset = 0;
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (offset >= bytes.length) {
+          controller.close();
+          return;
+        }
+        controller.enqueue(bytes.slice(offset, offset + chunk));
+        offset += chunk;
+      },
+      cancel() {
+        call.bodyCancelled = true;
+      },
+    });
+    return new Response(stream, { status: reply.status, headers: reply.headers ?? {} });
+  }
   return new Response(body, { status: reply.status, headers: reply.headers ?? {} });
 }
 
@@ -73,6 +101,7 @@ export function createFetchStub(routes: Record<string, Route>) {
       init,
       startedAt: Date.now(),
       endedAt: null,
+      bodyCancelled: false,
     };
     calls.push(call);
     events.push(`start ${url.pathname}`);
@@ -100,7 +129,7 @@ export function createFetchStub(routes: Record<string, Route>) {
       if (!reply.never) {
         timer = setTimeout(() => {
           signal?.removeEventListener('abort', onAbort);
-          settle(() => resolve(toResponse(reply)));
+          settle(() => resolve(toResponse(reply, call)));
         }, reply.delayMs ?? 0);
       }
     });

@@ -58,7 +58,11 @@ export function renderText(report: AuditReport): string {
 export function renderScoreLines(score: ScoreReport): string[] {
   const lines: string[] = [];
   if (score.analysisStatus === 'blocked' || score.score === null) {
-    lines.push(`  ${BOLD}Agent-readiness score${RESET}: not available - we could not reach the site in time; re-run`);
+    lines.push(
+      score.blockedKind === 'http-status'
+        ? `  ${BOLD}Agent-readiness score${RESET}: not available - the ${score.blockedReason ?? 'homepage answered an error status'}, so there is nothing to score; make the site root serve a page`
+        : `  ${BOLD}Agent-readiness score${RESET}: not available - we could not reach the site in time; re-run`
+    );
     lines.push(`    ${DIM}catalog ${score.catalogVersion}, formula ${score.formulaVersion}, methodology: https://agentmarkup.dev/score/${RESET}`);
     return lines;
   }
@@ -69,10 +73,24 @@ export function renderScoreLines(score: ScoreReport): string[] {
   lines.push(
     `    ${DIM}required ${score.required.earned}/${score.required.available} (${score.required.passing} of ${score.required.total} passing), recommended ${score.recommended.earned}/${score.recommended.available} (${score.recommended.passing} of ${score.recommended.total}), bonus +${score.bonus.points} from ${score.bonus.signals} signal(s)${RESET}`
   );
-  if (score.analysisStatus === 'partial' && score.range) {
-    lines.push(
-      `    ${YELLOW}provisional${RESET}: ${score.unverifiedChecks.length} check(s) could not be verified in time (${score.unverifiedChecks.join(', ')}); the score is between ${score.range.pessimistic} and ${score.range.optimistic}; re-run to confirm`
-    );
+  if (score.analysisStatus === 'partial') {
+    // A run is partial when a check or a recorded resource is unverified; a
+    // timed-out sample page can leave zero unverified checks, so both count.
+    const reasons: string[] = [];
+    if (score.unverifiedChecks.length > 0) {
+      reasons.push(`${score.unverifiedChecks.length} check(s) could not be verified in time (${score.unverifiedChecks.join(', ')})`);
+    }
+    const resources = score.unverifiedResources ?? [];
+    if (resources.length > 0) {
+      reasons.push(`${resources.length} resource(s) did not complete in time (${resources.join(', ')})`);
+    }
+    const reason = reasons.length > 0 ? reasons.join('; ') : 'a resource could not be verified in time';
+    const range = !score.range
+      ? ''
+      : score.range.pessimistic === score.range.optimistic
+        ? `; the score is ${score.range.pessimistic} either way`
+        : `; the score is between ${score.range.pessimistic} and ${score.range.optimistic}`;
+    lines.push(`    ${YELLOW}provisional${RESET}: ${reason}${range}; re-run to confirm`);
   } else {
     lines.push(`    ${DIM}status: complete${RESET}`);
   }

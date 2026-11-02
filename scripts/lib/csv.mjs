@@ -1,5 +1,6 @@
 // Minimal RFC 4180 CSV reader and writer for the batch scripts: quoted fields,
-// doubled quotes, newlines inside quotes, CRLF tolerated. No dependencies.
+// doubled quotes, newlines inside quotes, CRLF tolerated, and formula-injection
+// neutralised on write. No dependencies.
 
 /** Parses CSV text into an array of row objects keyed by the header line. */
 export function parseCsv(text) {
@@ -62,8 +63,24 @@ export function parseCsvRows(text) {
   return rows;
 }
 
+/** A cell a spreadsheet would read as a number: `12`, `-3`, `0.5`, `1e3`. */
+const PLAIN_NUMBER = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
+/** Leading characters that make Excel, Sheets or LibreOffice evaluate a cell. */
+const FORMULA_START = /^[=+\-@\t\r]/;
+
+/**
+ * One CSV field. index.csv is opened in spreadsheets for mail merge and carries
+ * untrusted website strings, so a string cell that a spreadsheet would run as a
+ * formula (leading `=`, `+`, `-`, `@`, tab or carriage return) gets a leading
+ * `'` and is quoted. Numbers, and strings that are plain numerics such as
+ * `-3`, are written unchanged.
+ */
 function escapeField(value) {
+  if (typeof value === 'number') return String(value);
   const text = value === null || value === undefined ? '' : String(value);
+  if (FORMULA_START.test(text) && !PLAIN_NUMBER.test(text)) {
+    return `"'${text.replace(/"/g, '""')}"`;
+  }
   return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 

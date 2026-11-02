@@ -9,6 +9,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { compareReports, reportsComparable } from '../packages/core/dist/score/index.js';
+import { optionValue } from './lib/args.mjs';
 
 function usage(message) {
   // No message: --help, so the usage line goes to stdout and the exit code is 0.
@@ -21,8 +22,13 @@ function parseArgs(argv) {
   const args = { from: null, to: null, json: false };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
-    if (arg === '--from') args.from = argv[++i];
-    else if (arg === '--to') args.to = argv[++i];
+    const value = () => {
+      const taken = optionValue(argv, i, usage);
+      i += 1;
+      return taken;
+    };
+    if (arg === '--from') args.from = value();
+    else if (arg === '--to') args.to = value();
     else if (arg === '--json') args.json = true;
     else if (arg === '--help') usage();
     else usage(`unknown argument ${arg}`);
