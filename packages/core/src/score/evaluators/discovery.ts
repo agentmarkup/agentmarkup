@@ -77,7 +77,7 @@ function sitemapKind(body: string): 'urlset' | 'sitemapindex' | null {
 /**
  * The first actual link in llms.txt (a markdown link target or a bare http(s) URL)
  * to llms-full.txt or to another /llms.txt; a textual mention does not count, and
- * a link back to this llms.txt itself is not "another".
+ * a link back to this llms.txt itself (with or without a fragment) is not "another".
  */
 function findModularLink(body: string, selfUrl: string | null): string | null {
   const targets: string[] = [];
@@ -89,7 +89,11 @@ function findModularLink(body: string, selfUrl: string | null): string | null {
   }
   let self: string | null = null;
   try {
-    self = selfUrl ? new URL(selfUrl).toString() : null;
+    if (selfUrl) {
+      const parsed = new URL(selfUrl);
+      parsed.hash = '';
+      self = parsed.toString();
+    }
   } catch {
     self = null;
   }
@@ -99,6 +103,7 @@ function findModularLink(body: string, selfUrl: string | null): string | null {
     try {
       const resolved = new URL(target, selfUrl ?? 'https://invalid.example/');
       path = resolved.pathname;
+      resolved.hash = '';
       absolute = selfUrl ? resolved.toString() : null;
     } catch {
       path = target.split(/[?#]/)[0];

@@ -74,7 +74,8 @@ const INDEX_HEADER = [
   'client3_score',
   'client3_grade',
   'needs_manual',
-  'unverified_count',
+  'unverified_checks',
+  'unverified_resources',
   'duration_ms',
   'collected_at',
   'catalog_version',
@@ -598,12 +599,13 @@ function buildIndexRow({ agencyDomain, agencyRun, clientRuns, discovery, duratio
     const client = clientRuns[i];
     row.push(client ? client.domain : '', client ? (client.run.score.score ?? '') : '', client ? (client.run.score.grade ?? '') : '');
   }
-  const unverifiedCount = [agencyRun, ...clientRuns.map((client) => client.run)].reduce(
-    (sum, run) => sum + run.score.unverifiedChecks.length,
-    0
-  );
+  const runs = [agencyRun, ...clientRuns.map((client) => client.run)];
+  const unverifiedChecks = runs.reduce((sum, run) => sum + run.score.unverifiedChecks.length, 0);
+  // A run can be partial with zero unverified checks (a timed-out sample page),
+  // so the unverified resources get their own column.
+  const unverifiedResources = runs.reduce((sum, run) => sum + (run.score.unverifiedResources ?? []).length, 0);
   // The report's own catalog version: a resumed row keeps the version it was scored under.
-  row.push(discovery.needs_manual ? 'true' : 'false', unverifiedCount, durationMs, collectedAt, agencyRun.score.catalogVersion ?? SCORE_CATALOG_VERSION);
+  row.push(discovery.needs_manual ? 'true' : 'false', unverifiedChecks, unverifiedResources, durationMs, collectedAt, agencyRun.score.catalogVersion ?? SCORE_CATALOG_VERSION);
   return row;
 }
 
@@ -694,7 +696,7 @@ async function main() {
       const domain = String(result.agencyDomain);
       const stored = /^[a-z0-9.-]+$/i.test(domain) ? readSavedAgency(join(outDir, domain)).agencyJson : null;
       const catalogVersion = stored?.score?.catalogVersion ?? SCORE_CATALOG_VERSION;
-      indexRows.push([result.agencyDomain, '', '', 'error', '', '', '', '', '', '', '', '', '', 'true', '', '', startedAt, catalogVersion]);
+      indexRows.push([result.agencyDomain, '', '', 'error', '', '', '', '', '', '', '', '', '', 'true', '', '', '', startedAt, catalogVersion]);
       continue;
     }
     if (result.row) indexRows.push(result.row);
@@ -725,7 +727,9 @@ async function main() {
       samplePins: args.samplePins,
       urls: args.urls,
     },
+    // The executing tool's versions; the reports' own catalogs are in reportCatalogVersions.
     versions: { collector: COLLECTOR_VERSION, catalog: SCORE_CATALOG_VERSION, formula: SCORE_FORMULA_VERSION },
+    reportCatalogVersions: siteSummary.reportCatalogVersions,
     userAgent: COLLECTOR_USER_AGENT,
     agencies: { selected: rows.length, processed, resumed, errors: errors.length },
     sites: siteSummary.sites,

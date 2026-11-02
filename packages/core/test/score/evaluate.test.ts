@@ -796,6 +796,11 @@ describe('discovery checks', () => {
     expect(mention.evidence).toContain('no link');
     const selfLink = check({ llms: text(`${ORIGIN}/llms.txt`, `# Site\n\n- [This file](${ORIGIN}/llms.txt)\n- [Same](/llms.txt)\n`) }, 'llms.modular');
     expect(selfLink.status).toBe('fail');
+    // A fragment still points at this same file, on either side of the comparison.
+    const selfFragment = check({ llms: text(`${ORIGIN}/llms.txt`, `# Site\n\n- [This file](/llms.txt#top)\n- [Again](${ORIGIN}/llms.txt#docs)\n`) }, 'llms.modular');
+    expect(selfFragment.status).toBe('fail');
+    const fetchedWithFragment = check({ llms: text(`${ORIGIN}/llms.txt#top`, `# Site\n\n- [This file](/llms.txt)\n`) }, 'llms.modular');
+    expect(fetchedWithFragment.status).toBe('fail');
     const markdownLink = check({ llms: text(`${ORIGIN}/llms.txt`, `# Site\n\n- [Full](/llms-full.txt): everything\n`) }, 'llms.modular');
     expect(markdownLink.status).toBe('pass');
     expect(markdownLink.evidence).toContain('links /llms-full.txt');

@@ -86,6 +86,7 @@ describe('linear link scans', () => {
     '<link', '<LINK ', '<link\n', '<linked', '<a', '<A ', '<a\n', '<ab', '<abbr>', 'href=', 'HREF=', 'href ="',
     'href="', "href='", '"', "'", '>', '<', 'x', ' ', '\n', '/a/', '#top', 'rel="alternate"', 'type="text/markdown"',
     '<a href="/b/">', "<a href='/c/'>", '<link rel="alternate" type="text/markdown" href="/m.md">', 'İ',
+    '<a class=x>',
   ];
   function seeded(seed: number): () => number {
     let state = seed >>> 0;
@@ -142,9 +143,10 @@ describe('linear link scans', () => {
     expect(seen).toEqual(['/1/', '/2/']);
   });
 
-  it('finish a 5 MB hostile homepage of "<link x" or "<a href=x" units in well under a second', () => {
+  it('finish a 5 MB hostile homepage of "<link x", "<a href=x", "<a class=x>" or "<a href=x>" units in well under a second', () => {
     const size = 5 * 1024 * 1024 - 1024;
-    for (const unit of ['<link x', '<a href=x', '<link rel="alternate" type="text/markdown" href="', '<a x']) {
+    const units = ['<link x', '<a href=x', '<link rel="alternate" type="text/markdown" href="', '<a x', '<a class=x>', '<a href=x>'];
+    for (const unit of units) {
       const html = `<html><head></head><body>${unit.repeat(Math.floor(size / unit.length))}`;
       const started = performance.now();
       findMarkdownAlternateUrl(html, 'https://www.example.com/');

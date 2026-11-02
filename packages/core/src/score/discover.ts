@@ -138,14 +138,17 @@ export function forEachAnchorHref(html: string, visit: (href: string) => boolean
       const gt = html.indexOf('>', start);
       segmentEnd = gt === -1 ? html.length : gt;
       segmentHref = -1;
-      let at = segmentEnd - 6 >= start ? lower.lastIndexOf('href=', segmentEnd - 6) : -1;
-      while (at >= start) {
-        const quote = html[at + 5];
-        if ((quote === '"' || quote === "'") && lastQuote[quote] >= at + 6) {
-          segmentHref = at;
+      // Searched within this segment only: an unbounded lastIndexOf ran back over the
+      // whole prefix for every closed anchor without an href.
+      const segment = lower.slice(start, segmentEnd);
+      let at = segment.length >= 6 ? segment.lastIndexOf('href=', segment.length - 6) : -1;
+      while (at >= 0) {
+        const quote = html[start + at + 5];
+        if ((quote === '"' || quote === "'") && lastQuote[quote] >= start + at + 6) {
+          segmentHref = start + at;
           break;
         }
-        at = at > start ? lower.lastIndexOf('href=', at - 1) : -1;
+        at = at > 0 ? segment.lastIndexOf('href=', at - 1) : -1;
       }
     }
     if (segmentHref < start) {

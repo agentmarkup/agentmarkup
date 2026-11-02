@@ -42,6 +42,8 @@ export function siteStat(score, evidence) {
     status: score.analysisStatus,
     score: score.score,
     grade: score.grade,
+    // The report's own catalog version: a resumed site keeps the one it was scored under.
+    catalogVersion: score.catalogVersion ?? null,
     elapsedMs: evidence?.fetchSummary?.elapsedMs ?? null,
     unverifiedResources: evidence?.fetchSummary?.unverified ?? [],
     resourcesPresent: RESOURCE_KEYS.filter((key) => Boolean(evidence?.[key])),
@@ -94,8 +96,11 @@ export function summarizeSites(siteStats) {
   const checkedPerResource = Object.fromEntries(RESOURCE_KEYS.map((key) => [key, 0]));
   const grades = {};
   const scores = [];
+  const reportCatalogVersions = {};
   for (const site of siteStats) {
     byStatus[site.status] = (byStatus[site.status] ?? 0) + 1;
+    const version = site.catalogVersion ?? 'unknown';
+    reportCatalogVersions[version] = (reportCatalogVersions[version] ?? 0) + 1;
     for (const key of site.resourcesPresent) checkedPerResource[key] = (checkedPerResource[key] ?? 0) + 1;
     for (const key of site.unverifiedResources) unverifiedPerResource[key] = (unverifiedPerResource[key] ?? 0) + 1;
     if (site.grade) grades[site.grade] = (grades[site.grade] ?? 0) + 1;
@@ -106,6 +111,9 @@ export function summarizeSites(siteStats) {
   const elapsed = siteStats.map((site) => site.elapsedMs).filter((value) => typeof value === 'number');
   return {
     sites: { total: siteStats.length, byStatus },
+    // Sites per catalog version of their stored report, so a summary that mixes
+    // resumed and fresh readings across catalogs shows it.
+    reportCatalogVersions,
     unverified: {
       perResource: unverifiedPerResource,
       checkedPerResource,

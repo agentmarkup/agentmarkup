@@ -93,6 +93,41 @@ describe('robotsBlockedAgents marker removal', () => {
     }
   });
 
+  it('removes the same marker lines as the per-line form with lone CR, U+2028 and U+2029 breaks', () => {
+    // The per-line form also stopped indentation at LF only, so its multiline ^ restarted
+    // after every CR. Excluding all four terminators can only leave whitespace in front
+    // of a removed marker on the same LF line, which the parser trims to a blank line.
+    const perLine = (robotsTxt: string) =>
+      findBlockedCrawlers(
+        robotsTxt.replace(/^[^\S\n]*# (?:BEGIN|END) agentmarkup [^\n]*$/gm, ''),
+        Object.fromEntries(AGENTS.map((agent) => [agent, 'allow' as const]))
+      );
+    const random = seeded(29);
+    const pieces = [
+      'User-agent: GPTBot\n', 'User-agent: *\n', 'User-agent: ClaudeBot\r', 'Disallow: /\n', 'Allow: /\r', '\n',
+      '\r', '\r\n', ' ', '\t', '\u2028', '\u2029', '# BEGIN agentmarkup AI crawlers', '# END agentmarkup AI crawlers',
+      '# BEGIN agentmarkup AI crawlers\n', '# END agentmarkup AI crawlers\r\n', ' \r# END agentmarkup AI crawlers\n',
+      '# comment\r',
+    ];
+    let blocking = 0;
+    for (let run = 0; run < 4000; run += 1) {
+      const body = compose(random, pieces, 18);
+      const expected = perLine(body);
+      if (expected.length > 0) blocking += 1;
+      expect(robotsBlockedAgents(body, AGENTS), JSON.stringify(body)).toEqual(expected);
+    }
+    expect(blocking).toBeGreaterThan(100);
+  });
+
+  it('reads 5 MB of lone CR, U+2028 or U+2029 line breaks in well under a second', () => {
+    for (const separator of ['\r', '\u2028', '\u2029']) {
+      const body = 'User-agent: *\n' + separator.repeat(5 * 1024 * 1024) + '# BEGIN agentmarkup AI crawlers\n';
+      const started = performance.now();
+      robotsBlockedAgents(body, AGENTS);
+      expect(performance.now() - started, JSON.stringify(separator)).toBeLessThan(1000);
+    }
+  });
+
   it('reads a robots.txt of 300,000 blank lines in well under a second', () => {
     const started = performance.now();
     robotsBlockedAgents('\n'.repeat(300_000) + '# BEGIN agentmarkup AI crawlers\n', AGENTS);

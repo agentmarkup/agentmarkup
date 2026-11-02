@@ -26,6 +26,8 @@ interface Reply {
   delayMs?: number
   /** Never resolve: only the request's abort signal ends the call. */
   never?: boolean
+  /** A streamed body instead of `body`, so a test can see it cancelled. */
+  bodyStream?: () => ReadableStream<Uint8Array>
 }
 
 /** `hit` counts earlier requests for the same pathname. */
@@ -100,7 +102,7 @@ function abortError() {
 }
 
 function toResponse(reply: Reply) {
-  const body = reply.body === undefined ? null : reply.body
+  const body = reply.bodyStream ? reply.bodyStream() : reply.body === undefined ? null : reply.body
   return new Response(body, { status: reply.status, headers: reply.headers ?? {} })
 }
 
@@ -404,12 +406,12 @@ describe('worker check chain', () => {
     expect(calls.some((call) => call.path === '/index.md')).toBe(false)
   })
 
-  it('finishes a check of a 5 MB hostile homepage of "<link x" or "<a href=x" units in well under a second', async () => {
+  it('finishes a check of a 5 MB hostile homepage of "<link x", "<a href=x", "<a class=x>" or "<a href=x>" units in well under a second', async () => {
     // The discovery scans once rescanned the rest of the page for every opener that
     // no ">" follows: 16,000 "<link x" units took 2.8 s, and 5 MB is about 750,000.
     vi.useRealTimers()
     const prefix = '<!doctype html><html lang="en"><head><title>x</title></head><body>'
-    for (const unit of ['<link x', '<a href=x']) {
+    for (const unit of ['<link x', '<a href=x', '<a class=x>', '<a href=x>']) {
       const body = prefix + unit.repeat(Math.floor((5 * 1024 * 1024 - 4096 - prefix.length) / unit.length))
       const routes = healthySite()
       routes['/'] = () => ({ status: 200, body, headers: { 'content-type': 'text/html; charset=utf-8' } })
@@ -741,6 +743,27 @@ describe('worker check chain', () => {
     expect(payload.fetchSummary.d1Statements).toBe(db.statements.length)
     expect(cachedValues).toHaveLength(1)
     expect((JSON.parse(cachedValues[0]) as CheckPayload).fetchSummary.d1Statements).toBe(payload.fetchSummary.d1Statements)
+  })
+
+  it('cancels the body of a followed 3xx without a Location header', async () => {
+    let cancelled = false
+    const routes = healthySite()
+    routes['/llms.txt'] = () => ({
+      status: 302,
+      bodyStream: () =>
+        new ReadableStream<Uint8Array>({
+          pull: (controller) => controller.enqueue(new TextEncoder().encode('moved')),
+          cancel: () => {
+            cancelled = true
+          },
+        }),
+    })
+    installFetch(routes)
+
+    const { payload } = await runCheck()
+
+    expect(payload.llmsTxt).toMatchObject({ status: 302, error: 'Redirect response had no Location header.' })
+    expect(cancelled).toBe(true)
   })
 
   it('C19: a probe 3xx without a Location header is a completed answer, never an error', async () => {

@@ -152,10 +152,11 @@ describe('worked examples from the spec (section 4)', () => {
 
   it('example 1b: tagteamdesign.com with the sitemap unverified is 83 provisional (81 to 83), 83 B once verified', () => {
     // The spec's corrected worked example (section 4) with its stated inputs:
-    // jsonld.type-breadth 0.5 (only LocalBusiness outside the baseline types). Since
-    // nested @type values count, the tagteamdesign fixture also reads the Yoast
-    // PropertyValueSpecification and scores type-breadth 1 (raw 83.24, range 81 to 84);
-    // this case keeps the spec's inputs so the formula itself stays pinned.
+    // jsonld.type-breadth 0.5 (only LocalBusiness outside the baseline types). The
+    // tagteamdesign fixture gives the same numbers: nested @type values count, but the
+    // Yoast PropertyValueSpecification is a baseline type (BASELINE_JSONLD_TYPES), so
+    // type-breadth stays 0.5 and the pinned raw is 83.12 with range 81 to 83. Do not
+    // move this example or that fixture back to the draft's 83.24 and 81 to 84.
     const checks: CheckResult[] = [
       ...required([1, 1, 1, 1, 1, 0.333, 1, 0.894, 0]),
       ...recommended([1, 1, 0.75, 0.75, 1, 1, 0.5, 1]),

@@ -84,4 +84,9 @@ test('summary: a resumed agency is rebuilt from its saved reports with their own
   assert.deepEqual(stats.sites.map((site) => [site.status, site.score]), [['complete', 88], ['partial', 61]]);
   assert.deepEqual(stats.sites[1].unverifiedResources, ['llmsTxt']);
   assert.equal(statsFromSaved({ agencyJson: {}, discovery: null, clientJsons: [] }), null);
+
+  // The aggregate keeps each report's catalog: two resumed 0.9.0 sites plus one fresh 1.0.0 site.
+  assert.deepEqual(summarizeSites(stats.sites).reportCatalogVersions, { '0.9.0': 2 });
+  const mixed = summarizeSites([...stats.sites, siteStat(report('complete', 90, 'A', '1.0.0'), evidence())]);
+  assert.deepEqual(mixed.reportCatalogVersions, { '0.9.0': 2, '1.0.0': 1 });
 });

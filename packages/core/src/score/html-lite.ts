@@ -930,8 +930,10 @@ export function parseContentSignal(body: string): ContentSignalParse {
  * One marker line, with leading whitespace on that line only. `^\s*` would also eat
  * the blank lines before it, which the parser reads the same way (any blank line
  * ends a group) but which cost a rescan of every following blank line per line.
+ * The indentation excludes every line terminator the multiline `^` stops after
+ * (CR, LF, U+2028, U+2029): a run of lone CRs was otherwise rescanned from each one.
  */
-const MANAGED_MARKER_LINE_RE = /^[^\S\n]*# (?:BEGIN|END) agentmarkup [^\n]*$/gm;
+const MANAGED_MARKER_LINE_RE = /^[^\S\r\n\u2028\u2029]*# (?:BEGIN|END) agentmarkup [^\n]*$/gm;
 
 /**
  * Agents root-blocked under RFC 9309 group logic (own group, else `*`), wrapping core
