@@ -110,16 +110,19 @@ function buildResourceStatus(
     };
   }
 
+  // The engine's classification wins over `ok`: a 2xx whose body could not be read
+  // (error set, body null) is unverified, not a fetched resource.
+  const fetched = resource.ok && classifyResource(resource) !== 'unverified';
   return {
     key,
     level,
     label,
     url: resource.finalUrl || resource.requestedUrl,
     status: statusLabel(resource),
-    detail: resource.ok
+    detail: fetched
       ? `Fetched ${resource.finalUrl || resource.requestedUrl}${durationNote(resource)}`
       : buildFetchFailureDetail(resource, label),
-    ok: resource.ok,
+    ok: fetched,
     agentmarkupHelp: inferResourceAgentmarkupHelp(key, level),
   };
 }
@@ -244,8 +247,9 @@ function buildFetchFailureDetail(resource: RemoteResource, label: string): strin
   return `The checker could not fetch ${resource.requestedUrl}.`;
 }
 
+/** Sentence-cases a label, but never a file name such as llms.txt or robots.txt. */
 function capitalize(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1);
+  return /^[\w-]+\.\w+/.test(value) ? value : value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function looksLikeHtml(resource: RemoteResource): boolean {
@@ -351,13 +355,14 @@ function inferResourceLevel(
     }
   }
 
-  if (resource.ok) {
-    return 'pass';
-  }
-
-  // A transport failure is an unknown state, never evidence against the site.
+  // A transport failure is an unknown state, never evidence against the site. It is
+  // checked before `ok`: a 2xx with an error and no readable body is unverified.
   if (classifyResource(resource) === 'unverified') {
     return 'warning';
+  }
+
+  if (resource.ok) {
+    return 'pass';
   }
 
   switch (key) {

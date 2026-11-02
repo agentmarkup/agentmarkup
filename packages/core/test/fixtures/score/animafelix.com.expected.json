@@ -39,11 +39,6 @@
       "fraction": 0.667,
       "verified": "about /about/ (text 'About', 'About Anima Felix') and privacy /privacy/ ('Privacy Policy') linked; no same-origin contact page link and no anchor text 'Contact' among the 103 anchors; captured body read 2026-11-02 (chunk A)"
     },
-    "llms.agent-instruction": {
-      "status": "partial",
-      "fraction": 0.5,
-      "verified": "llms.txt opens with '# Anima Felix' and a 238-char blockquote ('Anima Felix is an anxiety companion app ...'), then '## About', '## Core Features'; no 'when to use', 'use X when', 'do not use', 'best fit', 'use cases' or 'for agents' line; captured body read 2026-11-02 (chunk A)"
-    },
     "llms.formatting": {
       "status": "partial",
       "fraction": 0.75,
@@ -73,6 +68,11 @@
       "status": "fail",
       "fraction": 0,
       "verified": "probe answered 404 text/html with 124,942 bytes (the themed 404 page), not markdown or JSON; captured body read 2026-11-02 (chunk A)"
+    },
+    "llms.agent-instruction": {
+      "status": "partial",
+      "fraction": 0.5,
+      "verified": "llms.txt opens with '# Anima Felix' and a 238-char blockquote ('Anima Felix is an anxiety companion app ...'), then '## About', '## Core Features'; no 'when to use', 'use X when', 'do not use' or 'best fit' line, and 'use cases' appears only in a list item ('- **Comparison Guides**: ... for anxiety-specific use cases'), never in a heading, so the heading rule gives it no credit; captured body re-read 2026-11-02 (review fixes)"
     }
   },
   "unverified": [],
@@ -81,7 +81,6 @@
     "mcp.required-group",
     "markdown.code-fences",
     "search.developer-resources",
-    "commerce.pricing-info",
     "api.recommended-group",
     "mcp.recommended-group"
   ],
@@ -89,6 +88,7 @@
     "reach.agent-ua",
     "content.markdown-negotiation",
     "search.brand-accuracy",
+    "commerce.pricing-info",
     "markdown.agent-ua",
     "a2a.agent-card",
     "agent.discovery-file",

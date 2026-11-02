@@ -1,7 +1,8 @@
 // Plain-text client summary of a ScoreReport: no markdown markers, ready to paste
 // into an email. Every line comes from the catalog's client copy.
 import { getCheckDefinition } from './catalog.js';
-import { compareReports } from './formula.js';
+import { RESOURCE_NOTE_LABELS } from './evaluate.js';
+import { compareReports, unverifiedResourcesWithoutChecks } from './formula.js';
 import type { ScoreReport, ScoredCheck, SitePlatform } from './types.js';
 
 export interface ClientSummaryOptions {
@@ -56,15 +57,34 @@ export function renderClientSummary(report: ScoreReport, options: ClientSummaryO
   const lines: string[] = [];
   const site = options.siteName;
   if (report.analysisStatus === 'blocked' || report.score === null) {
+    if (report.blockedKind === 'http-status') {
+      const status = report.blockedReason?.match(/HTTP (\d{3})/)?.[1] ?? 'an error status';
+      lines.push(`${site}: the homepage answered HTTP ${status}, so there is nothing to score yet.`);
+      lines.push('Make the site root serve a page, then run the check again.');
+      return lines.join('\n');
+    }
     lines.push(`${site}: we could not reach the site in time, so there is no score yet.`);
     lines.push('Please re-run the check; a timed-out fetch is never counted against you.');
     return lines.join('\n');
   }
   lines.push(`${site}: agent-readiness score ${report.score} of 100, grade ${report.grade} (${report.label}).`);
+  const resourcesOnly = unverifiedResourcesWithoutChecks(report).map((key) => RESOURCE_NOTE_LABELS[key]);
   if (report.analysisStatus === 'partial' && report.range) {
-    lines.push(
-      `This reading is provisional: ${report.unverifiedChecks.length} check${report.unverifiedChecks.length === 1 ? '' : 's'} could not be verified in time, so the score is between ${report.range.pessimistic} and ${report.range.optimistic}. Re-run to confirm.`
-    );
+    const checks = report.unverifiedChecks.length;
+    if (checks > 0) {
+      lines.push(
+        `This reading is provisional: ${checks} check${checks === 1 ? '' : 's'} could not be verified in time, so the score is between ${report.range.pessimistic} and ${report.range.optimistic}. Re-run to confirm.`
+      );
+    }
+    if (resourcesOnly.length > 0) {
+      const what = `the ${resourcesOnly.join(' and the ')}`;
+      const pronoun = resourcesOnly.length === 1 ? 'it' : 'them';
+      lines.push(
+        checks > 0
+          ? `${what.charAt(0).toUpperCase()}${what.slice(1)} could not be fetched in time either; the checks that read ${pronoun} were judged without ${pronoun}.`
+          : `This reading is provisional: ${what} could not be fetched in time, so the checks that read ${pronoun} were judged without ${pronoun}. Re-run to confirm.`
+      );
+    }
   }
   const eligible = report.required.total + report.recommended.total;
   const passing = report.required.passing + report.recommended.passing;
@@ -100,11 +120,14 @@ export function renderClientSummary(report: ScoreReport, options: ClientSummaryO
     });
   }
 
-  if (report.unverifiedChecks.length > 0) {
+  if (report.unverifiedChecks.length > 0 || resourcesOnly.length > 0) {
     lines.push('');
     lines.push('Could not be verified in time, re-run:');
     for (const id of report.unverifiedChecks) {
       lines.push(`   ${nameOf(id)}`);
+    }
+    for (const label of resourcesOnly) {
+      lines.push(`   the ${label} fetch (the checks that read it were judged without it)`);
     }
   }
   if (report.naChecks.length > 0) {

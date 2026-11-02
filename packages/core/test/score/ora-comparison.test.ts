@@ -43,8 +43,6 @@ const report = scoreChecks(evaluateSiteChecks(evidence));
  * way round). Each needs a reason; a stale entry (no longer a disagreement) fails too.
  */
 const DOCUMENTED_DIFFERENCES: Record<string, string> = {
-  'llms.modular':
-    'Ora scores modular-llms-txt 0 although llms.txt links llms-full.txt; its rule is unpublished and stricter. Ours credits a link to llms-full.txt or another /llms.txt (catalog row llms.modular).',
   'jsonld.same-as':
     'Ora gives json-ld-entity-linking half credit with 8 absolute sameAs URLs (rule unpublished, likely wants specific registries). Ours credits >= 2 absolute http(s) URLs.',
   'jsonld.type-breadth':

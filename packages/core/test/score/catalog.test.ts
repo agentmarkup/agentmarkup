@@ -9,6 +9,7 @@ import {
   implementedChecks,
 } from '../../src/score/catalog.js';
 import { EVALUATORS } from '../../src/score/evaluate.js';
+import { CHALLENGE_SCAN_CHARS } from '../../src/score/evidence.js';
 import { SCORE_FORMULA_VERSION } from '../../src/score/formula.js';
 
 const SEMVER = /^\d+\.\d+\.\d+$/;
@@ -80,6 +81,16 @@ describe('SCORE_CATALOG v1.0.0', () => {
       expect(definition.applicability.length).toBeGreaterThan(3);
       expect(definition.evidence.length).toBeGreaterThan(3);
     }
+  });
+
+  it('states the challenge scan window in the same characters the engine scans', () => {
+    const row = SCORE_CATALOG.find((definition) => definition.id === 'reach.bot-detection');
+    expect(row?.evidence).toContain(`the first ${CHALLENGE_SCAN_CHARS.toLocaleString('en-US')} characters of the body`);
+  });
+
+  it('counts PropertyValueSpecification, the Yoast SearchAction query-input, as a baseline type', () => {
+    const row = SCORE_CATALOG.find((definition) => definition.id === 'jsonld.type-breadth');
+    expect(row?.rule).toContain('PropertyValueSpecification');
   });
 
   it('uses plain hyphens only (no em or en dashes) in any catalog string', () => {

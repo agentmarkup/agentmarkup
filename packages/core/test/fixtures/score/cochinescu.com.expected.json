@@ -39,11 +39,6 @@
       "fraction": 0.667,
       "verified": "about /about/ ('About') and privacy /privacy/ ('App privacy') linked; no contact path and no anchor text 'Contact' among the 41 anchors; captured body read 2026-11-02 (chunk A)"
     },
-    "llms.agent-instruction": {
-      "status": "partial",
-      "fraction": 0.5,
-      "verified": "H1 '# Sebastian Cochinescu', 156-char blockquote ('Professional and personal writing by ...'), then '## Posts' link list; no guidance phrase; captured body read 2026-11-02 (chunk A)"
-    },
     "llms.formatting": {
       "status": "partial",
       "fraction": 0.75,
@@ -78,6 +73,11 @@
       "status": "fail",
       "fraction": 0,
       "verified": "probe answered 404 text/html (14,520 bytes); captured body read 2026-11-02 (chunk A)"
+    },
+    "llms.agent-instruction": {
+      "status": "partial",
+      "fraction": 0.5,
+      "verified": "H1 '# Sebastian Cochinescu', 156-char blockquote ('Professional and personal writing by ...'), then '## Posts' link list; no 'when to use', 'use X when', 'do not use' or 'best fit' line, and 'use cases' appears only in post link titles ('What are the real blockchain use cases', 'Smartwatch use cases that matter'), never in a heading, so the heading rule gives it no credit; captured body re-read 2026-11-02 (review fixes)"
     }
   },
   "unverified": [],

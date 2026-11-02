@@ -1,6 +1,6 @@
 // navigation: nav.redirect-hygiene, nav.not-found, nav.not-found-markdown.
 import { bodyByteLength, findChallengeMarker } from '../evidence.js';
-import { hasMetaRefresh, normalizeBodyForComparison } from '../html-lite.js';
+import { hasMetaRefresh, normalizeBodyForComparison, scriptBlockContents } from '../html-lite.js';
 import {
   notApplicable,
   sampleUsable,
@@ -11,18 +11,10 @@ import {
 } from './shared.js';
 
 const REDIRECT_STUB_TEXT_MAX = 40;
-const SCRIPT_RE = /<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi;
 const LOCATION_RE = /location\.(?:href|replace\(|assign\()/;
 
 function scriptRedirect(page: PageView): boolean {
-  let match: RegExpExecArray | null;
-  SCRIPT_RE.lastIndex = 0;
-  while ((match = SCRIPT_RE.exec(page.body)) !== null) {
-    if (LOCATION_RE.test(match[1])) {
-      return true;
-    }
-  }
-  return false;
+  return scriptBlockContents(page.body).some((content) => LOCATION_RE.test(content));
 }
 
 function redirectFindings(name: string, page: PageView): string[] {

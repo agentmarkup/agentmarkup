@@ -3,6 +3,7 @@
 // browser-safe: no `node:` imports, no `Date.now()`.
 export type {
   AnalysisStatus,
+  BlockedKind,
   BonusSummary,
   CheckAvailability,
   CheckBucket,
@@ -65,10 +66,12 @@ export {
   roundTo,
   scoreChecks,
   scoreRange,
+  unverifiedResourcesWithoutChecks,
 } from './formula.js';
 export type { GainContext } from './formula.js';
 export { evaluateSiteChecks, detectPlatform, detectSurfaces } from './evaluate.js';
 export {
+  CHALLENGE_SCAN_CHARS,
   MAX_EVALUATED_BODY_CHARS,
   WORKER_ERROR_MESSAGES,
   classifyResource,
@@ -85,7 +88,9 @@ export {
   findFirstInternalLink,
   findMarkdownAlternateUrl,
   findSitemapUrl,
+  registrableDomainOf,
   resolveSameOriginUrl,
+  resolveSitemapDeclaration,
 } from './discover.js';
 export {
   extractBodyText,

@@ -34,7 +34,6 @@ export const axEvaluators: Record<string, EvaluatorEntry> = {
             ? `heading order sane (${sequence}${headings.length > 12 ? ' ...' : ''})`
             : `heading order not sane: ${orderIssue} (${sequence}${headings.length > 12 ? ' ...' : ''})`,
         `${passed}/3 sub-rules`,
-        homepage.truncationNote() ?? '',
       ]
         .filter(Boolean)
         .join('; ');
@@ -74,7 +73,6 @@ export const axEvaluators: Record<string, EvaluatorEntry> = {
         controls.unnamed.length > 0
           ? `unnamed: ${unnamed}${controls.unnamed.length > LISTED_UNNAMED ? ` and ${controls.unnamed.length - LISTED_UNNAMED} more` : ''}`
           : '',
-        context.homepage.truncationNote() ?? '',
       ]
         .filter(Boolean)
         .join('; ');

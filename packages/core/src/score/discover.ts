@@ -22,13 +22,59 @@ export function resolveSameOriginUrl(candidate: string, baseUrl: string): string
   }
 }
 
-/** The first same-origin `Sitemap:` declaration in robots.txt, or null. */
+const SECOND_LEVEL_LABELS = ['co', 'com', 'net', 'org', 'gov', 'edu', 'ac'];
+
+/**
+ * The registrable domain of a hostname: the last two labels, or the last three when
+ * the second-to-last label is co/com/net/org/gov/edu/ac under a two-letter last label
+ * (`www.example.co.uk` -> `example.co.uk`). IP literals and single labels return
+ * themselves, so they only ever match exactly.
+ */
+export function registrableDomainOf(hostname: string): string {
+  const lower = hostname.toLowerCase().replace(/\.$/, '');
+  if (/^\d+(?:\.\d+){3}$/.test(lower) || lower.includes(':') || lower.startsWith('[')) {
+    return lower;
+  }
+  const labels = lower.split('.').filter((label) => label.length > 0);
+  if (labels.length <= 2) {
+    return labels.join('.');
+  }
+  const last = labels[labels.length - 1];
+  const secondToLast = labels[labels.length - 2];
+  const keep = last.length === 2 && SECOND_LEVEL_LABELS.includes(secondToLast) ? 3 : 2;
+  return labels.slice(-keep).join('.');
+}
+
+/**
+ * Resolves a robots.txt `Sitemap:` value: http(s) only, on the base hostname or on
+ * a hostname with the same registrable domain (an apex declaration on a www site).
+ */
+export function resolveSitemapDeclaration(candidate: string, baseUrl: string): string | null {
+  try {
+    const base = new URL(baseUrl);
+    const resolved = new URL(candidate, base);
+    if (!['http:', 'https:'].includes(resolved.protocol)) {
+      return null;
+    }
+    const host = resolved.hostname.toLowerCase();
+    const baseHost = base.hostname.toLowerCase();
+    if (host !== baseHost && registrableDomainOf(host) !== registrableDomainOf(baseHost)) {
+      return null;
+    }
+    resolved.hash = '';
+    return resolved.toString();
+  } catch {
+    return null;
+  }
+}
+
+/** The first `Sitemap:` declaration in robots.txt on the same registrable domain, or null. */
 export function findSitemapUrl(robotsTxt: string, baseUrl: string): string | null {
   const sitemapPattern = /^\s*Sitemap:\s*(\S+)\s*$/gim;
   let match: RegExpExecArray | null;
 
   while ((match = sitemapPattern.exec(robotsTxt)) !== null) {
-    const candidate = resolveSameOriginUrl(match[1], baseUrl);
+    const candidate = resolveSitemapDeclaration(match[1], baseUrl);
     if (candidate) {
       return candidate;
     }
@@ -37,29 +83,108 @@ export function findSitemapUrl(robotsTxt: string, baseUrl: string): string | nul
   return null;
 }
 
-/** The target of the first `<link rel=alternate type=text/markdown>`, same origin, or null. */
-export function findMarkdownAlternateUrl(html: string, baseUrl: string): string | null {
-  const linkPattern = /<link\b[^>]*>/gi;
+/**
+ * One attribute value of a single tag: double-quoted, single-quoted or unquoted,
+ * optional spaces around `=`. Identical to the worker's copy.
+ */
+export function linkTagAttribute(tag: string, name: string): string | null {
+  const pattern = new RegExp(
+    `[\\s"']${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'=<>\`]+))`,
+    'i'
+  );
+  const match = tag.match(pattern);
+  return match ? (match[1] ?? match[2] ?? match[3] ?? '') : null;
+}
+
+/**
+ * Calls `visit` with every tag `/<link\b[^>]*>/gi` matches, in document order, until
+ * it returns true. Linear: the regex rescans to the end of the document for every
+ * `<link` that no `>` follows, while here the first such opener ends the scan, since
+ * no later one can close either. Identical to the worker's copy.
+ */
+export function forEachLinkTag(html: string, visit: (tag: string) => boolean): void {
+  const open = /<link\b/gi;
   let match: RegExpExecArray | null;
-
-  while ((match = linkPattern.exec(html)) !== null) {
-    const tag = match[0];
-    if (
-      !/\brel=(['"])[^'"]*\balternate\b[^'"]*\1/i.test(tag) ||
-      !/\btype=(['"])text\/markdown\1/i.test(tag)
-    ) {
-      continue;
+  while ((match = open.exec(html)) !== null) {
+    const end = html.indexOf('>', match.index + 5);
+    if (end === -1) {
+      return;
     }
-
-    const hrefMatch = tag.match(/\bhref=(['"])([\s\S]*?)\1/i);
-    if (!hrefMatch) {
-      continue;
+    if (visit(html.slice(match.index, end + 1))) {
+      return;
     }
-
-    return resolveSameOriginUrl(hrefMatch[2], baseUrl);
+    open.lastIndex = end + 1;
   }
+}
 
-  return null;
+/**
+ * Calls `visit` with every value `/<a\b[^>]*href=(['"])([\s\S]*?)\1/gi` captures, in
+ * document order, until it returns true. Linear: the regex backtracks from each
+ * opener's first `>` to its rightmost `href=` plus a quote that closes later, so a
+ * run of openers without a `>` rescanned the rest of the document each. Openers that
+ * share that `>` share the answer, which is computed once. Identical to the worker's
+ * copy.
+ */
+export function forEachAnchorHref(html: string, visit: (href: string) => boolean): void {
+  const lower = html.replace(/[A-Z]+/g, (run) => run.toLowerCase());
+  const lastQuote: Record<string, number> = { '"': html.lastIndexOf('"'), "'": html.lastIndexOf("'") };
+  const open = /<a\b/gi;
+  let segmentEnd = -1;
+  let segmentHref = -1;
+  let match: RegExpExecArray | null;
+  while ((match = open.exec(html)) !== null) {
+    const start = match.index + 2;
+    if (start > segmentEnd) {
+      const gt = html.indexOf('>', start);
+      segmentEnd = gt === -1 ? html.length : gt;
+      segmentHref = -1;
+      let at = segmentEnd - 6 >= start ? lower.lastIndexOf('href=', segmentEnd - 6) : -1;
+      while (at >= start) {
+        const quote = html[at + 5];
+        if ((quote === '"' || quote === "'") && lastQuote[quote] >= at + 6) {
+          segmentHref = at;
+          break;
+        }
+        at = at > start ? lower.lastIndexOf('href=', at - 1) : -1;
+      }
+    }
+    if (segmentHref < start) {
+      continue;
+    }
+    const quote = html[segmentHref + 5];
+    const close = html.indexOf(quote, segmentHref + 6);
+    if (visit(html.slice(segmentHref + 6, close))) {
+      return;
+    }
+    open.lastIndex = close + 1;
+  }
+}
+
+/** The target of the first same-origin `<link rel=alternate type=text/markdown>`, or null. */
+export function findMarkdownAlternateUrl(html: string, baseUrl: string): string | null {
+  let found: string | null = null;
+  forEachLinkTag(html, (tag) => {
+    const rel = linkTagAttribute(tag, 'rel');
+    const type = linkTagAttribute(tag, 'type');
+    if (
+      rel === null ||
+      !rel.toLowerCase().split(/\s+/).includes('alternate') ||
+      type === null ||
+      type.trim().toLowerCase() !== 'text/markdown'
+    ) {
+      return false;
+    }
+
+    const href = linkTagAttribute(tag, 'href');
+    if (href === null) {
+      return false;
+    }
+
+    found = resolveSameOriginUrl(href, baseUrl);
+    return found !== null;
+  });
+
+  return found;
 }
 
 /** `/` becomes `/index.md`; any other path drops a trailing slash or `.html` and gains `.md`. */
@@ -81,11 +206,10 @@ export function buildMarkdownUrl(pageUrl: string): string {
 /** The first same-origin, non-asset, non-API link in document order, or null. */
 export function findFirstInternalLink(html: string, baseUrl: string): string | null {
   const base = new URL(baseUrl);
-  const linkPattern = /<a\b[^>]*href=(['"])([\s\S]*?)\1/gi;
-  let match: RegExpExecArray | null;
+  let found: string | null = null;
 
-  while ((match = linkPattern.exec(html)) !== null) {
-    const href = match[2].trim();
+  forEachAnchorHref(html, (value) => {
+    const href = value.trim();
     if (
       !href ||
       href.startsWith('#') ||
@@ -94,18 +218,18 @@ export function findFirstInternalLink(html: string, baseUrl: string): string | n
       /^javascript:/i.test(href) ||
       /^data:/i.test(href)
     ) {
-      continue;
+      return false;
     }
 
     let candidate: URL;
     try {
       candidate = new URL(href, base);
     } catch {
-      continue;
+      return false;
     }
 
     if (candidate.origin !== base.origin) {
-      continue;
+      return false;
     }
 
     candidate.search = '';
@@ -119,11 +243,12 @@ export function findFirstInternalLink(html: string, baseUrl: string): string | n
         candidate.pathname
       )
     ) {
-      continue;
+      return false;
     }
 
-    return candidate.toString();
-  }
+    found = candidate.toString();
+    return true;
+  });
 
-  return null;
+  return found;
 }

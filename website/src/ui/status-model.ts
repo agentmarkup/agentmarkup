@@ -1,4 +1,4 @@
-import type { AnalysisStatus, Grade } from '@agentmarkup/core/score'
+import type { AnalysisStatus, BlockedKind, Grade } from '@agentmarkup/core/score'
 
 export type SemanticStatus = 'action' | 'attention' | 'good' | 'info' | 'neutral'
 
@@ -30,14 +30,31 @@ export function verdictFromGrade(grade: Grade | null, analysisStatus?: AnalysisS
   return 'action'
 }
 
-export function verdictExplanationForGrade(grade: Grade | null, analysisStatus?: AnalysisStatus): string {
-  if (analysisStatus === 'blocked' || grade === null) {
-    return 'The site could not be reached in time, so there is no score yet. Re-run the check; a timed-out fetch is never counted against a site.'
+/** The sentence for a run with no score, by why it is blocked. */
+export function blockedExplanation(
+  blockedKind?: BlockedKind | null,
+  blockedReason?: string | null
+): string {
+  if (blockedKind === 'http-status') {
+    const status = blockedReason?.match(/HTTP (\d{3})/)?.[1]
+    return `The homepage answered ${status ? `HTTP ${status}` : 'an error status'}, so there is nothing to score yet. Make the site root serve a page, then run the check again.`
   }
-  if (grade === 'A+') return 'Every scored check passes or the score is at the cap. Any remaining gains are listed below so the hidden work stays visible.'
-  if (grade === 'A') return 'The fundamentals are in place. The remaining gaps are listed below with their estimated gain.'
-  if (grade === 'B') return 'Agents can read this site. The top fixes below name the points still on the table.'
-  return 'Agents struggle with this site. Fix the required checks first; each one is worth the most points.'
+  return 'The site could not be reached in time, so there is no score yet. Re-run the check; a timed-out fetch is never counted against a site.'
+}
+
+export function verdictExplanationForGrade(
+  grade: Grade | null,
+  analysisStatus?: AnalysisStatus,
+  blockedKind?: BlockedKind | null,
+  blockedReason?: string | null
+): string {
+  if (analysisStatus === 'blocked' || grade === null) {
+    return blockedExplanation(blockedKind, blockedReason)
+  }
+  if (grade === 'A+') return 'The score is in the top band. Any remaining estimated gains are listed below.'
+  if (grade === 'A') return 'The required checks are largely in place. The remaining gaps are listed below with their estimated gain.'
+  if (grade === 'B') return 'Several checks still cost points. The top fixes below name them.'
+  return 'Required checks are failing. Fix those first; each one is worth the most points.'
 }
 
 export function levelToStatus(level: 'error' | 'warning' | 'pass' | 'info'): SemanticStatus {

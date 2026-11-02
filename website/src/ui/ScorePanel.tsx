@@ -1,16 +1,16 @@
 import { useState } from 'react';
-import { getCheckDefinition, renderClientSummary } from '@agentmarkup/core/score';
+import { getCheckDefinition, renderClientSummary, unverifiedResourcesWithoutChecks } from '@agentmarkup/core/score';
 import type { ScoreReport } from '@agentmarkup/core/score';
 
-import { SCORE_METHODOLOGY_PATH } from '../checker/check-copy';
-import { verdictFromGrade } from './status-model';
+import { RESOURCE_LABELS, SCORE_METHODOLOGY_PATH } from '../checker/check-copy';
+import { blockedExplanation, verdictFromGrade } from './status-model';
 import './score.css';
 
 interface ScorePanelProps {
   report: ScoreReport;
   /** Host name shown in the client summary. */
   siteName: string;
-  /** Re-runs the check; shown on provisional and blocked reports. */
+  /** Re-runs the check; shown on provisional reports and on runs blocked by a fetch that did not complete. */
   onRerun?: () => void;
   rerunDisabled?: boolean;
 }
@@ -19,6 +19,28 @@ type CopyState = 'idle' | 'copied' | 'manual';
 
 function nameOf(id: string): string {
   return getCheckDefinition(id)?.name ?? id;
+}
+
+/**
+ * The provisional line: unverified checks left the denominator; a resource no check
+ * waited on (a timed-out sample page) means its readers were judged without it.
+ */
+function provisionalSentence(report: ScoreReport, resourceLabels: string[]): string {
+  const checks = report.unverifiedChecks.length;
+  const parts: string[] = [];
+  if (checks > 0) {
+    parts.push(
+      `Between ${report.range?.pessimistic} and ${report.range?.optimistic}: ${checks} check${checks === 1 ? '' : 's'} could not be verified in time and left the denominator.`
+    );
+  }
+  if (resourceLabels.length > 0) {
+    const pronoun = resourceLabels.length === 1 ? 'it' : 'them';
+    parts.push(
+      `${resourceLabels.join(' and ')} could not be fetched in time${checks > 0 ? ' either' : ''}, so the checks that read ${pronoun} were judged without ${pronoun}.`
+    );
+  }
+  parts.push('This run was not cached.');
+  return parts.join(' ');
 }
 
 function formatPoints(value: number): string {
@@ -63,9 +85,13 @@ export function ScorePanel({ report, siteName, onRerun, rerunDisabled }: ScorePa
   const [copyState, setCopyState] = useState<CopyState>('idle');
   const verdict = verdictFromGrade(report.grade, report.analysisStatus);
   const blocked = report.analysisStatus === 'blocked' || report.score === null;
+  // A final homepage status (404, 410, ...) is a complete answer: a re-run changes nothing.
+  const rerunHelps = blocked && report.blockedKind !== 'http-status';
   const partial = report.analysisStatus === 'partial' && report.range !== null;
   const atCap = report.score !== null && report.score >= 100;
   const unverifiedCount = report.unverifiedChecks.length;
+  const resourcesOnly = unverifiedResourcesWithoutChecks(report);
+  const resourceLabels = resourcesOnly.map((key) => RESOURCE_LABELS[key]);
   const summary = renderClientSummary(report, { siteName });
 
   async function copySummary() {
@@ -85,8 +111,9 @@ export function ScorePanel({ report, siteName, onRerun, rerunDisabled }: ScorePa
           <>
             <h2 id="score-panel-title">No score yet</h2>
             <p className="score-panel-blocked">
-              We could not reach this site in time, so nothing was scored. A fetch that did not
-              complete is never counted against a site. Re-run the check.
+              {report.blockedKind === 'http-status'
+                ? blockedExplanation(report.blockedKind, report.blockedReason)
+                : 'We could not reach this site in time, so nothing was scored. A fetch that did not complete is never counted against a site. Re-run the check.'}
             </p>
           </>
         ) : (
@@ -108,11 +135,7 @@ export function ScorePanel({ report, siteName, onRerun, rerunDisabled }: ScorePa
         {partial ? (
           <p className="score-panel-provisional" role="status">
             <span className="score-badge">Provisional</span>
-            <span>
-              Between {report.range?.pessimistic} and {report.range?.optimistic}: {unverifiedCount}{' '}
-              check{unverifiedCount === 1 ? '' : 's'} could not be verified in time and left the
-              denominator. This run was not cached.
-            </span>
+            <span>{provisionalSentence(report, resourceLabels)}</span>
             {onRerun ? (
               <button type="button" className="checker-action" onClick={onRerun} disabled={rerunDisabled}>
                 Re-run the check
@@ -120,7 +143,7 @@ export function ScorePanel({ report, siteName, onRerun, rerunDisabled }: ScorePa
             ) : null}
           </p>
         ) : null}
-        {blocked && onRerun ? (
+        {rerunHelps && onRerun ? (
           <div className="score-panel-actions">
             <button type="button" className="checker-action" onClick={onRerun} disabled={rerunDisabled}>
               Re-run the check
@@ -129,38 +152,46 @@ export function ScorePanel({ report, siteName, onRerun, rerunDisabled }: ScorePa
         ) : null}
       </div>
 
-      <dl className="score-tiers" aria-label="Points by tier">
-        <TierBar
-          id="required"
-          label="Required"
-          earned={report.required.earned}
-          available={report.required.available}
-          note={`${report.required.passing} of ${report.required.total} eligible checks pass`}
-        />
-        <TierBar
-          id="recommended"
-          label="Recommended"
-          earned={report.recommended.earned}
-          available={report.recommended.available}
-          note={`${report.recommended.passing} of ${report.recommended.total} eligible checks pass`}
-        />
-        <TierBar
-          id="bonus"
-          label="Bonus"
-          earned={report.bonus.points}
-          available={report.bonus.cap}
-          note={`${report.bonus.signals} extra signal${report.bonus.signals === 1 ? '' : 's'}, never subtracts`}
-        />
-      </dl>
+      {/* A blocked run has no tiers to show: 0 of 0 bars would read as a score. */}
+      {!blocked ? (
+        <dl className="score-tiers" aria-label="Points by tier">
+          <TierBar
+            id="required"
+            label="Required"
+            earned={report.required.earned}
+            available={report.required.available}
+            note={`${report.required.passing} of ${report.required.total} eligible checks pass`}
+          />
+          <TierBar
+            id="recommended"
+            label="Recommended"
+            earned={report.recommended.earned}
+            available={report.recommended.available}
+            note={`${report.recommended.passing} of ${report.recommended.total} eligible checks pass`}
+          />
+          <TierBar
+            id="bonus"
+            label="Bonus"
+            earned={report.bonus.points}
+            available={report.bonus.cap}
+            note={`${report.bonus.signals} extra signal${report.bonus.signals === 1 ? '' : 's'}, never subtracts`}
+          />
+        </dl>
+      ) : null}
 
-      {unverifiedCount > 0 || report.naChecks.length > 0 || report.notMeasured.length > 0 ? (
+      {unverifiedCount > 0 || resourcesOnly.length > 0 || report.naChecks.length > 0 || report.notMeasured.length > 0 ? (
         <div className="score-panel-lists">
-          {unverifiedCount > 0 ? (
+          {unverifiedCount > 0 || resourcesOnly.length > 0 ? (
             <div>
               <h3>Could not be verified in time</h3>
               <ul>
                 {report.unverifiedChecks.map((id) => (
                   <li key={id}>{nameOf(id)}</li>
+                ))}
+                {resourcesOnly.map((key) => (
+                  <li key={`resource-${key}`}>
+                    {RESOURCE_LABELS[key]} <small>(its readers were judged without it)</small>
+                  </li>
                 ))}
               </ul>
             </div>

@@ -7,7 +7,8 @@
 // 3. bonus.points = min(5, 0.25 x sum(f over bonus checks with status pass or partial)).
 // 4. raw = required + recommended + bonus (2 dp); score = min(100, round-half-up(raw)).
 // 5. Grade bands below are agentmarkup's own (assumed, not evidenced in any Ora file).
-// 6. analysisStatus: complete / partial (any unverified) / blocked (homepage unverified).
+// 6. analysisStatus: complete / partial (any unverified check or unverified resource) /
+//    blocked (homepage unverified, or a final non-2xx homepage status other than 401/403).
 // 7. A tier with zero eligible checks contributes 0.
 // 8. catalogVersion and formulaVersion ride in every report; cross-major comparisons are refused.
 import { SCORE_CATALOG_VERSION, catalogIndexOf } from './catalog.js';
@@ -15,6 +16,7 @@ import type {
   AnalysisStatus,
   CheckResult,
   CheckTier,
+  EvidenceResourceKey,
   Grade,
   ReportComparison,
   ScoreRange,
@@ -156,6 +158,24 @@ export function estimatedGain(result: CheckResult, context: GainContext): number
 }
 
 /**
+ * Unverified resources that no unverified check names. The checks that read them
+ * were judged without them (a timed-out sample page leaves homepage-only judging),
+ * so the run is partial although every check has a status; surfaces list these
+ * separately, since no check carries them. Empty for a blocked run, which judged
+ * nothing.
+ */
+export function unverifiedResourcesWithoutChecks(
+  report: Pick<ScoreReport, 'analysisStatus' | 'unverifiedResources' | 'checks'>
+): EvidenceResourceKey[] {
+  if (report.analysisStatus === 'blocked') {
+    return [];
+  }
+  return report.unverifiedResources.filter(
+    (key) => !report.checks.some((check) => check.status === 'unverified' && (check.resources ?? []).includes(key))
+  );
+}
+
+/**
  * estGain descending, then tier (required, recommended, bonus), then catalog order
  * (input order for ids the catalog does not know).
  */
@@ -225,9 +245,10 @@ export function scoreChecks(input: CheckResult[] | SiteEvaluation): ScoreReport 
   const unverifiedChecks = results
     .filter((result) => result.status === 'unverified')
     .map((result) => result.id);
+  const unverifiedResources = evaluation ? [...evaluation.unverifiedResources] : [];
   const analysisStatus: AnalysisStatus = blocked
     ? 'blocked'
-    : unverifiedChecks.length > 0
+    : unverifiedChecks.length > 0 || unverifiedResources.length > 0
       ? 'partial'
       : 'complete';
 
@@ -249,6 +270,8 @@ export function scoreChecks(input: CheckResult[] | SiteEvaluation): ScoreReport 
     catalogVersion: SCORE_CATALOG_VERSION,
     formulaVersion: SCORE_FORMULA_VERSION,
     analysisStatus,
+    blockedKind: blocked ? evaluation?.blockedKind ?? 'unverified' : null,
+    blockedReason: blocked ? evaluation?.blockedReason ?? null : null,
     score,
     grade,
     label: grade ? GRADE_LABELS[grade] : null,
@@ -259,6 +282,7 @@ export function scoreChecks(input: CheckResult[] | SiteEvaluation): ScoreReport 
     checks,
     topFixes: blocked ? [] : rankTopFixes(checks),
     unverifiedChecks,
+    unverifiedResources,
     naChecks: results
       .filter((result) => result.status === 'na')
       .map((result) => ({ id: result.id, reason: result.reason ?? 'not-applicable' })),

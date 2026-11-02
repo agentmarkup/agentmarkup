@@ -1,25 +1,53 @@
 // DOM-free HTML helpers for the score evaluators: regexes plus a small attribute
 // tokenizer. No DOMParser, so browser, Node and the worker read identical input.
 //
-// Text extraction mirrors `validation/html.ts` (same body and ignored-block regexes)
-// and adds entity decoding; the two must stay in step.
+// Text extraction mirrors `validation/html.ts` (same body and ignored-block rules)
+// and adds entity decoding; the two must stay in step. Both remove blocks through
+// `../html-scan.ts`, which returns exactly what the documented regexes match but in
+// linear time.
 import { extractJsonLdScriptContents } from '../html.js';
+import { asciiLower, blockPattern, replaceBlocks, replaceComments, replaceTags, scanBlocks } from '../html-scan.js';
 import { findBlockedCrawlers } from '../generators/robots-txt.js';
 import type { AiCrawlersConfig } from '../types.js';
 
-const BODY_RE = /<body\b[^>]*>([\s\S]*?)<\/body>/i;
-/** Blocks removed before text extraction (identical to validation/html.ts). */
-const TEXT_IGNORED_BLOCKS_RE =
-  /<(script|style|noscript|template|svg|canvas|iframe|form)\b[^>]*>[\s\S]*?<\/\1>/gi;
+/** `/<body\b[^>]*>([\s\S]*?)<\/body>/i` */
+const BODY_BLOCK = blockPattern(['body'], { openerEndsAtGt: true, closeAllowsSpace: false });
+/**
+ * Blocks removed before text extraction (identical to validation/html.ts):
+ * `/<(script|style|noscript|template|svg|canvas|iframe|form)\b[^>]*>[\s\S]*?<\/\1>/gi`.
+ */
+const TEXT_IGNORED_BLOCKS = blockPattern(
+  ['script', 'style', 'noscript', 'template', 'svg', 'canvas', 'iframe', 'form'],
+  { openerEndsAtGt: true, closeAllowsSpace: false }
+);
 /** Blocks removed before structural reads (headings, landmarks): forms stay. */
-const STRUCTURE_IGNORED_BLOCKS_RE =
-  /<(script|style|noscript|template|svg|canvas|iframe)\b[^>]*>[\s\S]*?<\/\1>/gi;
+const STRUCTURE_IGNORED_BLOCKS = blockPattern(
+  ['script', 'style', 'noscript', 'template', 'svg', 'canvas', 'iframe'],
+  { openerEndsAtGt: true, closeAllowsSpace: false }
+);
 /** Blocks removed before control reads: svg stays so `svg > title` names count. */
-const CONTROL_IGNORED_BLOCKS_RE =
-  /<(script|style|noscript|template|canvas|iframe)\b[^>]*>[\s\S]*?<\/\1>/gi;
-const COMMENT_RE = /<!--[\s\S]*?-->/g;
+const CONTROL_IGNORED_BLOCKS = blockPattern(['script', 'style', 'noscript', 'template', 'canvas', 'iframe'], {
+  openerEndsAtGt: true,
+  closeAllowsSpace: false,
+});
+/** `/<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi` */
+const SCRIPT_BLOCKS = blockPattern(['script'], { openerEndsAtGt: true, closeAllowsSpace: true });
+/** `/<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1\s*>/gi` */
+const HEADING_BLOCKS = blockPattern(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'], {
+  openerEndsAtGt: true,
+  closeAllowsSpace: true,
+});
+/** `/<head\b[\s\S]*?<\/head>/gi`, and the same for script and style. */
+const COMPARISON_HEAD_BLOCKS = blockPattern(['head'], { openerEndsAtGt: false, closeAllowsSpace: false });
+const COMPARISON_SCRIPT_BLOCKS = blockPattern(['script'], { openerEndsAtGt: false, closeAllowsSpace: false });
+const COMPARISON_STYLE_BLOCKS = blockPattern(['style'], { openerEndsAtGt: false, closeAllowsSpace: false });
 const CLIENT_SHELL_RE =
   /^<(div|main|section)\b[^>]*(id|class)="[^"]*(root|app|__next|svelte|mount)[^"]*"[^>]*>\s*<\/\1>$/;
+
+/** Contents of every `<script>` element, as `/<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi` captures them. */
+export function scriptBlockContents(html: string): string[] {
+  return scanBlocks(html, SCRIPT_BLOCKS).map((match) => match.content);
+}
 
 const NAMED_ENTITIES: Record<string, string> = {
   amp: '&',
@@ -67,13 +95,13 @@ export function collapseWhitespace(value: string): string {
 
 /** Text of an HTML fragment: tags stripped, entities decoded, whitespace collapsed. */
 export function textOfFragment(fragment: string): string {
-  return collapseWhitespace(decodeEntities(fragment.replace(COMMENT_RE, ' ').replace(/<[^>]+>/g, ' ')));
+  return collapseWhitespace(decodeEntities(replaceTags(replaceComments(fragment, ' '), ' ')));
 }
 
 export function extractBodyHtml(html: string): string {
-  const match = html.match(BODY_RE);
+  const [match] = scanBlocks(html, BODY_BLOCK, 1);
   if (match) {
-    return match[1];
+    return match.content;
   }
   const open = html.search(/<body\b/i);
   if (open !== -1) {
@@ -95,13 +123,13 @@ export function extractHead(html: string): string {
 
 /** Page text per the catalog convention: body minus ignored blocks and tags. */
 export function extractBodyText(html: string): string {
-  const cleaned = extractBodyHtml(html).replace(TEXT_IGNORED_BLOCKS_RE, '');
+  const cleaned = replaceBlocks(extractBodyHtml(html), TEXT_IGNORED_BLOCKS, '');
   return textOfFragment(cleaned);
 }
 
 /** Same rule as validation/html.ts: an empty body, or a lone empty mount node. */
 export function looksLikeClientShell(html: string): boolean {
-  const cleaned = extractBodyHtml(html).replace(TEXT_IGNORED_BLOCKS_RE, '');
+  const cleaned = replaceBlocks(extractBodyHtml(html), TEXT_IGNORED_BLOCKS, '');
   const normalized = cleaned.replace(/\s+/g, ' ').trim().toLowerCase();
   if (!normalized) {
     return true;
@@ -110,11 +138,11 @@ export function looksLikeClientShell(html: string): boolean {
 }
 
 export function structuralBodyHtml(html: string): string {
-  return extractBodyHtml(html).replace(STRUCTURE_IGNORED_BLOCKS_RE, ' ').replace(COMMENT_RE, ' ');
+  return replaceComments(replaceBlocks(extractBodyHtml(html), STRUCTURE_IGNORED_BLOCKS, ' '), ' ');
 }
 
 export function controlBodyHtml(html: string): string {
-  return extractBodyHtml(html).replace(CONTROL_IGNORED_BLOCKS_RE, ' ').replace(COMMENT_RE, ' ');
+  return replaceComments(replaceBlocks(extractBodyHtml(html), CONTROL_IGNORED_BLOCKS, ' '), ' ');
 }
 
 // ----------------------------------------------------------------- tokenizer
@@ -155,6 +183,8 @@ function isSpace(code: number): boolean {
 export function tokenizeTags(html: string): TagToken[] {
   const tokens: TagToken[] = [];
   const length = html.length;
+  // Lowercased once (ASCII only, so indices line up), on the first raw-text element.
+  let lower: string | null = null;
   let i = 0;
   while (i < length) {
     const lt = html.indexOf('<', i);
@@ -267,11 +297,45 @@ export function tokenizeTags(html: string): TagToken[] {
     tokens.push({ name, attrs, start: lt, end: pos, closing, selfClosing });
     i = pos;
     if (!closing && RAW_TEXT_ELEMENTS.has(name)) {
-      const closeAt = html.toLowerCase().indexOf(`</${name}`, pos);
+      lower ??= asciiLower(html);
+      const closeAt = lower.indexOf(`</${name}`, pos);
       i = closeAt === -1 ? length : closeAt;
     }
   }
   return tokens;
+}
+
+/**
+ * For every token, the index of the closing token that ends it (-1 when none), with
+ * same-name nesting honoured: one stack pass per token list, so asking for every
+ * element's inner markup stays linear even when thousands of openers never close.
+ */
+const closingIndexes = new WeakMap<TagToken[], Int32Array>();
+
+function closingIndexesOf(tokens: TagToken[]): Int32Array {
+  let closes = closingIndexes.get(tokens);
+  if (closes) {
+    return closes;
+  }
+  closes = new Int32Array(tokens.length).fill(-1);
+  const open = new Map<string, number[]>();
+  tokens.forEach((token, index) => {
+    if (token.closing) {
+      const opener = open.get(token.name)?.pop();
+      if (opener !== undefined) {
+        closes[opener] = index;
+      }
+    } else if (!token.selfClosing) {
+      const stack = open.get(token.name);
+      if (stack) {
+        stack.push(index);
+      } else {
+        open.set(token.name, [index]);
+      }
+    }
+  });
+  closingIndexes.set(tokens, closes);
+  return closes;
 }
 
 /** Inner markup of the element opened at `tokens[index]` (same-name nesting honoured). */
@@ -280,22 +344,8 @@ export function elementInnerHtml(html: string, tokens: TagToken[], index: number
   if (open.closing || open.selfClosing) {
     return '';
   }
-  let depth = 0;
-  for (let j = index + 1; j < tokens.length; j += 1) {
-    const token = tokens[j];
-    if (token.name !== open.name) {
-      continue;
-    }
-    if (token.closing) {
-      if (depth === 0) {
-        return html.slice(open.end, token.start);
-      }
-      depth -= 1;
-    } else if (!token.selfClosing) {
-      depth += 1;
-    }
-  }
-  return '';
+  const close = closingIndexesOf(tokens)[index];
+  return close === -1 ? '' : html.slice(open.end, tokens[close].start);
 }
 
 function roleTokens(attrs: Record<string, string>): string[] {
@@ -311,14 +361,10 @@ export interface HeadingEntry {
 }
 
 export function headingSequence(html: string): HeadingEntry[] {
-  const out: HeadingEntry[] = [];
-  const pattern = /<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1\s*>/gi;
-  let match: RegExpExecArray | null;
-  const source = structuralBodyHtml(html);
-  while ((match = pattern.exec(source)) !== null) {
-    out.push({ level: Number(match[1]), text: textOfFragment(match[2]) });
-  }
-  return out;
+  return scanBlocks(structuralBodyHtml(html), HEADING_BLOCKS).map((match) => ({
+    level: Number(match.name.slice(1)),
+    text: textOfFragment(match.content),
+  }));
 }
 
 /**
@@ -628,6 +674,26 @@ export function findMetaContent(
   return null;
 }
 
+/** The `content` of every meta tag whose `name`/`property` equals `key`, in document order. */
+export function findAllMetaContent(
+  head: string,
+  key: string,
+  attribute: 'name' | 'property'
+): string[] {
+  const wanted = key.toLowerCase();
+  const values: string[] = [];
+  for (const token of tokenizeTags(head)) {
+    if (token.closing || token.name !== 'meta') {
+      continue;
+    }
+    const value = token.attrs[attribute];
+    if (typeof value === 'string' && value.trim().toLowerCase() === wanted) {
+      values.push(token.attrs.content ?? '');
+    }
+  }
+  return values;
+}
+
 export function hasMetaRefresh(head: string): boolean {
   return tokenizeTags(head).some(
     (token) =>
@@ -652,6 +718,12 @@ export interface JsonLdSummary {
   blocks: JsonLdBlockStatus[];
   /** Flattened nodes from parseable blocks, `@id` references resolved one level. */
   nodes: JsonLdNode[];
+  /**
+   * Every distinct `@type` value in the parseable blocks, nested objects included
+   * (an Offer inside an Organization), in first-seen order. Identity-node selection
+   * reads `nodes`; type breadth and surface detection read this.
+   */
+  types: string[];
 }
 
 function isPlainObject(value: unknown): value is JsonLdNode {
@@ -672,6 +744,32 @@ function flattenJsonLd(value: unknown, out: JsonLdNode[]): void {
   const graph = value['@graph'];
   if (Array.isArray(graph)) {
     flattenJsonLd(graph, out);
+  }
+}
+
+const MAX_JSONLD_DEPTH = 64;
+
+/** Every `@type` string in a parsed JSON-LD value, recursing through all nested objects. */
+function collectJsonLdTypes(value: unknown, out: Set<string>, depth = 0): void {
+  if (depth > MAX_JSONLD_DEPTH) {
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      collectJsonLdTypes(item, out, depth + 1);
+    }
+    return;
+  }
+  if (!isPlainObject(value)) {
+    return;
+  }
+  for (const type of jsonLdTypes(value)) {
+    out.add(type);
+  }
+  for (const [key, child] of Object.entries(value)) {
+    if (key !== '@type' && typeof child === 'object' && child !== null) {
+      collectJsonLdTypes(child, out, depth + 1);
+    }
   }
 }
 
@@ -715,11 +813,13 @@ function resolveReferences(nodes: JsonLdNode[]): JsonLdNode[] {
 export function parseJsonLd(html: string): JsonLdSummary {
   const blocks: JsonLdBlockStatus[] = [];
   const nodes: JsonLdNode[] = [];
+  const types = new Set<string>();
   extractJsonLdScriptContents(html).forEach((content, index) => {
     try {
       const parsed: unknown = JSON.parse(content);
       blocks.push({ index, ok: true, position: null });
       flattenJsonLd(parsed, nodes);
+      collectJsonLdTypes(parsed, types);
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
       const positionMatch = message.match(/position (\d+)/i);
@@ -730,7 +830,7 @@ export function parseJsonLd(html: string): JsonLdSummary {
       });
     }
   });
-  return { blocks, nodes: resolveReferences(nodes) };
+  return { blocks, nodes: resolveReferences(nodes), types: [...types] };
 }
 
 export function jsonLdTypes(node: JsonLdNode): string[] {
@@ -780,11 +880,11 @@ export function collectAttributeTexts(html: string): string[] {
  * when a nonce or a hashed asset name differs.
  */
 export function normalizeBodyForComparison(html: string): string {
-  return html
-    .replace(/<head\b[\s\S]*?<\/head>/gi, ' ')
-    .replace(/<script\b[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style\b[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<[^>]*>/g, ' ')
+  const withoutBlocks = [COMPARISON_HEAD_BLOCKS, COMPARISON_SCRIPT_BLOCKS, COMPARISON_STYLE_BLOCKS].reduce(
+    (current, pattern) => replaceBlocks(current, pattern, ' '),
+    html
+  );
+  return replaceTags(withoutBlocks, ' ', true)
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase();
@@ -826,7 +926,12 @@ export function parseContentSignal(body: string): ContentSignalParse {
 
 // -------------------------------------------------------------------- robots
 
-const MANAGED_MARKER_LINE_RE = /^\s*# (?:BEGIN|END) agentmarkup [^\n]*$/gm;
+/**
+ * One marker line, with leading whitespace on that line only. `^\s*` would also eat
+ * the blank lines before it, which the parser reads the same way (any blank line
+ * ends a group) but which cost a rescan of every following blank line per line.
+ */
+const MANAGED_MARKER_LINE_RE = /^[^\S\n]*# (?:BEGIN|END) agentmarkup [^\n]*$/gm;
 
 /**
  * Agents root-blocked under RFC 9309 group logic (own group, else `*`), wrapping core

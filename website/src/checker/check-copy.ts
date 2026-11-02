@@ -5,6 +5,7 @@
 import {
   catalogIndexOf,
   getCheckDefinition,
+  unverifiedResourcesWithoutChecks,
   type CheckDefinition,
   type CheckTier,
   type EvidenceResourceKey,
@@ -156,6 +157,54 @@ export function auditItemForUnverified(
   };
 }
 
+/**
+ * One warning per resource that did not answer in time although no check waited on
+ * it: the checks that read it were judged without it (a timed-out sample page leaves
+ * homepage-only judging), so the reading is provisional all the same.
+ */
+export function auditItemForUnverifiedResource(
+  resource: EvidenceResourceKey,
+  readers: ScoredCheck[]
+): AuditItem {
+  const label = RESOURCE_LABELS[resource];
+  const names = readers.map((check) => getCheckDefinition(check.id)?.name ?? check.id);
+  const judged =
+    names.length === 0
+      ? 'No scored check waited on it'
+      : `${names.length === 1 ? 'The check that reads it' : `The ${names.length} checks that read it`} (${names.join(', ')}) ${names.length === 1 ? 'was' : 'were'} judged without it`;
+  return {
+    id: `unverified-${resource}`,
+    level: 'warning',
+    title: `${label} could not be verified in time`,
+    detail: `${judged}, so this reading is provisional and was not cached.`,
+    action: `Re-run the check. If it repeats, confirm by hand that ${label.toLowerCase()} answers within a few seconds.`,
+    docUrl: `${SCORE_METHODOLOGY_PATH}#statuses`,
+    agentmarkupHelp:
+      'agentmarkup never counts a timed-out or failed fetch against a site; only completed responses are judged.',
+  };
+}
+
+const AGENTMARKUP_REACHABILITY_HELP =
+  'agentmarkup can layer on llms.txt, JSON-LD, markdown mirrors, and crawler controls, but the page still needs to be publicly reachable first.';
+
+/**
+ * The single finding for a run blocked by a final homepage status (404, 410, ...):
+ * the fetch completed, so this is an error against the site, not a re-run case.
+ */
+export function auditItemForHomepageStatus(report: ScoreReport): AuditItem {
+  const reason = report.blockedReason ?? 'homepage answered an error status';
+  const status = reason.match(/HTTP (\d{3})/)?.[1];
+  return {
+    id: 'homepage-http-status',
+    level: 'error',
+    title: status ? `Homepage answered HTTP ${status}` : 'Homepage answered an error status',
+    detail: reason,
+    action: 'Make the site root serve a page. Nothing else can be checked until it does.',
+    docUrl: `${SCORE_METHODOLOGY_PATH}#statuses`,
+    agentmarkupHelp: AGENTMARKUP_REACHABILITY_HELP,
+  };
+}
+
 function compareItems(left: AuditItem, right: AuditItem, gains: Map<string, number>): number {
   const weightDiff = LEVEL_WEIGHT[left.level] - LEVEL_WEIGHT[right.level];
   if (weightDiff !== 0) {
@@ -174,9 +223,14 @@ function compareItems(left: AuditItem, right: AuditItem, gains: Map<string, numb
 
 /**
  * Every finding for a report: scored checks as items, unverified checks grouped
- * by resource, ordered by level, then estimated gain, then catalog order.
+ * by resource, one item per unverified resource no check waited on, ordered by
+ * level, then estimated gain, then catalog order. A run
+ * blocked by a final homepage status yields exactly one error finding.
  */
 export function auditItemsForReport(report: ScoreReport): AuditItem[] {
+  if (report.analysisStatus === 'blocked' && report.blockedKind === 'http-status') {
+    return [auditItemForHomepageStatus(report)];
+  }
   const items: AuditItem[] = [];
   const gains = new Map<string, number>();
   const unverified = new Map<EvidenceResourceKey, ScoredCheck[]>();
@@ -198,6 +252,17 @@ export function auditItemsForReport(report: ScoreReport): AuditItem[] {
 
   for (const [resource, checks] of unverified) {
     items.push(auditItemForUnverified(resource, checks));
+  }
+  for (const resource of unverifiedResourcesWithoutChecks(report)) {
+    if (unverified.has(resource)) {
+      continue;
+    }
+    const readers = report.checks.filter(
+      (check) =>
+        (check.resources ?? []).includes(resource) &&
+        (check.status === 'pass' || check.status === 'partial' || check.status === 'fail')
+    );
+    items.push(auditItemForUnverifiedResource(resource, readers));
   }
 
   return items.sort((left, right) => compareItems(left, right, gains));

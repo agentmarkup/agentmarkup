@@ -4,9 +4,9 @@
   "fetchedAt": "2026-11-02T12:07:39.000Z",
   "catalogVersion": "1.0.0",
   "formulaVersion": "1.0.0",
-  "score": 90,
+  "score": 91,
   "grade": "A",
-  "raw": 90.32,
+  "raw": 91.06,
   "analysisStatus": "complete",
   "range": null,
   "samplePageUrl": "https://sandiegowebstudios.com/portfolio/",
@@ -18,7 +18,7 @@
     "total": 9
   },
   "recommended": {
-    "earned": 12.78,
+    "earned": 13.52,
     "available": 20,
     "passing": 5,
     "total": 9
@@ -45,9 +45,9 @@
       "verified": "Organization node keys are @type, @id, name, url, logo and image only; no address, contactPoint, telephone or email; captured body read 2026-11-02 (chunk A)"
     },
     "trust.anchors": {
-      "status": "fail",
-      "fraction": 0,
-      "verified": "the only contact links are 'CONTACT US' / 'Contact Us' pointing at the homepage section #contact-us (path /); no about or privacy page link among the 56 anchors; captured body read 2026-11-02 (chunk A)"
+      "status": "partial",
+      "fraction": 0.333,
+      "verified": "'CONTACT US' links to https://sandiegowebstudios.com/#contact-us, a same-origin section link that the published rule counts by its text; no about or privacy link among the 56 anchors; captured body re-read 2026-11-02 (review fixes)"
     },
     "llms.agent-instruction": {
       "status": "fail",
@@ -82,7 +82,7 @@
     "jsonld.type-breadth": {
       "status": "fail",
       "fraction": 0,
-      "verified": "types WebPage, BreadcrumbList, WebSite, Organization, all in the baseline set; captured body read 2026-11-02 (chunk A)"
+      "verified": "types WebPage, ReadAction, BreadcrumbList, ListItem, WebSite, SearchAction, EntryPoint, PropertyValueSpecification, Organization, ImageObject (nested types included), all in the baseline set; PropertyValueSpecification is the Yoast SearchAction query-input; captured body re-read 2026-11-02 (review fixes)"
     },
     "link.headers-discovery": {
       "status": "fail",
@@ -127,6 +127,6 @@
   "topFixes": [
     "ax.document-structure",
     "jsonld.org-completeness",
-    "trust.anchors"
+    "llms.agent-instruction"
   ]
 }

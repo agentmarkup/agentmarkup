@@ -52,7 +52,7 @@ function headerValue(resource: RemoteResource, name: string): string | null {
 
 /**
  * Returns the challenge marker found on a response: the `cf-mitigated` header
- * containing `challenge`, or one of the published body markers in the first 20 KB.
+ * containing `challenge`, or one of the published body markers in the first 20,480 characters.
  */
 export function findChallengeMarker(resource: RemoteResource): string | null {
   const mitigated = headerValue(resource, 'cf-mitigated');

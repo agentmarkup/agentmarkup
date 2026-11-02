@@ -16,18 +16,35 @@ const LLMS_MIN_CHARS = 100;
 const LLMS_MAX_CHARS = 30_000;
 const BLOCKQUOTE_MIN_CHARS = 100;
 const SITEMAP_HEAD_CHARS = 5_000;
-const LASTMOD_WINDOW_MS = 365 * 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const LASTMOD_WINDOW_MS = 365 * DAY_MS;
+/** A lastmod may lead the fetch time by at most this much (clock skew), never more. */
+const LASTMOD_FUTURE_ALLOWANCE_MS = DAY_MS;
 
-/** Guidance phrases that count on any line. */
+/**
+ * Guidance phrases from the published rule ("a heading or sentence with explicit
+ * guidance"): each counts on any line, heading or sentence alike.
+ */
 const GUIDANCE_PATTERNS: ReadonlyArray<RegExp> = [
   /\bwhen to use\b/i,
   /\buse (?:this|it|[\w.-]+) when\b/i,
   /\bdo not use [\w.-]+ (?:for|when)\b/i,
   /\bbest fit (?:for|when)\b/i,
 ];
-/** Guidance phrases that count only in a heading line (they are common in ordinary prose). */
+/**
+ * Phrases that count only in a heading ("a heading containing 'use cases' or 'for
+ * agents'"): in running prose they are common and say nothing about when to use the
+ * site, so a sentence never earns credit with them.
+ */
 const HEADING_GUIDANCE_PATTERNS: ReadonlyArray<RegExp> = [/\buse cases\b/i, /\bfor agents\b/i];
 const HEADING_LINE_RE = /^\s*#{1,6}\s+\S/;
+/**
+ * Markdown link targets and bare http(s) URLs in llms.txt. A target stops at `(`, so
+ * every `](` bounds the previous attempt: with `(` allowed, a body of unclosed
+ * `[a](` links rescanned the rest of the file from each one.
+ */
+const MARKDOWN_LINK_TARGET_RE = /\]\(\s*<?([^()\s>]+)>?(?:\s+["'][^"']*["'])?\s*\)/g;
+const BARE_URL_RE = /\bhttps?:\/\/[^\s<>()"'\]]+/gi;
 
 function llmsState(llms: ResourceView): string {
   if (llms.unverified) {
@@ -57,6 +74,45 @@ function sitemapKind(body: string): 'urlset' | 'sitemapindex' | null {
   return null;
 }
 
+/**
+ * The first actual link in llms.txt (a markdown link target or a bare http(s) URL)
+ * to llms-full.txt or to another /llms.txt; a textual mention does not count, and
+ * a link back to this llms.txt itself is not "another".
+ */
+function findModularLink(body: string, selfUrl: string | null): string | null {
+  const targets: string[] = [];
+  for (const match of body.matchAll(MARKDOWN_LINK_TARGET_RE)) {
+    targets.push(match[1]);
+  }
+  for (const match of body.matchAll(BARE_URL_RE)) {
+    targets.push(match[0].replace(/[.,;:!?]+$/, ''));
+  }
+  let self: string | null = null;
+  try {
+    self = selfUrl ? new URL(selfUrl).toString() : null;
+  } catch {
+    self = null;
+  }
+  for (const target of targets) {
+    let path = target;
+    let absolute: string | null = null;
+    try {
+      const resolved = new URL(target, selfUrl ?? 'https://invalid.example/');
+      path = resolved.pathname;
+      absolute = selfUrl ? resolved.toString() : null;
+    } catch {
+      path = target.split(/[?#]/)[0];
+    }
+    if (/llms-full\.txt$/i.test(path)) {
+      return target;
+    }
+    if (/\/llms\.txt$/i.test(path) && (absolute === null || absolute !== self)) {
+      return target;
+    }
+  }
+  return null;
+}
+
 export const discoveryEvaluators: Record<string, EvaluatorEntry> = {
   'sitemap.valid': {
     needsHomepage: false,
@@ -73,6 +129,15 @@ export const discoveryEvaluators: Record<string, EvaluatorEntry> = {
         );
       }
       if (!sitemap.ok) {
+        // robots.txt did not answer, so the /sitemap.xml fallback stood in for a
+        // declaration nobody could read; its failure says nothing about the sitemap.
+        if (context.robots.unverified && context.evidence.sitemapSource !== 'robots') {
+          return unverified(
+            'robots-unverified',
+            `robots.txt could not be verified in time and /sitemap.xml answered HTTP ${sitemap.status}`,
+            ['sitemap', 'robotsTxt']
+          );
+        }
         return scored(0, `${sitemapLabel(context)} answered HTTP ${sitemap.status}`, ['sitemap', 'robotsTxt']);
       }
       const kind = sitemapKind(sitemap.body);
@@ -128,11 +193,12 @@ export const discoveryEvaluators: Record<string, EvaluatorEntry> = {
         return scored(0, 'urlset with 0 url entries', ['sitemap']);
       }
       const coverage = withLastmod / entries.length;
-      const fresh = newestRaw !== null && context.nowMs - newest <= LASTMOD_WINDOW_MS;
+      const future = newestRaw !== null && newest > context.nowMs + LASTMOD_FUTURE_ALLOWANCE_MS;
+      const fresh = newestRaw !== null && !future && context.nowMs - newest <= LASTMOD_WINDOW_MS;
       const fraction = coverage >= 0.5 ? (fresh ? 1 : 0.5) : 0;
       return scored(
         fraction,
-        `${withLastmod}/${entries.length} url entries carry a parseable lastmod; newest ${newestRaw ?? 'none'}; freshness judged against ${context.now}`,
+        `${withLastmod}/${entries.length} url entries carry a parseable lastmod; newest ${newestRaw ?? 'none'}${future ? ' lies in the future (more than 1 day after the fetch), not counted as fresh' : ''}; freshness judged against ${context.now}`,
         ['sitemap']
       );
     },
@@ -164,13 +230,16 @@ export const discoveryEvaluators: Record<string, EvaluatorEntry> = {
           }
         }
       }
+      // The summary blockquote must follow an actual H1; without one nothing is credited.
       const h1Index = lines.findIndex((line) => /^\s*#\s+\S/.test(line));
       let blockquote = '';
-      for (const line of lines.slice(h1Index + 1)) {
-        if (/^\s*>/.test(line)) {
-          blockquote += ` ${line.replace(/^\s*>\s?/, '')}`;
-        } else if (blockquote) {
-          break;
+      if (h1Index !== -1) {
+        for (const line of lines.slice(h1Index + 1)) {
+          if (/^\s*>/.test(line)) {
+            blockquote += ` ${line.replace(/^\s*>\s?/, '')}`;
+          } else if (blockquote) {
+            break;
+          }
         }
       }
       const summary = collapseWhitespace(blockquote);
@@ -179,9 +248,11 @@ export const discoveryEvaluators: Record<string, EvaluatorEntry> = {
           'llmsTxt',
         ]);
       }
-      return scored(0, `llms.txt has ${formatCount(text.length)} chars but no when-to-use guidance and no summary blockquote of ${BLOCKQUOTE_MIN_CHARS}+ chars`, [
-        'llmsTxt',
-      ]);
+      return scored(
+        0,
+        `llms.txt has ${formatCount(text.length)} chars but no when-to-use guidance and no summary blockquote of ${BLOCKQUOTE_MIN_CHARS}+ chars${h1Index === -1 ? ' after an H1 (no H1)' : ''}`,
+        ['llmsTxt']
+      );
     },
   },
   'llms.exists': {
@@ -237,10 +308,10 @@ export const discoveryEvaluators: Record<string, EvaluatorEntry> = {
       if (!llms.isText) {
         return notApplicable('no-llms', llmsState(llms), ['llmsTxt']);
       }
-      const match = llms.body.match(/[^\s()]*(?:llms-full\.txt|\/llms\.txt)/i);
+      const target = findModularLink(llms.body, llms.finalUrl);
       return scored(
-        match ? 1 : 0,
-        match ? `links ${match[0]}` : 'no link to llms-full.txt or another /llms.txt',
+        target ? 1 : 0,
+        target ? `links ${target}` : 'no link (markdown link or bare URL) to llms-full.txt or another /llms.txt',
         ['llmsTxt']
       );
     },

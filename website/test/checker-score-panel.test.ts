@@ -3,12 +3,13 @@ import { act, createElement, isValidElement, type ReactElement, type ReactNode }
 import { createRoot, type Root } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { SCORE_CATALOG, SCORE_CATALOG_VERSION, TOP_FIXES_LIMIT, rankTopFixes } from '@agentmarkup/core/score';
+import { SCORE_CATALOG, SCORE_CATALOG_VERSION, TOP_FIXES_LIMIT, rankTopFixes, renderClientSummary } from '@agentmarkup/core/score';
 
 
 import { analyzeSiteCheck } from '../src/checker/analyze';
 import ScoreMethodology from '../src/pages/ScoreMethodology';
 import { ScorePanel } from '../src/ui/ScorePanel';
+import { verdictExplanationForGrade } from '../src/ui/status-model';
 import { TopFixes } from '../src/ui/TopFixes';
 import { DEFAULT_BODY, HOME, ORIGIN, PROBE_URL, homepage, notFound, siteCheck, status, text, timedOut } from './helpers/score-fixture';
 
@@ -18,6 +19,8 @@ const SITE_NAME = 'www.example.com';
 const reference = analyzeSiteCheck(siteCheck()).report;
 const provisional = analyzeSiteCheck(siteCheck({ llms: timedOut(`${ORIGIN}/llms.txt`) })).report;
 const blocked = analyzeSiteCheck(siteCheck({ homepage: timedOut(HOME) })).report;
+const sampleTimedOut = analyzeSiteCheck(siteCheck({ sample: timedOut(`${ORIGIN}/services/`), sampleMd: null })).report;
+const homepage404 = analyzeSiteCheck(siteCheck({ homepage: notFound(HOME) })).report;
 const failing = analyzeSiteCheck(
   siteCheck({
     homepage: homepage(DEFAULT_BODY, { jsonLd: [], canonical: null, llmsLink: false, markdownLink: false }),
@@ -137,13 +140,66 @@ describe('ScorePanel', () => {
     expect(onRerun).toHaveBeenCalledTimes(1);
   });
 
+  it('C2: a sample page that timed out is provisional, counts the resource and names it in the list and the summary', () => {
+    const container = renderMarkup(createElement(ScorePanel, { report: sampleTimedOut, siteName: SITE_NAME }));
+    const sentence = container.querySelector('.score-panel-provisional')?.textContent ?? '';
+
+    expect(sampleTimedOut.unverifiedChecks).toEqual([]);
+    expect(sampleTimedOut.unverifiedResources).toEqual(['samplePage']);
+    expect(sampleTimedOut.analysisStatus).toBe('partial');
+    expect(container.querySelector('.score-badge')?.textContent).toBe('Provisional');
+    expect(sentence).toContain('Sample page could not be fetched in time, so the checks that read it were judged without it. This run was not cached.');
+    expect(sentence).not.toContain('0 checks');
+    expect(container.querySelector('.score-panel-lists')?.textContent).toContain('Sample page (its readers were judged without it)');
+
+    const summary = renderClientSummary(sampleTimedOut, { siteName: SITE_NAME });
+    expect(summary).toContain('This reading is provisional: the sample page could not be fetched in time, so the checks that read it were judged without it.');
+    expect(summary).toContain('the sample page fetch (the checks that read it were judged without it)');
+    expect(summary).not.toContain('0 checks could not be verified');
+  });
+
+  it('a provisional run with unverified checks keeps the range sentence and lists no resource line', () => {
+    const container = renderMarkup(createElement(ScorePanel, { report: provisional, siteName: SITE_NAME }));
+    expect(container.querySelector('.score-panel-provisional')?.textContent).toMatch(/^ProvisionalBetween \d+ and \d+: \d+ checks? could not be verified in time and left the denominator\. This run was not cached\./);
+    expect(container.textContent).not.toContain('judged without it');
+  });
+
   it('shows no score for a blocked run and offers a re-run', () => {
     const container = renderMarkup(createElement(ScorePanel, { report: blocked, siteName: SITE_NAME, onRerun: () => {} }));
 
+    expect(blocked.blockedKind).toBe('unverified');
     expect(container.querySelector('#score-panel-title')?.textContent).toBe('No score yet');
     expect(container.querySelector('.score-panel-number')).toBeNull();
+    expect(container.querySelector('.score-panel-blocked')?.textContent).toContain('could not reach this site in time');
     expect(container.textContent).toContain('Re-run the check');
     expect(container.querySelector('.score-panel')?.className).toContain('score-panel-action');
+    // W2: a blocked run shows no tier bars, no bonus line and no raw breakdown.
+    expect(container.querySelector('.score-tiers')).toBeNull();
+    expect(container.querySelector('.score-panel-raw')).toBeNull();
+    expect(container.textContent).not.toContain('never subtracts');
+  });
+
+  it('names the final homepage status, offers no re-run and never mentions a timeout', () => {
+    const container = renderMarkup(createElement(ScorePanel, { report: homepage404, siteName: SITE_NAME, onRerun: () => {} }));
+    const sentence = container.querySelector('.score-panel-blocked')?.textContent ?? '';
+
+    expect(homepage404.blockedKind).toBe('http-status');
+    expect(container.querySelector('#score-panel-title')?.textContent).toBe('No score yet');
+    expect(container.querySelector('.score-tiers')).toBeNull();
+    expect(sentence).toContain('The homepage answered HTTP 404, so there is nothing to score yet.');
+    expect(sentence).toContain('Make the site root serve a page');
+    expect(sentence).not.toMatch(/in time|timed out|never counted against/i);
+    expect(Array.from(container.querySelectorAll('button')).map((button) => button.textContent?.trim())).not.toContain('Re-run the check');
+    expect(container.querySelector('.score-panel')?.className).toContain('score-panel-action');
+
+    const summary = renderClientSummary(homepage404, { siteName: SITE_NAME });
+    expect(summary).toBe(
+      `${SITE_NAME}: the homepage answered HTTP 404, so there is nothing to score yet.\nMake the site root serve a page, then run the check again.`
+    );
+    expect(verdictExplanationForGrade(homepage404.grade, homepage404.analysisStatus, homepage404.blockedKind, homepage404.blockedReason)).not.toMatch(
+      /in time|timed out|never counted against/i
+    );
+    expect(verdictExplanationForGrade(blocked.grade, blocked.analysisStatus, blocked.blockedKind, blocked.blockedReason)).toContain('in time');
   });
 
   it('copies a plain-text client summary to the clipboard', async () => {

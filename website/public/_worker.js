@@ -310,6 +310,8 @@ async function handleCheckRequest(request, url, env, checkStartTime) {
       cacheExpiresAt,
       budget
     );
+    // The cache statements (written, failed or skipped) count as well.
+    fetchSummary.d1Statements = budget.d1;
 
     return json(responseBody, 200, rateLimitHeaders(protection.metadata));
   } catch (error) {
@@ -441,6 +443,16 @@ async function fetchCheckEvidence(normalized, checkStartTime, budget) {
  * when the homepage itself is unverified. `unverified` lists payload keys so a
  * client can name what to re-run; `elapsedMs` is the fetch wall-clock.
  */
+// A challenged not-found probe (429/503 with challenge markers) leaves
+// nav.not-found unverified in the score engine, so the run is not complete
+// either. classifyResource itself stays unchanged for parity with core.
+function isUnverifiedForSummary(key, resource) {
+  return (
+    resource.outcome === 'unverified' ||
+    (key === 'notFoundProbe' && resource.outcome === 'challenge')
+  );
+}
+
 function buildFetchSummary(evidence, checkStartTime, budget) {
   const unverified = [];
   let hops = 0;
@@ -451,7 +463,7 @@ function buildFetchSummary(evidence, checkStartTime, budget) {
       continue;
     }
     hops += resource.hops ?? 0;
-    if (resource.outcome === 'unverified') {
+    if (isUnverifiedForSummary(key, resource)) {
       unverified.push(key);
     }
   }
@@ -1046,6 +1058,12 @@ async function cacheCheckResponse(
     return;
   }
 
+  const keys = targetUrl === normalized ? [normalized] : [normalized, targetUrl];
+  // The cached copy carries the statement count including its own cache writes,
+  // the same number the live response reports once the write was attempted.
+  if (payload.fetchSummary && budget) {
+    payload.fetchSummary.d1Statements = budget.d1 + keys.length;
+  }
   const responseJson = JSON.stringify(payload);
 
   // Large targets (big homepages, sitemaps, llms-full.txt) can serialize past
@@ -1057,7 +1075,6 @@ async function cacheCheckResponse(
     return;
   }
 
-  const keys = targetUrl === normalized ? [normalized] : [normalized, targetUrl];
   countD1(budget, keys.length);
 
   try {
@@ -1475,6 +1492,27 @@ async function fetchText(targetUrl, checkStartTime, options = {}) {
         }
 
         if (response.status >= 300 && response.status < 400) {
+          // A resource that follows no redirects (the not-found probe) reports
+          // the 3xx it received as its final, completed answer, with or without
+          // a Location header (kept through the discovery headers when present),
+          // rather than the "Too many redirects" or missing-Location failure a
+          // followed chain gets.
+          if (maxRedirects === 0) {
+            await cancelResponseBody(response);
+            return finish(
+              {
+                requestedUrl: targetUrl,
+                finalUrl: currentUrl,
+                status: response.status,
+                ok: false,
+                contentType: response.headers.get('content-type'),
+                body: null,
+                xRobotsTag: response.headers.get('x-robots-tag'),
+              },
+              response
+            );
+          }
+
           const location = response.headers.get('location');
           if (!location) {
             return finish(
@@ -1487,26 +1525,6 @@ async function fetchText(targetUrl, checkStartTime, options = {}) {
                 body: null,
                 xRobotsTag: response.headers.get('x-robots-tag'),
                 error: 'Redirect response had no Location header.',
-              },
-              response
-            );
-          }
-
-          // A resource that follows no redirects (the not-found probe) reports
-          // the 3xx it received as its final, completed answer, Location
-          // included through the discovery headers, rather than the
-          // "Too many redirects" failure a capped chain gets.
-          if (maxRedirects === 0) {
-            await cancelResponseBody(response);
-            return finish(
-              {
-                requestedUrl: targetUrl,
-                finalUrl: currentUrl,
-                status: response.status,
-                ok: false,
-                contentType: response.headers.get('content-type'),
-                body: null,
-                xRobotsTag: response.headers.get('x-robots-tag'),
               },
               response
             );
@@ -2096,12 +2114,52 @@ function mapFetchError(error) {
   return 'Request failed.';
 }
 
+const SECOND_LEVEL_LABELS = ['co', 'com', 'net', 'org', 'gov', 'edu', 'ac'];
+
+// Same rule as registrableDomainOf in packages/core/src/score/discover.ts: the last
+// two labels, or three under co/com/net/org/gov/edu/ac plus a two-letter last label.
+function registrableDomainOf(hostname) {
+  const lower = hostname.toLowerCase().replace(/\.$/, '');
+  if (/^\d+(?:\.\d+){3}$/.test(lower) || lower.includes(':') || lower.startsWith('[')) {
+    return lower;
+  }
+  const labels = lower.split('.').filter((label) => label.length > 0);
+  if (labels.length <= 2) {
+    return labels.join('.');
+  }
+  const last = labels[labels.length - 1];
+  const secondToLast = labels[labels.length - 2];
+  const keep = last.length === 2 && SECOND_LEVEL_LABELS.includes(secondToLast) ? 3 : 2;
+  return labels.slice(-keep).join('.');
+}
+
+// A robots.txt Sitemap: value on the base hostname or the same registrable domain.
+// Every hop of the later fetch still passes the blocked-host and port rules.
+function resolveSitemapDeclaration(candidate, baseUrl) {
+  try {
+    const base = new URL(baseUrl);
+    const resolved = new URL(candidate, base);
+    if (!['http:', 'https:'].includes(resolved.protocol) || isBlockedHostname(resolved.hostname)) {
+      return null;
+    }
+    const host = resolved.hostname.toLowerCase();
+    const baseHost = base.hostname.toLowerCase();
+    if (host !== baseHost && registrableDomainOf(host) !== registrableDomainOf(baseHost)) {
+      return null;
+    }
+    resolved.hash = '';
+    return resolved.toString();
+  } catch {
+    return null;
+  }
+}
+
 function findSitemapUrl(robotsTxt, baseUrl) {
   const sitemapPattern = /^\s*Sitemap:\s*(\S+)\s*$/gim;
   let match;
 
   while ((match = sitemapPattern.exec(robotsTxt)) !== null) {
-    const candidate = resolveSameOriginUrl(match[1], baseUrl);
+    const candidate = resolveSitemapDeclaration(match[1], baseUrl);
     if (candidate) {
       return candidate;
     }
@@ -2110,28 +2168,98 @@ function findSitemapUrl(robotsTxt, baseUrl) {
   return null;
 }
 
-function findMarkdownAlternateUrl(html, baseUrl) {
-  const linkPattern = /<link\b[^>]*>/gi;
+// Same as linkTagAttribute in packages/core/src/score/discover.ts: double-quoted,
+// single-quoted or unquoted values, optional spaces around "=".
+function linkTagAttribute(tag, name) {
+  const pattern = new RegExp(
+    `[\\s"']${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'=<>\`]+))`,
+    'i'
+  );
+  const match = tag.match(pattern);
+  return match ? (match[1] ?? match[2] ?? match[3] ?? '') : null;
+}
+
+// Same as forEachLinkTag in packages/core/src/score/discover.ts: every tag
+// /<link\b[^>]*>/gi matches, in order, until visit returns true, in linear time
+// (the first <link that no ">" follows ends the scan, since no later one can close).
+function forEachLinkTag(html, visit) {
+  const open = /<link\b/gi;
   let match;
-
-  while ((match = linkPattern.exec(html)) !== null) {
-    const tag = match[0];
-    if (
-      !/\brel=(['"])[^'"]*\balternate\b[^'"]*\1/i.test(tag) ||
-      !/\btype=(['"])text\/markdown\1/i.test(tag)
-    ) {
-      continue;
+  while ((match = open.exec(html)) !== null) {
+    const end = html.indexOf('>', match.index + 5);
+    if (end === -1) {
+      return;
     }
-
-    const hrefMatch = tag.match(/\bhref=(['"])([\s\S]*?)\1/i);
-    if (!hrefMatch) {
-      continue;
+    if (visit(html.slice(match.index, end + 1))) {
+      return;
     }
-
-    return resolveSameOriginUrl(hrefMatch[2], baseUrl);
+    open.lastIndex = end + 1;
   }
+}
 
-  return null;
+// Same as forEachAnchorHref in packages/core/src/score/discover.ts: every value
+// /<a\b[^>]*href=(['"])([\s\S]*?)\1/gi captures, in order, until visit returns
+// true, in linear time. Openers that share their first ">" share the rightmost
+// href= with a quote that closes later, computed once.
+function forEachAnchorHref(html, visit) {
+  const lower = html.replace(/[A-Z]+/g, (run) => run.toLowerCase());
+  const lastQuote = { '"': html.lastIndexOf('"'), "'": html.lastIndexOf("'") };
+  const open = /<a\b/gi;
+  let segmentEnd = -1;
+  let segmentHref = -1;
+  let match;
+  while ((match = open.exec(html)) !== null) {
+    const start = match.index + 2;
+    if (start > segmentEnd) {
+      const gt = html.indexOf('>', start);
+      segmentEnd = gt === -1 ? html.length : gt;
+      segmentHref = -1;
+      let at = segmentEnd - 6 >= start ? lower.lastIndexOf('href=', segmentEnd - 6) : -1;
+      while (at >= start) {
+        const quote = html[at + 5];
+        if ((quote === '"' || quote === "'") && lastQuote[quote] >= at + 6) {
+          segmentHref = at;
+          break;
+        }
+        at = at > start ? lower.lastIndexOf('href=', at - 1) : -1;
+      }
+    }
+    if (segmentHref < start) {
+      continue;
+    }
+    const quote = html[segmentHref + 5];
+    const close = html.indexOf(quote, segmentHref + 6);
+    if (visit(html.slice(segmentHref + 6, close))) {
+      return;
+    }
+    open.lastIndex = close + 1;
+  }
+}
+
+function findMarkdownAlternateUrl(html, baseUrl) {
+  let found = null;
+  forEachLinkTag(html, (tag) => {
+    const rel = linkTagAttribute(tag, 'rel');
+    const type = linkTagAttribute(tag, 'type');
+    if (
+      rel === null ||
+      !rel.toLowerCase().split(/\s+/).includes('alternate') ||
+      type === null ||
+      type.trim().toLowerCase() !== 'text/markdown'
+    ) {
+      return false;
+    }
+
+    const href = linkTagAttribute(tag, 'href');
+    if (href === null) {
+      return false;
+    }
+
+    found = resolveSameOriginUrl(href, baseUrl);
+    return found !== null;
+  });
+
+  return found;
 }
 
 function buildMarkdownUrl(pageUrl) {
@@ -2151,11 +2279,10 @@ function buildMarkdownUrl(pageUrl) {
 
 function findFirstInternalLink(html, baseUrl) {
   const base = new URL(baseUrl);
-  const linkPattern = /<a\b[^>]*href=(['"])([\s\S]*?)\1/gi;
-  let match;
+  let found = null;
 
-  while ((match = linkPattern.exec(html)) !== null) {
-    const href = match[2].trim();
+  forEachAnchorHref(html, (value) => {
+    const href = value.trim();
     if (
       !href ||
       href.startsWith('#') ||
@@ -2164,18 +2291,18 @@ function findFirstInternalLink(html, baseUrl) {
       /^javascript:/i.test(href) ||
       /^data:/i.test(href)
     ) {
-      continue;
+      return false;
     }
 
     let candidate;
     try {
       candidate = new URL(href, base);
     } catch {
-      continue;
+      return false;
     }
 
     if (candidate.origin !== base.origin) {
-      continue;
+      return false;
     }
 
     candidate.search = '';
@@ -2189,13 +2316,14 @@ function findFirstInternalLink(html, baseUrl) {
         candidate.pathname
       )
     ) {
-      continue;
+      return false;
     }
 
-    return candidate.toString();
-  }
+    found = candidate.toString();
+    return true;
+  });
 
-  return null;
+  return found;
 }
 
 function resolveSameOriginUrl(candidate, baseUrl) {

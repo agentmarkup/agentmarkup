@@ -1,8 +1,13 @@
+import { blockPattern, replaceBlocks, replaceTags, scanBlocks } from '../html-scan.js';
 import type { ValidationResult } from '../types.js';
 
-const BODY_RE = /<body\b[^>]*>([\s\S]*?)<\/body>/i;
-const IGNORED_BLOCKS_RE =
-  /<(script|style|noscript|template|svg|canvas|iframe|form)\b[^>]*>[\s\S]*?<\/\1>/gi;
+/** `/<body\b[^>]*>([\s\S]*?)<\/body>/i`, in linear time (see html-scan.ts). */
+const BODY_BLOCK = blockPattern(['body'], { openerEndsAtGt: true, closeAllowsSpace: false });
+/** `/<(script|style|noscript|template|svg|canvas|iframe|form)\b[^>]*>[\s\S]*?<\/\1>/gi`, in linear time. */
+const IGNORED_BLOCKS = blockPattern(
+  ['script', 'style', 'noscript', 'template', 'svg', 'canvas', 'iframe', 'form'],
+  { openerEndsAtGt: true, closeAllowsSpace: false }
+);
 
 export function validateHtmlContent(
   html: string,
@@ -13,9 +18,8 @@ export function validateHtmlContent(
     return [];
   }
 
-  const cleanedBody = body.replace(IGNORED_BLOCKS_RE, '').trim();
-  const text = cleanedBody
-    .replace(/<[^>]+>/g, ' ')
+  const cleanedBody = replaceBlocks(body, IGNORED_BLOCKS, '').trim();
+  const text = replaceTags(cleanedBody, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 
@@ -34,8 +38,8 @@ export function validateHtmlContent(
 }
 
 function extractBody(html: string): string {
-  const match = html.match(BODY_RE);
-  return match ? match[1] : '';
+  const [match] = scanBlocks(html, BODY_BLOCK, 1);
+  return match ? match.content : '';
 }
 
 function looksLikeClientShell(body: string): boolean {

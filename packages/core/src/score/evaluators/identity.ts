@@ -3,6 +3,7 @@
 import { BASELINE_JSONLD_TYPES, IDENTITY_TYPES, NON_ORGANIZATION_IDENTITY_TYPES } from '../catalog.js';
 import {
   collectLinkTags,
+  findAllMetaContent,
   findHtmlLang,
   findMetaContent,
   jsonLdTypes,
@@ -119,10 +120,14 @@ export const identityEvaluators: Record<string, EvaluatorEntry> = {
     run: (context) => {
       const head = context.homepage.head;
       const findings: string[] = [];
+      // Every robots, googlebot and bingbot meta tag counts, not only the first.
       for (const name of ['robots', 'googlebot', 'bingbot']) {
-        const directive = robotsDirectiveBlocks(findMetaContent(head, name, 'name'));
-        if (directive) {
-          findings.push(`meta ${name} contains ${directive}`);
+        for (const content of findAllMetaContent(head, name, 'name')) {
+          const directive = robotsDirectiveBlocks(content);
+          if (directive) {
+            findings.push(`meta ${name} contains ${directive}`);
+            break;
+          }
         }
       }
       const headerValue = context.homepage.resource?.xRobotsTag ?? context.homepage.header('x-robots-tag');
@@ -175,7 +180,7 @@ export const identityEvaluators: Record<string, EvaluatorEntry> = {
       const candidates = identityNodes(context);
       const organizations = candidates.filter(isOrganizationNode);
       if (organizations.length === 0) {
-        if (candidates.length > 0) {
+        if (candidates.length > 0 && candidates.every((node) => jsonLdTypes(node).includes('Person'))) {
           return notApplicable(
             'identity-is-person',
             `the only identity node is ${typeLabel(candidates[0])}`,
@@ -193,6 +198,7 @@ export const identityEvaluators: Record<string, EvaluatorEntry> = {
             typeof entry === 'object' &&
             entry !== null &&
             !Array.isArray(entry) &&
+            jsonLdTypes(entry as JsonLdNode).some((type) => type.endsWith('Address')) &&
             (hasValue(entry as JsonLdNode, 'streetAddress') || hasValue(entry as JsonLdNode, 'addressLocality'))
         );
         const contact = node.contactPoint;
@@ -254,12 +260,8 @@ export const identityEvaluators: Record<string, EvaluatorEntry> = {
       if (summary.blocks.length === 0) {
         return notApplicable('no-jsonld', 'no JSON-LD block on the homepage', ['homepage']);
       }
-      const types = new Set<string>();
-      for (const node of summary.nodes) {
-        for (const type of jsonLdTypes(node)) {
-          types.add(type);
-        }
-      }
+      // Every @type in the parseable blocks, nested objects included.
+      const types = new Set<string>(summary.types);
       const extra = [...types].filter((type) => !BASELINE_SET.has(type)).sort();
       return scored(
         extra.length >= 2 ? 1 : extra.length === 1 ? 0.5 : 0,
@@ -291,12 +293,6 @@ export const identityEvaluators: Record<string, EvaluatorEntry> = {
     needsHomepage: true,
     run: (context) => {
       const found = new Map<AnchorKind, string>();
-      let homePath = '/';
-      try {
-        homePath = new URL(context.homepageUrl).pathname;
-      } catch {
-        homePath = '/';
-      }
       for (const anchor of context.homepage.anchors(context.homepageUrl)) {
         const resolved = anchor.resolved;
         if (!resolved || resolved.origin !== context.origin) {
@@ -312,16 +308,13 @@ export const identityEvaluators: Record<string, EvaluatorEntry> = {
         if (!found.has('privacy') && first === 'legal' && segments[1] === 'privacy') {
           found.set('privacy', resolved.pathname);
         }
-        // Text matches must lead to another page: a "Contact" link to a homepage
-        // section (#contact-us) is not a contact page.
-        const leadsToHomepage = normalizePath(resolved.pathname) === normalizePath(homePath);
-        if (leadsToHomepage) {
-          continue;
-        }
+        // Published rule: any same-origin link whose text is About, Contact or
+        // Privacy counts, including a one-page site's section links (/#contact).
         const text = anchor.text.toLowerCase();
+        const target = `${resolved.pathname}${resolved.hash}`;
         for (const [kind, texts] of ANCHOR_TEXT_RULES) {
           if (!found.has(kind) && texts.has(text)) {
-            found.set(kind, resolved.pathname);
+            found.set(kind, target);
           }
         }
       }

@@ -137,7 +137,37 @@ describe('analyzeSiteCheck', () => {
     expect(analysis.items[0].id).toBe('unverified-homepage');
     expect(analysis.items[0].level).toBe('warning');
     expect(analysis.items[0].title).toBe('Homepage could not be verified in time');
+    expect(analysis.report.blockedKind).toBe('unverified');
     expect(analysis.counts).toEqual({ error: 0, warning: 1, pass: 0 });
+  });
+
+  it('reports a final 404 homepage as one error finding, never as a timeout to re-run', () => {
+    const analysis = analyzeSiteCheck(siteCheck({ homepage: notFound(HOME) }));
+
+    expect(analysis.report.analysisStatus).toBe('blocked');
+    expect(analysis.report.blockedKind).toBe('http-status');
+    expect(analysis.report.blockedReason).toBe('homepage answered HTTP 404');
+    expect(analysis.report.score).toBeNull();
+    expect(analysis.report.unverifiedChecks).toEqual([]);
+    expect(analysis.items).toHaveLength(1);
+    const [item] = analysis.items;
+    expect(item.level).toBe('error');
+    expect(item.title).toBe('Homepage answered HTTP 404');
+    expect(item.detail).toBe('homepage answered HTTP 404');
+    expect(item.action).toBe('Make the site root serve a page. Nothing else can be checked until it does.');
+    expect(analysis.counts).toEqual({ error: 1, warning: 0, pass: 0 });
+    for (const finding of analysis.items) {
+      const text = `${finding.title} ${finding.detail} ${finding.action} ${finding.agentmarkupHelp ?? ''}`;
+      expect(text).not.toContain('verified in time');
+      expect(text.toLowerCase()).not.toContain('re-run');
+    }
+  });
+
+  it('reports a 406 homepage the same way, with its own status', () => {
+    const analysis = analyzeSiteCheck(siteCheck({ homepage: status(HOME, 406) }));
+
+    expect(analysis.report.blockedKind).toBe('http-status');
+    expect(analysis.items.map((item) => item.title)).toEqual(['Homepage answered HTTP 406']);
   });
 
   it('never leaks raw HTML into titles, details or actions', () => {
@@ -213,6 +243,37 @@ describe('analyzeSiteCheck', () => {
     expect(robots?.status).toBe('Request failed');
     expect(robots?.detail).toMatch(/robots\.txt could not be verified in time \(Request timed out\)/i);
     expect(robots?.detail).toContain('never counted against the site');
+  });
+
+  it('renders a 2xx resource with an error and no readable body as unverified, never as fetched', () => {
+    const unreadable = text(`${ORIGIN}/llms.txt`, '', 'text/plain', {
+      status: 200,
+      ok: true,
+      body: null,
+      error: 'Response exceeded the checker size limit.',
+    });
+    const analysis = analyzeSiteCheck(siteCheck({ llms: unreadable }));
+    const llms = analysis.resources.find((resource) => resource.key === 'llmsTxt');
+
+    expect(llms?.level).toBe('warning');
+    expect(llms?.ok).toBe(false);
+    expect(llms?.status).toBe('HTTP 200');
+    expect(llms?.detail).toContain('llms.txt could not be verified in time (Response exceeded the checker size limit)');
+    expect(llms?.detail).not.toContain('Fetched');
+  });
+
+  it('C2: a sample page that timed out gets its own grouped finding naming the checks that read it, with no check unverified', () => {
+    const analysis = analyzeSiteCheck(siteCheck({ sample: timedOut(`${ORIGIN}/services/`), sampleMd: null }));
+    const item = itemById(analysis, 'unverified-samplePage');
+
+    expect(analysis.report.unverifiedChecks).toEqual([]);
+    expect(analysis.report.analysisStatus).toBe('partial');
+    expect(item.level).toBe('warning');
+    expect(item.title).toBe('Sample page could not be verified in time');
+    expect(item.detail).toMatch(/^The \d+ checks that read it \(.*Public content not behind a login.*\) were judged without it, so this reading is provisional and was not cached\.$/);
+    expect(analysis.items.filter((candidate) => candidate.id === 'unverified-samplePage')).toHaveLength(1);
+    expect(itemById(analyzeSiteCheck(siteCheck({ llms: timedOut(`${ORIGIN}/llms.txt`) })), 'unverified-llmsTxt').detail).toContain('waiting on it');
+    expect(analyzeSiteCheck(siteCheck()).items.some((candidate) => candidate.id.startsWith('unverified-'))).toBe(false);
   });
 });
 

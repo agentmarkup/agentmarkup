@@ -15,9 +15,10 @@ import {
   roundTo,
   scoreChecks,
   scoreRange,
+  unverifiedResourcesWithoutChecks,
 } from '../../src/score/formula.js';
 import { SCORE_CATALOG_VERSION } from '../../src/score/catalog.js';
-import type { CheckResult, CheckTier, ScoreReport, ScoredCheck, SiteEvaluation } from '../../src/score/types.js';
+import type { CheckResult, CheckTier, EvidenceResourceKey, ScoreReport, ScoredCheck, SiteEvaluation } from '../../src/score/types.js';
 
 const fixturePath = fileURLToPath(new URL('../fixtures/score/ora-agentmarkup.dev.json', import.meta.url));
 
@@ -149,26 +150,35 @@ describe('worked examples from the spec (section 4)', () => {
     expect(report.bonus.signals).toBe(12);
   });
 
-  it('example 1b: tagteamdesign.com with the sitemap unverified is 83 provisional (81 to 84)', () => {
+  it('example 1b: tagteamdesign.com with the sitemap unverified is 83 provisional (81 to 83), 83 B once verified', () => {
+    // The spec's corrected worked example (section 4) with its stated inputs:
+    // jsonld.type-breadth 0.5 (only LocalBusiness outside the baseline types). Since
+    // nested @type values count, the tagteamdesign fixture also reads the Yoast
+    // PropertyValueSpecification and scores type-breadth 1 (raw 83.24, range 81 to 84);
+    // this case keeps the spec's inputs so the formula itself stays pinned.
     const checks: CheckResult[] = [
       ...required([1, 1, 1, 1, 1, 0.333, 1, 0.894, 0]),
       ...recommended([1, 1, 0.75, 0.75, 1, 1, 0.5, 1]),
       check('sitemap.valid', 'recommended', null, 'unverified'),
-      ...bonus([1, 1, 1, 1, 1, 1]),
+      ...bonus([1, 1, 1, 1, 1, 0.5]),
     ];
     const report = scoreChecks(checks);
     expect(report.required.earned).toBe(64.24);
     expect(report.recommended.earned).toBe(17.5);
-    expect(report.bonus.points).toBe(1.5);
-    expect(report.raw).toBe(83.24);
+    expect(report.bonus.points).toBe(1.38);
+    expect(report.bonus.signals).toBe(6);
+    expect(report.raw).toBe(83.12);
     expect(report.score).toBe(83);
     expect(report.grade).toBe('B');
     expect(report.analysisStatus).toBe('partial');
     expect(report.unverifiedChecks).toEqual(['sitemap.valid']);
-    expect(report.range).toEqual({ pessimistic: 81, optimistic: 84 });
+    expect(report.range).toEqual({ pessimistic: 81, optimistic: 83 });
     const verified = scoreChecks(checks.map((entry) => (entry.id === 'sitemap.valid' ? check('sitemap.valid', 'recommended', 1) : entry)));
-    expect(verified.raw).toBe(83.52);
-    expect(verified.score).toBe(84);
+    expect(verified.recommended.earned).toBe(17.78);
+    // 64.24 + 17.777... + 1.375 = 83.39 unrounded; the spec's 83.40 adds the rounded parts.
+    expect(verified.raw).toBe(83.39);
+    expect(verified.score).toBe(83);
+    expect(verified.grade).toBe('B');
     expect(verified.analysisStatus).toBe('complete');
     expect(verified.range).toBeNull();
   });
@@ -250,15 +260,19 @@ describe('status rules', () => {
     const evaluation: SiteEvaluation = {
       checks: [check('a', 'required', null, 'unverified')],
       blocked: true,
+      blockedKind: 'unverified',
       blockedReason: 'homepage could not be verified in time',
       targetUrl: 'https://example.com/',
       samplePageUrl: null,
       fetchedAt: '2026-11-02T00:00:00.000Z',
       platform: null,
       surfaces: { api: false, mcp: false, commerce: false, forms: false, markdown: false },
+      unverifiedResources: [],
     };
     const report = scoreChecks(evaluation);
     expect(report.analysisStatus).toBe('blocked');
+    expect(report.blockedKind).toBe('unverified');
+    expect(report.blockedReason).toBe('homepage could not be verified in time');
     expect(report.score).toBeNull();
     expect(report.grade).toBeNull();
     expect(report.label).toBeNull();
@@ -268,6 +282,37 @@ describe('status rules', () => {
     expect(report.targetUrl).toBe('https://example.com/');
     expect(report.catalogVersion).toBe(SCORE_CATALOG_VERSION);
     expect(report.formulaVersion).toBe(SCORE_FORMULA_VERSION);
+  });
+
+  it('carries the http-status block kind and reason; an unblocked report carries neither', () => {
+    const evaluation: SiteEvaluation = {
+      checks: [check('a', 'required', null, 'na'), check('b', 'recommended', null, 'na')],
+      blocked: true,
+      blockedKind: 'http-status',
+      blockedReason: 'homepage answered HTTP 404',
+      targetUrl: 'https://example.com/',
+      samplePageUrl: null,
+      fetchedAt: '2026-11-02T00:00:00.000Z',
+      platform: null,
+      surfaces: { api: false, mcp: false, commerce: false, forms: false, markdown: false },
+      unverifiedResources: [],
+    };
+    const report = scoreChecks(evaluation);
+    expect(report.analysisStatus).toBe('blocked');
+    expect(report.blockedKind).toBe('http-status');
+    expect(report.blockedReason).toBe('homepage answered HTTP 404');
+    expect(report.score).toBeNull();
+    expect(report.raw).toBeNull();
+    expect(report.unverifiedChecks).toEqual([]);
+    expect(report.range).toBeNull();
+
+    const challenged = scoreChecks({ ...evaluation, checks: [check('a', 'required', 0)], blocked: false, blockedKind: null, blockedReason: 'Agents cannot reach this site: HTTP 403' });
+    expect(challenged.analysisStatus).toBe('complete');
+    expect(challenged.blockedKind).toBeNull();
+    expect(challenged.blockedReason).toBeNull();
+    const fromList = scoreChecks([check('a', 'required', 1)]);
+    expect(fromList.blockedKind).toBeNull();
+    expect(fromList.blockedReason).toBeNull();
   });
 
   it('a tier with zero eligible checks contributes 0', () => {
@@ -338,5 +383,24 @@ describe('version comparison', () => {
     const partial = scoreChecks([check('a', 'required', 1), check('b', 'recommended', null, 'unverified')]);
     expect(compareReports(base, partial).comparable).toBe(false);
     expect(compareReports(base, partial).reason).toContain('only complete runs are compared');
+  });
+});
+
+describe('unverifiedResourcesWithoutChecks (C2)', () => {
+  it('lists an unverified resource only when no unverified check names it, and nothing for a blocked run', () => {
+    const check = (status: CheckResult['status'], resources: EvidenceResourceKey[]): CheckResult => ({
+      id: 'x',
+      tier: 'required',
+      status,
+      fraction: status === 'pass' ? 1 : null,
+      evidence: '',
+      resources,
+    });
+    const checks = [check('pass', ['homepage', 'samplePage']), check('unverified', ['llmsTxt'])];
+    expect(
+      unverifiedResourcesWithoutChecks({ analysisStatus: 'partial', unverifiedResources: ['llmsTxt', 'samplePage'], checks })
+    ).toEqual(['samplePage']);
+    expect(unverifiedResourcesWithoutChecks({ analysisStatus: 'blocked', unverifiedResources: ['samplePage'], checks })).toEqual([]);
+    expect(unverifiedResourcesWithoutChecks({ analysisStatus: 'complete', unverifiedResources: [], checks })).toEqual([]);
   });
 });

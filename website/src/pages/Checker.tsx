@@ -661,7 +661,9 @@ function Checker() {
                       <p>
                         {verdictExplanationForGrade(
                           analysis.report.grade,
-                          analysis.report.analysisStatus
+                          analysis.report.analysisStatus,
+                          analysis.report.blockedKind,
+                          analysis.report.blockedReason
                         )}
                       </p>
                     </div>

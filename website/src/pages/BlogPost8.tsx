@@ -7,10 +7,19 @@ import BlogFooter from '../BlogFooter'
 // Rendered from the catalog so the post cannot drift from the checks that run.
 const scoredChecks = implementedChecks()
 const checksFor = (tier: CheckTier) => scoredChecks.filter((definition) => definition.tier === tier)
+// The same rule as the checker's levelForCheck: a failing required check is an
+// error, a failing upside-only bonus signal is an error that never subtracts,
+// any other failing check, a partial and an unverified check are warnings.
+const upsideOnlyNames = scoredChecks
+  .filter((definition) => definition.upsideOnly)
+  .map((definition) => definition.name)
+  .join(' and ')
+const upsideOnlyException = `The exception is the upside-only signals (${upsideOnlyNames}): a failure is shown as an error so it stands out, but it still never subtracts from the score.`
+const upsideOnlyError = `Upside-only bonus signals (${upsideOnlyNames}) are also shown as errors when they fail, but they never subtract from the score.`
 const TIER_SECTIONS: ReadonlyArray<{ tier: CheckTier; title: string; intro: string }> = [
   { tier: 'required', title: 'Required checks', intro: 'Each one is a gap an agent trips over on the first fetch. A failing required check is reported as an error.' },
   { tier: 'recommended', title: 'Recommended checks', intro: 'Each one makes the site easier to understand or cite. A failing recommended check is reported as a warning.' },
-  { tier: 'bonus', title: 'Bonus signals', intro: 'Extra credit that never subtracts: a missing bonus signal is a warning that points at an upside, not a penalty.' },
+  { tier: 'bonus', title: 'Bonus signals', intro: `Extra credit that never subtracts: a missing bonus signal is a warning that points at an upside, not a penalty. ${upsideOnlyException}` },
 ]
 
 function WebsiteCheckerGuide() {
@@ -70,8 +79,8 @@ function WebsiteCheckerGuide() {
             Under the score, each check lands in one of three levels:
           </p>
           <ul>
-            <li><strong>Error</strong> - a required check fails. The homepage answers a bot challenge, a path that cannot exist answers 200, there is no readable HTML without JavaScript, or the JSON-LD identity is missing.</li>
-            <li><strong>Warning</strong> - a recommended check or bonus signal fails, a check earns only partial credit, or a resource could not be verified in time. A fetch that never completed leaves the denominator instead of lowering the score, and the run is marked provisional with a range.</li>
+            <li><strong>Error</strong> - a required check fails. The homepage answers a bot challenge, a path that cannot exist answers 200, there is no readable HTML without JavaScript, or a form field has no label. {upsideOnlyError}</li>
+            <li><strong>Warning</strong> - a recommended check or any other bonus signal fails, a check earns only partial credit, or a resource could not be verified in time. A fetch that never completed leaves the denominator instead of lowering the score, and the run is marked provisional with a range.</li>
             <li><strong>Pass</strong> - the check is met, with the evidence it read: counts, ids, URLs, attribute and header values.</li>
           </ul>
           <p>

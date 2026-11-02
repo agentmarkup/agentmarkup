@@ -82,11 +82,6 @@
       "fraction": 0,
       "verified": "no type=text/markdown link in the head; captured body read 2026-11-02 (chunk A)"
     },
-    "jsonld.type-breadth": {
-      "status": "partial",
-      "fraction": 0.5,
-      "verified": "types WebPage, ImageObject, BreadcrumbList, WebSite, Organization/Place/LocalBusiness, PostalAddress; only LocalBusiness is outside the baseline set; captured body read 2026-11-02 (chunk A)"
-    },
     "robots.content-signal": {
       "status": "fail",
       "fraction": 0,
@@ -96,6 +91,11 @@
       "status": "fail",
       "fraction": 0,
       "verified": "probe answered 404 text/html (79,896 chars); captured body read 2026-11-02 (chunk A)"
+    },
+    "jsonld.type-breadth": {
+      "status": "partial",
+      "fraction": 0.5,
+      "verified": "types WebPage, ReadAction, ImageObject, BreadcrumbList, ListItem, WebSite, SearchAction, EntryPoint, PropertyValueSpecification, Organization, Place, LocalBusiness, GeoCoordinates, OpeningHoursSpecification, PostalAddress (nested types included); only LocalBusiness is outside the baseline set; captured body re-read 2026-11-02 (review fixes)"
     }
   },
   "unverified": [

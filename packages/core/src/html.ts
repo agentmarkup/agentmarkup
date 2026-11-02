@@ -1,4 +1,12 @@
 import type { AgentMarkupConfig, JsonLdBase } from './types.js';
+import { blockPattern, scanBlocks } from './html-scan.js';
+
+/** `/<script\b[^>]*type=(['"])application\/ld\+json\1[^>]*>([\s\S]*?)<\/script\s*>/gi`, in linear time. */
+const JSON_LD_SCRIPT_BLOCKS = blockPattern(['script'], {
+  openerEndsAtGt: true,
+  closeAllowsSpace: true,
+  openerMust: /type=(['"])application\/ld\+json\1/gi,
+});
 
 export function collectSchemasForPage(
   config: AgentMarkupConfig,
@@ -50,19 +58,9 @@ export function hasExistingJsonLdScripts(html: string): boolean {
 }
 
 export function extractJsonLdScriptContents(html: string): string[] {
-  const contents: string[] = [];
-  const pattern =
-    /<script\b[^>]*type=(['"])application\/ld\+json\1[^>]*>([\s\S]*?)<\/script\s*>/gi;
-
-  let match: RegExpExecArray | null;
-  while ((match = pattern.exec(html)) !== null) {
-    const content = match[2].trim();
-    if (content) {
-      contents.push(content);
-    }
-  }
-
-  return contents;
+  return scanBlocks(html, JSON_LD_SCRIPT_BLOCKS)
+    .map((match) => match.content.trim())
+    .filter(Boolean);
 }
 
 export function findExistingJsonLdTypes(html: string): Set<string> {

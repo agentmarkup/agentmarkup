@@ -3,6 +3,7 @@ import {
   BONUS_CAP,
   BONUS_PER_SIGNAL,
   CHALLENGE_MARKERS,
+  CHALLENGE_SCAN_CHARS,
   GRADE_BANDS,
   GRADE_LABELS,
   MAX_EVALUATED_BODY_CHARS,
@@ -38,11 +39,17 @@ const recommendedNow = implementedFor('recommended')
 const bonusNow = implementedFor('bonus')
 const fetchCount = Object.keys(RESOURCE_LABELS).length
 const maxBonusBeforeCap = bonusNow * BONUS_PER_SIGNAL
+// The score ceiling. packages/core/src/score exports no ceiling constant, so it
+// is derived from the two pools: the formula caps the score at 100, which is
+// POOLS.required + POOLS.recommended (80 + 20), and bonus points only fill
+// back toward it.
+const SCORE_CEILING = POOLS.required + POOLS.recommended
+const challengeWindow = `${CHALLENGE_SCAN_CHARS.toLocaleString('en-US')} characters`
 
 const bands = GRADE_BANDS.map(([min, grade], index) => ({
   grade,
   min,
-  max: index === 0 ? 100 : GRADE_BANDS[index - 1][0] - 1,
+  max: index === 0 ? SCORE_CEILING : GRADE_BANDS[index - 1][0] - 1,
   label: GRADE_LABELS[grade],
 }))
 
@@ -77,7 +84,7 @@ function ScoreMethodology() {
         <p className="license-kicker section-kicker">Score methodology</p>
         <h1>How the agent-readiness score is computed</h1>
         <p className="doc-intro">
-          The <a href="/checker/">website checker</a> reports a deterministic 0-100 agent-readiness
+          The <a href="/checker/">website checker</a> reports a deterministic 0-{SCORE_CEILING} agent-readiness
           score with a letter grade. This page is the formula. Every constant, every check and every
           threshold below is rendered from the same code that produces the score, so there is no
           unpublished formula and no hidden weighting.
@@ -95,7 +102,7 @@ function ScoreMethodology() {
         <section id="what">
           <h2>What the score is</h2>
           <p>
-            A deterministic 0-100 agent-readiness score for public content websites, computed from the{' '}
+            A deterministic 0-{SCORE_CEILING} agent-readiness score for public content websites, computed from the{' '}
             {fetchCount} fetches the checker already makes (homepage, one sampled internal page, their
             markdown mirrors, llms.txt, robots.txt, the sitemap and a probe for a path that cannot exist).
             No LLM, no heuristics, no off-site search, and no extra request per check. The same engine runs
@@ -151,7 +158,7 @@ function ScoreMethodology() {
             ({requiredNow} required, {recommendedNow} recommended, {bonusNow} bonus), {catalogTwo.length}{' '}
             that need one extra fetch each and wait for a catalog 2.0 decision, and {later.length} listed for
             parity with Ora&apos;s catalog and not measured (off-site search, API, MCP and payment surfaces).
-            Each row names what it reads, the exact rule with thresholds, the Ora counterpart, and the
+            Each row names its bucket, what it reads, the exact rule with thresholds, the Ora counterpart, and the
             sentence a non-technical client sees on a pass and on a fail.
           </p>
           {TIERS.map(({ tier, title, pool }) => (
@@ -163,6 +170,7 @@ function ScoreMethodology() {
                   <thead>
                     <tr>
                       <th>Check</th>
+                      <th>Bucket</th>
                       <th>Applies when</th>
                       <th>Reads</th>
                       <th>Rule</th>
@@ -180,6 +188,7 @@ function ScoreMethodology() {
                           <span className="score-catalog-sentence">Pass: {definition.clientSentence.pass}</span>
                           <span className="score-catalog-sentence">Fail: {definition.clientSentence.fail}</span>
                         </td>
+                        <td className="score-catalog-narrow score-catalog-bucket">{definition.bucket}</td>
                         <td>{definition.applicability}</td>
                         <td>{definition.evidence}</td>
                         <td>{definition.rule}</td>
@@ -200,7 +209,7 @@ function ScoreMethodology() {
             <li>The eligible set per tier is the checks in that tier with status pass, partial or fail. Not applicable, could-not-be-verified and not-measured checks leave the denominator.</li>
             <li><code>required.earned = {POOLS.required} x sum(fraction over eligible required) / count(eligible required)</code>, and <code>recommended.earned = {POOLS.recommended} x sum(fraction over eligible recommended) / count(eligible recommended)</code>. Partial results earn proportional credit.</li>
             <li><code>bonus.points = min({BONUS_CAP}, {BONUS_PER_SIGNAL} x sum(fraction over bonus checks with status pass or partial))</code>. The absence of a bonus signal never subtracts. With {bonusNow} bonus signals scored now the maximum is {maxBonusBeforeCap} points before the cap binds.</li>
-            <li><code>raw = required.earned + recommended.earned + bonus.points</code>, reported to two decimals beside the integer; <code>score = min(100, round-half-up(raw))</code>.</li>
+            <li><code>raw = required.earned + recommended.earned + bonus.points</code>, reported to two decimals beside the integer; <code>score = min({SCORE_CEILING}, round-half-up(raw))</code>.</li>
             <li>The grade comes from the bands below and the label from the grade. The bands are agentmarkup&apos;s own: they are not evidenced in any Ora file or page.</li>
             <li>A run is <strong>complete</strong> when no check is unverified, <strong>provisional</strong> when at least one is (with the pessimistic-to-optimistic range), and <strong>blocked</strong> when the homepage is unverified (no score).</li>
             <li>A tier with zero eligible checks contributes 0 and is reported as not applicable. This cannot happen for the required tier on a reachable HTML homepage because reach.bot-detection is always eligible.</li>
@@ -250,7 +259,7 @@ function ScoreMethodology() {
             Top fixes are ranked by estimated gain, then tier (required, recommended, bonus), then catalog
             order; the panel lists the first {TOP_FIXES_LIMIT}. Gains assume the current denominator: a fix
             that makes other checks eligible (serving markdown makes markdown.code-fences eligible) changes
-            the count, so gains are estimates. When the score is already 100 the panel says &quot;at the
+            the count, so gains are estimates. When the score is already {SCORE_CEILING} the panel says &quot;at the
             cap&quot; and still lists the remaining gains so required gaps stay visible.
           </p>
         </section>
@@ -271,7 +280,7 @@ function ScoreMethodology() {
             <li><strong>Same origin</strong> is judged against the origin of the final homepage URL, never the requested one, so an apex-to-www redirect does not fail trust.anchors.</li>
             <li><strong>Evaluation cap</strong>: checks read at most the first {MAX_EVALUATED_BODY_CHARS.toLocaleString('en-US')} characters of any body; a truncated body is flagged in the evidence.</li>
             <li><strong>Missing-path probe</strong>: <code>{NOT_FOUND_PROBE_PATH}</code> at the final-URL origin, following no redirects, with <code>Accept: {NOT_FOUND_PROBE_ACCEPT}</code> so a compliant negotiator can answer markdown or JSON.</li>
-            <li><strong>Challenge markers</strong> (a response header <code>cf-mitigated</code> containing <code>challenge</code>, or any of these strings in the first 20 KB of the body): {CHALLENGE_MARKERS.map((marker, index) => (<span key={marker}>{index > 0 ? ', ' : ''}<code>{marker}</code></span>))}. Additions bump the catalog minor version.</li>
+            <li><strong>Challenge markers</strong> (a response header <code>cf-mitigated</code> containing <code>challenge</code>, or any of these strings in the first {challengeWindow} of the body): {CHALLENGE_MARKERS.map((marker, index) => (<span key={marker}>{index > 0 ? ', ' : ''}<code>{marker}</code></span>))}. Additions bump the catalog minor version.</li>
             <li><strong>AI search and agent user agents</strong> scored by robots.ai-search-access: {AI_SEARCH_AGENTS.join(', ')}.</li>
             <li><strong>Training crawlers</strong> reported as a policy note, never scored: {TRAINING_CRAWLERS.join(', ')}.</li>
             <li><strong>Text resource</strong>: a 2xx response whose content type is not HTML and whose body is not an HTML document. A host answering 200 HTML for llms.txt, robots.txt or a markdown URL reads as absent for that resource; a 200 status is not proof.</li>

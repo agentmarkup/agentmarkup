@@ -44,7 +44,13 @@ export function formatCount(value: number): string {
   return value.toLocaleString('en-US');
 }
 
-/** A fetched resource with its classification and the capped body. */
+/**
+ * A fetched resource with its classification and the capped body. The cap is applied
+ * once, here: `resource` is a copy whose body is cut at 1,048,576 characters, and every
+ * derived value (classification, text/markdown/HTML detection, frontmatter, parsed
+ * HTML) reads that copy, so no evaluator can see past the cap. The truncation note is
+ * attached centrally to every check that reads a truncated resource (evaluate.ts).
+ */
 export class ResourceView {
   readonly resource: RemoteResource | null;
   readonly outcome: ResourceOutcome;
@@ -52,11 +58,11 @@ export class ResourceView {
   readonly truncated: boolean;
 
   constructor(resource: RemoteResource | null | undefined) {
-    this.resource = resource ?? null;
-    this.outcome = classifyResource(resource);
     const evaluated = readEvaluatedBody(resource);
-    this.body = evaluated.text;
     this.truncated = evaluated.truncated;
+    this.body = evaluated.text;
+    this.resource = resource ? (evaluated.truncated ? { ...resource, body: evaluated.text } : resource) : null;
+    this.outcome = classifyResource(this.resource);
   }
 
   get status(): number {
@@ -137,9 +143,6 @@ export class ResourceView {
     return `HTTP ${resource.status} ${this.mediaType}`;
   }
 
-  truncationNote(): string | null {
-    return this.truncated ? 'body truncated to 1,048,576 characters' : null;
-  }
 }
 
 /** Lazily parsed HTML page (homepage or sample page). */

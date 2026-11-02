@@ -6,7 +6,7 @@
   "formulaVersion": "1.0.0",
   "score": 100,
   "grade": "A+",
-  "raw": 103,
+  "raw": 102.75,
   "analysisStatus": "complete",
   "range": null,
   "samplePageUrl": "https://agentmarkup.dev/checker/",
@@ -24,8 +24,8 @@
     "total": 10
   },
   "bonus": {
-    "points": 3,
-    "signals": 12,
+    "points": 2.75,
+    "signals": 11,
     "cap": 5
   },
   "nonPass": {
@@ -43,12 +43,16 @@
       "status": "fail",
       "fraction": 0,
       "verified": "homepage Link header is '</favicon.png>; rel=\"preload\"; as=image' only; no rel=sitemap and no type=text/markdown; captured body read 2026-11-02 (chunk A)"
+    },
+    "llms.modular": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "llms.txt mentions llms-full.txt only in prose ('Build-time llms.txt, optional llms-full.txt, ...'); no markdown link or bare URL targets llms-full.txt, and the only /llms.txt link ('[llms.txt Generation](https://agentmarkup.dev/llms.txt)') points at this file itself, not another llms.txt; captured body re-read 2026-11-02 (review fixes)"
     }
   },
   "unverified": [],
   "na": [
     "mcp.required-group",
-    "commerce.pricing-info",
     "mcp.recommended-group"
   ],
   "notMeasured": [
@@ -57,6 +61,7 @@
     "api.required-group",
     "search.brand-accuracy",
     "search.developer-resources",
+    "commerce.pricing-info",
     "api.recommended-group",
     "markdown.agent-ua",
     "a2a.agent-card",
@@ -65,8 +70,8 @@
     "llms.links-resolve"
   ],
   "topFixes": [
+    "llms.modular",
     "markdown.frontmatter",
-    "sitemap.lastmod",
-    "link.headers-discovery"
+    "sitemap.lastmod"
   ]
 }

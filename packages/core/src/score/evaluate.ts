@@ -11,19 +11,21 @@ import { navEvaluators } from './evaluators/nav.js';
 import { reachEvaluators } from './evaluators/reach.js';
 import { robotsEvaluators } from './evaluators/robots.js';
 import {
+  MAX_EVIDENCE_CHARS,
   PageView,
   ResourceView,
   evidenceText,
+  formatCount,
   toCheckResult,
   type EvaluationContext,
   type EvaluatorEntry,
 } from './evaluators/shared.js';
-import { findChallengeMarker } from './evidence.js';
-import { jsonLdTypes } from './html-lite.js';
+import { MAX_EVALUATED_BODY_CHARS, findChallengeMarker } from './evidence.js';
 import type {
   CheckDefinition,
   CheckResult,
   EvaluateOptions,
+  EvidenceResourceKey,
   SiteEvaluation,
   SiteEvidence,
   SitePlatform,
@@ -74,15 +76,12 @@ function detectSurfacesFrom(context: EvaluationContext): SurfaceDetection {
     .map((anchor) => anchor.resolved)
     .filter((url): url is URL => url !== null && url.origin === context.origin)
     .map((url) => url.pathname);
-  const types = new Set<string>();
-  if (usable) {
-    for (const node of homepage.jsonLd.nodes) {
-      for (const type of jsonLdTypes(node)) {
-        types.add(type);
-      }
-    }
-  }
-  const markdown = [context.homepageMarkdown, context.sampleMarkdown].some((view) => view.isMarkdown);
+  // Every @type in the homepage JSON-LD, nested objects included (an Offer inside
+  // an Organization still marks a commerce surface).
+  const types = new Set<string>(usable ? homepage.jsonLd.types : []);
+  // Served markdown, as `markdown.code-fences` reads it: llms.txt plus either mirror.
+  const markdown =
+    context.llms.isText || [context.homepageMarkdown, context.sampleMarkdown].some((view) => view.isMarkdown);
   return {
     api: sameOriginPaths.some((path) => API_PATH_RE.test(path)) || /\/\.well-known\/api-catalog/i.test(link),
     mcp:
@@ -99,6 +98,74 @@ function detectSurfacesFrom(context: EvaluationContext): SurfaceDetection {
 /** Surface detection over a `SiteEvidence` (section 3.4): api, mcp, commerce, forms, markdown. */
 export function detectSurfaces(evidence: SiteEvidence, options: EvaluateOptions = {}): SurfaceDetection {
   return detectSurfacesFrom(buildContext(evidence, options));
+}
+
+/** Payload order of the recorded resources. */
+const RESOURCE_KEYS: ReadonlyArray<EvidenceResourceKey> = [
+  'homepage',
+  'homepageMarkdown',
+  'llmsTxt',
+  'robotsTxt',
+  'sitemap',
+  'notFoundProbe',
+  'samplePage',
+  'samplePageMarkdown',
+];
+
+function viewFor(context: EvaluationContext, key: EvidenceResourceKey): ResourceView {
+  switch (key) {
+    case 'homepage':
+      return context.homepage;
+    case 'homepageMarkdown':
+      return context.homepageMarkdown;
+    case 'llmsTxt':
+      return context.llms;
+    case 'robotsTxt':
+      return context.robots;
+    case 'sitemap':
+      return context.sitemap;
+    case 'notFoundProbe':
+      return context.probe;
+    case 'samplePage':
+      return context.sample;
+    case 'samplePageMarkdown':
+      return context.sampleMarkdown;
+  }
+}
+
+/** Recorded resources whose fetch did not complete; a never-requested one is not listed. */
+function unverifiedResourcesOf(context: EvaluationContext): EvidenceResourceKey[] {
+  return RESOURCE_KEYS.filter((key) => {
+    const view = viewFor(context, key);
+    return view.resource !== null && view.unverified;
+  });
+}
+
+/** Lowercase prose names for each evidence resource (truncation notes, client summary). */
+export const RESOURCE_NOTE_LABELS: Readonly<Record<EvidenceResourceKey, string>> = {
+  homepage: 'homepage',
+  homepageMarkdown: 'homepage mirror',
+  llmsTxt: 'llms.txt',
+  robotsTxt: 'robots.txt',
+  sitemap: 'sitemap',
+  notFoundProbe: 'probe',
+  samplePage: 'sample page',
+  samplePageMarkdown: 'sample mirror',
+};
+
+/**
+ * The truncation disclosure, attached centrally to every evaluated check whose
+ * resources include a body cut at the 1,048,576-character evaluation cap.
+ */
+function withTruncationNote(result: CheckResult, context: EvaluationContext): CheckResult {
+  const truncated = (result.resources ?? []).filter((key) => viewFor(context, key).truncated);
+  if (truncated.length === 0) {
+    return result;
+  }
+  const note = `${truncated.map((key) => RESOURCE_NOTE_LABELS[key]).join(', ')} body truncated to ${formatCount(MAX_EVALUATED_BODY_CHARS)} characters`;
+  const room = MAX_EVIDENCE_CHARS - note.length - 2;
+  const base = result.evidence.length > room ? `${result.evidence.slice(0, Math.max(0, room - 3))}...` : result.evidence;
+  return { ...result, evidence: base ? `${base}; ${note}` : note };
 }
 
 function buildContext(evidence: SiteEvidence, options: EvaluateOptions): EvaluationContext {
@@ -179,7 +246,10 @@ function homepageBlockedReason(context: EvaluationContext): string | null {
 
 /**
  * Evaluates every catalog check. Homepage unverified: every check `unverified` and the
- * run is `blocked`. Homepage challenged or 401/403: `reach.bot-detection` fails and every
+ * run is `blocked` (kind `unverified`, a re-run may succeed). Homepage final non-2xx
+ * other than 401/403 (404, 410, 400, 406, ...): every check `na` and the run is
+ * `blocked` (kind `http-status`, nothing to score until the root serves a page).
+ * Homepage challenged or 401/403: `reach.bot-detection` fails and every
  * homepage-derived check is `na` with reason `homepage-blocked`; the rest is scored.
  */
 export function evaluateSiteChecks(evidence: SiteEvidence, options: EvaluateOptions = {}): SiteEvaluation {
@@ -193,14 +263,10 @@ export function evaluateSiteChecks(evidence: SiteEvidence, options: EvaluateOpti
     fetchedAt: evidence.fetchedAt,
     platform,
     surfaces,
+    unverifiedResources: unverifiedResourcesOf(context),
   };
 
-  const unreachable =
-    !homepage.resource ||
-    homepage.unverified ||
-    homepage.outcome === 'not-found' ||
-    (homepage.outcome === 'http-error' && homepage.status !== 401 && homepage.status !== 403);
-  if (unreachable) {
+  if (!homepage.resource || homepage.unverified) {
     const state = homepage.resource ? homepage.describeState() : 'homepage not recorded';
     const checks: CheckResult[] = SCORE_CATALOG.map((definition) => ({
       id: definition.id,
@@ -208,10 +274,27 @@ export function evaluateSiteChecks(evidence: SiteEvidence, options: EvaluateOpti
       status: 'unverified',
       fraction: null,
       evidence: evidenceText([`homepage ${state}`]),
-      reason: homepage.unverified || !homepage.resource ? 'homepage-unverified' : `homepage-http-${homepage.status}`,
+      reason: 'homepage-unverified',
       resources: ['homepage'],
     }));
-    return { ...base, checks, blocked: true, blockedReason: `homepage ${state}` };
+    return { ...base, checks, blocked: true, blockedKind: 'unverified', blockedReason: `homepage ${state}` };
+  }
+
+  const finalStatus =
+    homepage.outcome === 'not-found' ||
+    (homepage.outcome === 'http-error' && homepage.status !== 401 && homepage.status !== 403);
+  if (finalStatus) {
+    const code = homepage.status;
+    const checks: CheckResult[] = SCORE_CATALOG.map((definition) => ({
+      id: definition.id,
+      tier: definition.tier,
+      status: 'na',
+      fraction: null,
+      evidence: evidenceText([`homepage HTTP ${code} (final answer, nothing to score)`]),
+      reason: `homepage-http-${code}`,
+      resources: ['homepage'],
+    }));
+    return { ...base, checks, blocked: true, blockedKind: 'http-status', blockedReason: `homepage answered HTTP ${code}` };
   }
 
   const blockedReason = homepageBlockedReason(context);
@@ -232,10 +315,16 @@ export function evaluateSiteChecks(evidence: SiteEvidence, options: EvaluateOpti
         resources: ['homepage'],
       };
     } else {
-      result = toCheckResult(definition.id, definition.tier, evaluator.run(context));
+      result = withTruncationNote(toCheckResult(definition.id, definition.tier, evaluator.run(context)), context);
     }
     context.results.set(definition.id, result);
     checks.push(result);
   }
-  return { ...base, checks, blocked: false, blockedReason: blockedReason ? `Agents cannot reach this site: ${blockedReason}` : null };
+  return {
+    ...base,
+    checks,
+    blocked: false,
+    blockedKind: null,
+    blockedReason: blockedReason ? `Agents cannot reach this site: ${blockedReason}` : null,
+  };
 }

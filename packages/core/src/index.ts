@@ -42,6 +42,7 @@ export type {
 } from './types.js';
 export type {
   AnalysisStatus,
+  BlockedKind,
   BonusSummary,
   CheckAvailability,
   CheckBucket,

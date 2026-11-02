@@ -47,6 +47,17 @@ function mirrorState(file: ServedFile): string {
   return `${file.label} ${url} answered HTTP ${view.status}`;
 }
 
+/** Absolute form of `href` against `base`, fragment dropped; null when unresolvable. */
+function resolveUrl(href: string, base: string): string | null {
+  try {
+    const resolved = new URL(href, base);
+    resolved.hash = '';
+    return resolved.toString();
+  } catch {
+    return null;
+  }
+}
+
 function countFences(body: string): number {
   return (body.match(FENCE_LINE_RE) ?? []).length;
 }
@@ -98,13 +109,25 @@ export const markdownEvaluators: Record<string, EvaluatorEntry> = {
   'markdown.alternate-link': {
     needsHomepage: true,
     run: (context) => {
-      const link = collectLinkTags(context.homepage.head).find(
+      const links = collectLinkTags(context.homepage.head).filter(
         (entry) => entry.rel.includes('alternate') && entry.type === 'text/markdown' && entry.href !== null
       );
-      if (!link) {
+      if (links.length === 0) {
         return scored(0, 'no link rel=alternate type=text/markdown in the homepage head', ['homepage']);
       }
       const target = context.homepageMarkdown;
+      // The fetched mirror must be a declared target: discovery skips cross-origin
+      // alternates and falls back to /index.md when none is usable.
+      const fetched = target.resource ? resolveUrl(target.resource.requestedUrl, context.homepageUrl) : null;
+      const link = links.find((entry) => fetched !== null && resolveUrl(entry.href ?? '', context.homepageUrl) === fetched) ?? links[0];
+      const declared = resolveUrl(link.href ?? '', context.homepageUrl);
+      if (!declared || declared !== fetched) {
+        return scored(
+          0,
+          `link href=${link.href} declares ${declared ?? 'an unresolvable URL'}, but the fetched mirror is ${fetched ?? 'none'} (the declared target was not fetched)`,
+          ['homepage', 'homepageMarkdown']
+        );
+      }
       if (target.unverified) {
         return unverified('mirror-unverified', `link href=${link.href}; target ${target.describeState()}`, [
           'homepage',

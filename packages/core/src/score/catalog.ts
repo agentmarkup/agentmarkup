@@ -118,6 +118,8 @@ export const BASELINE_JSONLD_TYPES = [
   'ReadAction',
   'SearchAction',
   'EntryPoint',
+  // Yoast's SearchAction query-input: on every Yoast homepage, so it says nothing about breadth.
+  'PropertyValueSpecification',
   'ContactPoint',
   'Place',
   'GeoCoordinates',
@@ -140,11 +142,11 @@ export const CHALLENGE_MARKERS = [
 
 /** Published prompt-injection patterns for `ax.injection-safe`. */
 export const INJECTION_PATTERNS: ReadonlyArray<RegExp> = [
-  /ignore (?:all )?(?:previous|prior) instructions/i,
-  /you are an ai/i,
-  /as an ai assistant/i,
-  /system prompt/i,
-  /disregard the above/i,
+  /\bignore (?:all )?(?:previous|prior) instructions\b/i,
+  /\byou are an ai\b/i,
+  /\bas an ai assistant\b/i,
+  /\bsystem prompt\b/i,
+  /\bdisregard the above\b/i,
 ];
 
 export const NOT_FOUND_PROBE_PATH = '/agentmarkup-probe-404-does-not-exist-9f3a2c';
@@ -170,7 +172,7 @@ export const SCORE_CATALOG: ReadonlyArray<CheckDefinition> = [
     tier: 'required',
     bucket: 'reachability',
     applicability: 'Always.',
-    evidence: 'Homepage status, the cf-mitigated header and the first 20 KB of the body.',
+    evidence: 'Homepage status, the cf-mitigated header and the first 20,480 characters of the body.',
     rule: 'A 2xx HTML homepage with no challenge marker scores 1. A challenge page, or a 401/403 without markers, scores 0 and the evidence quotes the status and the marker. Status 0, 429 or 5xx without markers, or a null body, is unverified and the whole run is blocked.',
     availability: 'now',
     oraCounterpart: 'bot-detection',
@@ -557,7 +559,7 @@ export const SCORE_CATALOG: ReadonlyArray<CheckDefinition> = [
     tier: 'recommended',
     bucket: 'discovery',
     applicability: 'Always.',
-    evidence: 'The robots-declared sitemap (same origin) or /sitemap.xml.',
+    evidence: 'The robots-declared sitemap (same registrable domain as the final homepage origin) or /sitemap.xml.',
     rule: 'A body containing a urlset or sitemapindex element scores 1 (index children are not fetched, published as such). A 404 or a non-XML body scores 0. A fetch that did not complete is unverified: "declared in robots.txt at URL but could not be verified in time".',
     availability: 'now',
     oraCounterpart: 'sitemap',
@@ -627,7 +629,7 @@ export const SCORE_CATALOG: ReadonlyArray<CheckDefinition> = [
     bucket: 'discovery',
     applicability: 'Always.',
     evidence: '/llms.txt as a text resource.',
-    rule: 'A heading or sentence with explicit guidance (when to use, use X when, do not use X for/when, best fit for/when, use cases, for agents) scores 1. A summary blockquote of at least 100 characters after the H1 scores 0.5. Absent, HTML, or under 100 characters of text scores 0. A fetch that did not complete is unverified. A presence rule, not a semantic one.',
+    rule: 'A heading or sentence with explicit guidance (when to use, use X when, do not use X for/when, best fit for/when), or a heading containing \'use cases\' or \'for agents\', scores 1. A summary blockquote of at least 100 characters after the H1 scores 0.5. Absent, HTML, or under 100 characters of text scores 0. A fetch that did not complete is unverified. A presence rule, not a semantic one.',
     availability: 'now',
     oraCounterpart: 'agent-instruction',
     clientSentence: {

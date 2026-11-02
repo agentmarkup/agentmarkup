@@ -1,5 +1,5 @@
 // content: content.no-js, content.auth-gate, content.token-budget.
-import { looksLikeClientShell } from '../html-lite.js';
+import { controlBodyHtml, looksLikeClientShell, tokenizeTags } from '../html-lite.js';
 import {
   formatCount,
   sampleState,
@@ -12,10 +12,15 @@ import {
 
 const MIN_PAGE_TEXT = 500;
 const MAX_PAGE_TEXT = 100_000;
-const PASSWORD_FIELD_RE = /<input\b[^>]*\btype\s*=\s*["']?password\b/i;
-
+/**
+ * A password input in the active markup: parsed tags of the body with comments,
+ * script, style, noscript, template, canvas and iframe removed (the same view
+ * `ax.form-labeling` reads), so a commented-out or inert field never counts.
+ */
 function hasPasswordField(page: PageView): boolean {
-  return PASSWORD_FIELD_RE.test(page.body);
+  return tokenizeTags(controlBodyHtml(page.body)).some(
+    (token) => !token.closing && token.name === 'input' && (token.attrs.type ?? '').trim().toLowerCase() === 'password'
+  );
 }
 
 export const contentEvaluators: Record<string, EvaluatorEntry> = {
@@ -40,7 +45,6 @@ export const contentEvaluators: Record<string, EvaluatorEntry> = {
       }
       const passed = results.filter(Boolean).length;
       parts.push(`${passed}/${results.length} sub-rules`);
-      parts.push(homepage.truncationNote() ?? '');
       return scored(passed / results.length, parts.filter(Boolean).join('; '), ['homepage', 'samplePage']);
     },
   },

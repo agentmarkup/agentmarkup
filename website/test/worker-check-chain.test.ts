@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { createHash } from 'node:crypto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // @ts-expect-error - the deployed Pages worker is plain JS with no type declarations
@@ -252,12 +253,29 @@ function fakeD1() {
   }
 }
 
+/**
+ * crypto.subtle.digest resolves on a real event-loop turn, which the fake clock
+ * cannot wait for: runCheck kept advancing 1 s steps meanwhile, so under load the
+ * IP hash alone used up the 25 s budget before the first fetch. This copy resolves
+ * on a microtask with the same SHA-256 bytes.
+ */
+function stubDigestOnMicrotasks() {
+  vi.spyOn(crypto.subtle, 'digest').mockImplementation(async (_algorithm, data) => {
+    const view = ArrayBuffer.isView(data)
+      ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+      : new Uint8Array(data)
+    const hash = createHash('sha256').update(view).digest()
+    return hash.buffer.slice(hash.byteOffset, hash.byteOffset + hash.byteLength) as ArrayBuffer
+  })
+}
+
 const isCacheWrite = (sql: string) => sql.includes('INSERT OR REPLACE INTO checker_cache')
 const isRetentionDelete = (sql: string) => sql.startsWith('DELETE FROM')
 
 describe('worker check chain', () => {
   beforeEach(() => {
     vi.useFakeTimers()
+    stubDigestOnMicrotasks()
   })
 
   afterEach(() => {
@@ -324,6 +342,109 @@ describe('worker check chain', () => {
     expect(payload.sitemapUrl).toBe('https://example.com/sitemap_index.xml')
     expect(payload.sitemapSource).toBe('robots')
     expect(payload.sitemap?.outcome).toBe('ok')
+  })
+
+  it('uses a sitemap declared on the apex when the homepage settles on www (same registrable domain)', async () => {
+    const routes = healthySite()
+    const home = routes['/']
+    routes['/'] = (url, hit) =>
+      url.hostname === 'example.com'
+        ? { status: 301, headers: { location: 'https://www.example.com/' } }
+        : home(url, hit)
+    const { calls } = installFetch(routes)
+
+    const { payload } = await runCheck()
+
+    expect(payload.homepage).toMatchObject({ finalUrl: 'https://www.example.com/', outcome: 'ok', hops: 1 })
+    expect(callFor(calls, '/robots.txt').url).toBe('https://www.example.com/robots.txt')
+    expect(payload.sitemapUrl).toBe('https://example.com/sitemap_index.xml')
+    expect(payload.sitemapSource).toBe('robots')
+    expect(callFor(calls, '/sitemap_index.xml').url).toBe('https://example.com/sitemap_index.xml')
+    expect(calls.some((call) => call.path === '/sitemap.xml')).toBe(false)
+    expect(payload.sitemap?.outcome).toBe('ok')
+  })
+
+  it('ignores a sitemap declared on another registrable domain and falls back to /sitemap.xml', async () => {
+    const routes = healthySite()
+    routes['/robots.txt'] = () => ({
+      status: 200,
+      body: 'User-agent: *\nAllow: /\nSitemap: https://cdn.other.net/sitemap.xml\n',
+      headers: { 'content-type': 'text/plain' },
+    })
+    const { calls } = installFetch(routes)
+
+    const { payload } = await runCheck()
+
+    expect(payload.sitemapUrl).toBe('https://example.com/sitemap.xml')
+    expect(payload.sitemapSource).toBe('default')
+    expect(calls.some((call) => call.url.startsWith('https://cdn.other.net/'))).toBe(false)
+  })
+
+  it('skips a cross-origin markdown alternate and fetches the next same-origin one', async () => {
+    const routes = healthySite()
+    routes['/'] = () => ({
+      status: 200,
+      body: HOMEPAGE_HTML.replace(
+        '</head>',
+        '<link rel="alternate" type="text/markdown" href="https://cdn.other.net/index.md"><link rel="alternate" type="text/markdown" href="/home.md"></head>'
+      ),
+      headers: { 'content-type': 'text/html; charset=utf-8' },
+    })
+    routes['/home.md'] = () => ({
+      status: 200,
+      body: '# Example\n\nMarkdown twin.\n',
+      headers: { 'content-type': 'text/markdown' },
+    })
+    const { calls } = installFetch(routes)
+
+    const { payload } = await runCheck()
+
+    expect(payload.homepageMarkdown).toMatchObject({ requestedUrl: 'https://example.com/home.md', outcome: 'ok' })
+    expect(calls.some((call) => call.url.startsWith('https://cdn.other.net/'))).toBe(false)
+    expect(calls.some((call) => call.path === '/index.md')).toBe(false)
+  })
+
+  it('finishes a check of a 5 MB hostile homepage of "<link x" or "<a href=x" units in well under a second', async () => {
+    // The discovery scans once rescanned the rest of the page for every opener that
+    // no ">" follows: 16,000 "<link x" units took 2.8 s, and 5 MB is about 750,000.
+    vi.useRealTimers()
+    const prefix = '<!doctype html><html lang="en"><head><title>x</title></head><body>'
+    for (const unit of ['<link x', '<a href=x']) {
+      const body = prefix + unit.repeat(Math.floor((5 * 1024 * 1024 - 4096 - prefix.length) / unit.length))
+      const routes = healthySite()
+      routes['/'] = () => ({ status: 200, body, headers: { 'content-type': 'text/html; charset=utf-8' } })
+      installFetch(routes)
+
+      const started = performance.now()
+      const response = (await worker.fetch(new Request(CHECK_URL), {})) as Response
+      const elapsed = performance.now() - started
+      const payload = (await response.json()) as CheckPayload
+
+      expect(response.status).toBe(200)
+      expect(payload.homepage.outcome).toBe('ok')
+      expect(payload.homepage.body?.length).toBe(body.length)
+      expect(payload.fetchSummary.samplePageUrl).toBeNull()
+      expect(elapsed, unit).toBeLessThan(1000)
+    }
+  })
+
+  it('C11: reads a markdown alternate whose attributes have spaces around = or no quotes', async () => {
+    const routes = healthySite()
+    routes['/'] = () => ({
+      status: 200,
+      body: HOMEPAGE_HTML.replace('</head>', '<link rel = alternate type = "text/markdown" href = /spaced.md></head>'),
+      headers: { 'content-type': 'text/html; charset=utf-8' },
+    })
+    routes['/spaced.md'] = () => ({
+      status: 200,
+      body: '# Example\n\nMarkdown twin.\n',
+      headers: { 'content-type': 'text/markdown' },
+    })
+    installFetch(routes)
+
+    const { payload } = await runCheck()
+
+    expect(payload.homepageMarkdown).toMatchObject({ requestedUrl: 'https://example.com/spaced.md', outcome: 'ok' })
   })
 
   it('reports a sitemap that never answers as unverified, marks the run partial and skips the cache write', async () => {
@@ -574,7 +695,64 @@ describe('worker check chain', () => {
     expect(payload.notFoundProbe?.outcome).toBe('challenge')
     expect(payload.notFoundProbe?.headers?.['cf-mitigated']).toBe('challenge')
     expect(payload.fetchSummary.analysisStatus).toBe('partial')
-    expect(payload.fetchSummary.unverified).toEqual(['llmsTxt', 'sitemap'])
+    // C3: a challenged probe counts too, as core marks nav.not-found unverified for it.
+    expect(payload.fetchSummary.unverified).toEqual(['llmsTxt', 'sitemap', 'notFoundProbe'])
+  })
+
+  it('C3: a probe that answers a challenge page alone marks the run partial and skips the cache write', async () => {
+    const routes = healthySite()
+    routes[PROBE_PATH] = () => ({
+      status: 503,
+      body: 'checking your browser',
+      headers: { 'cf-mitigated': 'challenge' },
+    })
+    installFetch(routes)
+    const db = fakeD1()
+
+    const { payload } = await runCheck({ CHECKS_DB: db })
+
+    expect(payload.notFoundProbe?.outcome).toBe('challenge')
+    expect(payload.fetchSummary.analysisStatus).toBe('partial')
+    expect(payload.fetchSummary.unverified).toEqual(['notFoundProbe'])
+    expect(db.statements.filter(isCacheWrite)).toEqual([])
+    expect(payload.cache.cachedAt).toBeNull()
+  })
+
+  it('C18: d1Statements counts the cache write, in the live response and in the cached copy', async () => {
+    installFetch(healthySite())
+    const db = fakeD1()
+    const cachedValues: string[] = []
+    const prepare = db.prepare
+    db.prepare = (sql: string) => {
+      const statement = prepare(sql)
+      if (!isCacheWrite(sql.replace(/\s+/g, ' ').trim())) return statement
+      return {
+        ...statement,
+        bind: (...values: unknown[]) => {
+          cachedValues.push(...values.filter((value): value is string => typeof value === 'string' && value.startsWith('{')))
+          return statement
+        },
+      }
+    }
+
+    const { payload } = await runCheck({ CHECKS_DB: db })
+
+    expect(db.statements.filter(isCacheWrite)).toHaveLength(1)
+    expect(payload.fetchSummary.d1Statements).toBe(db.statements.length)
+    expect(cachedValues).toHaveLength(1)
+    expect((JSON.parse(cachedValues[0]) as CheckPayload).fetchSummary.d1Statements).toBe(payload.fetchSummary.d1Statements)
+  })
+
+  it('C19: a probe 3xx without a Location header is a completed answer, never an error', async () => {
+    const routes = healthySite()
+    routes[PROBE_PATH] = () => ({ status: 302, body: '', headers: { 'content-type': 'text/html' } })
+    installFetch(routes)
+
+    const { payload } = await runCheck()
+
+    expect(payload.notFoundProbe).toMatchObject({ status: 302, ok: false, body: null, outcome: 'http-error' })
+    expect(payload.notFoundProbe?.error ?? null).toBeNull()
+    expect(payload.fetchSummary.unverified).toEqual([])
   })
 
   it('reports a run whose homepage never completes as blocked and still records the other resources', async () => {

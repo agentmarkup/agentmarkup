@@ -213,11 +213,26 @@ export interface NotApplicableCheck {
   reason: string;
 }
 
+/**
+ * Why a run is `blocked`: `unverified` = the homepage fetch did not complete (a
+ * re-run may succeed); `http-status` = the homepage answered a final non-2xx status
+ * such as 404 (a re-run changes nothing until the site root serves a page).
+ */
+export type BlockedKind = 'unverified' | 'http-status';
+
 /** Output of `evaluateSiteChecks`, the input `scoreChecks` prefers. */
 export interface SiteEvaluation {
   checks: CheckResult[];
   blocked: boolean;
+  /** null when not blocked. */
+  blockedKind: BlockedKind | null;
+  /** Set when blocked, and on a challenged homepage ("Agents cannot reach this site"). */
   blockedReason: string | null;
+  /**
+   * Every recorded resource whose fetch did not complete (`classifyResource` says
+   * `unverified`), in payload order. A resource that was never requested is not listed.
+   */
+  unverifiedResources: EvidenceResourceKey[];
   targetUrl: string;
   samplePageUrl: string | null;
   fetchedAt: string;
@@ -229,6 +244,10 @@ export interface ScoreReport {
   catalogVersion: string;
   formulaVersion: string;
   analysisStatus: AnalysisStatus;
+  /** null unless `blocked`. */
+  blockedKind: BlockedKind | null;
+  /** null unless `blocked`, e.g. "homepage answered HTTP 404". */
+  blockedReason: string | null;
   /** null when `blocked`. */
   score: number | null;
   grade: Grade | null;
@@ -241,6 +260,12 @@ export interface ScoreReport {
   checks: ScoredCheck[];
   topFixes: ScoredCheck[];
   unverifiedChecks: string[];
+  /**
+   * Resources whose fetch did not complete. Any entry makes the run `partial` even
+   * when no check became unverified (an unverified sample page leaves content checks
+   * judged on the homepage alone). Empty when scored from a bare `CheckResult[]`.
+   */
+  unverifiedResources: EvidenceResourceKey[];
   naChecks: NotApplicableCheck[];
   notMeasured: string[];
   /** Present on `partial` reports only. */
