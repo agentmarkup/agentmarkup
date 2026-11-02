@@ -1,0 +1,72 @@
+{
+  "site": "agentmarkup.dev",
+  "source": "curl capture 2026-11-02 via probe.sh (UA agentmarkup-checker/0.3.2, 206 range artefact normalised to 200), converted by convert-fixtures.mjs; sample page from samples.txt",
+  "fetchedAt": "2026-11-02T12:07:10.000Z",
+  "catalogVersion": "1.0.0",
+  "formulaVersion": "1.0.0",
+  "score": 100,
+  "grade": "A+",
+  "raw": 103,
+  "analysisStatus": "complete",
+  "range": null,
+  "samplePageUrl": "https://agentmarkup.dev/checker/",
+  "platform": null,
+  "required": {
+    "earned": 80,
+    "available": 80,
+    "passing": 9,
+    "total": 9
+  },
+  "recommended": {
+    "earned": 20,
+    "available": 20,
+    "passing": 10,
+    "total": 10
+  },
+  "bonus": {
+    "points": 3,
+    "signals": 12,
+    "cap": 5
+  },
+  "nonPass": {
+    "markdown.frontmatter": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "both mirrors (/index.md, /checker.md) are text/markdown and start directly with '# agentmarkup ...' and '# Website checker ...'; no leading --- frontmatter block in either body; captured body read 2026-11-02 (chunk A)"
+    },
+    "sitemap.lastmod": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "sitemap.xml is a urlset with 35 url entries carrying loc, changefreq and priority only; zero lastmod elements in the body; captured body read 2026-11-02 (chunk A)"
+    },
+    "link.headers-discovery": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "homepage Link header is '</favicon.png>; rel=\"preload\"; as=image' only; no rel=sitemap and no type=text/markdown; captured body read 2026-11-02 (chunk A)"
+    }
+  },
+  "unverified": [],
+  "na": [
+    "mcp.required-group",
+    "commerce.pricing-info",
+    "mcp.recommended-group"
+  ],
+  "notMeasured": [
+    "reach.agent-ua",
+    "content.markdown-negotiation",
+    "api.required-group",
+    "search.brand-accuracy",
+    "search.developer-resources",
+    "api.recommended-group",
+    "markdown.agent-ua",
+    "a2a.agent-card",
+    "agent.discovery-file",
+    "mcp.well-known",
+    "llms.links-resolve"
+  ],
+  "topFixes": [
+    "markdown.frontmatter",
+    "sitemap.lastmod",
+    "link.headers-discovery"
+  ]
+}

@@ -131,6 +131,33 @@ When `agentCard` is enabled, provide a `version`, at least one `supportedInterfa
 - `Content-Signal` policy generation and patching in `robots.txt` (canonical) and the `_headers` header
 - canonical `Link` header generation for markdown mirrors
 - deterministic schema and crawler validation
+- a deterministic agent-readiness score (`@agentmarkup/core/score`)
+
+## Agent-readiness score
+
+`@agentmarkup/core/score` (also re-exported from the main entry) turns a recorded set of
+fetches (`SiteEvidence`: homepage, sample page, `llms.txt`, `robots.txt`, sitemap, markdown
+mirrors and a missing-path probe) into a 0-100 score with a letter grade. It is DOM-free
+and transport-free: it never fetches anything, uses no LLM and no heuristics, and the same
+code runs in the browser and in Node.
+
+```ts
+import { evaluateSiteChecks, scoreChecks, renderClientSummary } from '@agentmarkup/core/score';
+
+const report = scoreChecks(evaluateSiteChecks(evidence));
+report.score; // 0-100 or null when the homepage could not be reached
+report.grade; // 'A+' | 'A' | 'B' | 'C' | 'D' | 'F'
+report.topFixes; // ranked by estimated gain
+console.log(renderClientSummary(report, { siteName: 'example.com' }));
+```
+
+Formula v1.0.0 (`POOLS`, `GRADE_BANDS`, `SCORE_FORMULA_VERSION`): required checks share an
+80-point pool at even weight, recommended checks share 20, bonus signals add 0.25 each up
+to +5 and never subtract. Checks that do not apply, could not be verified in time, or are
+not measured in this version leave the denominator; a run with an unverified check is
+`partial` and carries a pessimistic/optimistic range. The catalog (`SCORE_CATALOG`,
+`SCORE_CATALOG_VERSION`) lists every check with its rule, tier and plain-language client
+copy; scores compare only within one catalog and formula major version.
 
 ## Maintainer
 

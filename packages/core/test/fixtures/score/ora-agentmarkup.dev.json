@@ -1,0 +1,608 @@
+{
+ "source": "Ora audit of agentmarkup.dev (ora.ai), essentials object only, trimmed from the session capture ora-am.json",
+ "contractVersion": "1.38.0",
+ "scannedAt": "2026-10-10T22:17:11.896+00:00",
+ "domain": "agentmarkup.dev",
+ "finalUrl": "https://agentmarkup.dev/",
+ "layeredScore": {
+  "score": 76,
+  "grade": "B",
+  "note": "Ora's headline layered score; not comparable to the Essentials lens"
+ },
+ "essentials": {
+  "score": 100,
+  "label": "Strong technical baseline",
+  "required": {
+   "earned": 80,
+   "available": 80,
+   "passing": 11,
+   "total": 11
+  },
+  "recommended": {
+   "earned": 18.4,
+   "available": 20,
+   "passing": 19,
+   "total": 21
+  },
+  "bonusPoints": 3.8,
+  "bonusSignals": 17,
+  "eligibleChecks": 32,
+  "checks": {
+   "ard-catalog": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "agentic-search-specific": {
+    "tier": "recommended",
+    "bonus": false,
+    "fraction": 0.3333333333333333,
+    "occurrences": 1,
+    "essentialsGain": 0.6
+   },
+   "brand-search-accuracy": {
+    "tier": "recommended",
+    "bonus": false,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 1
+   },
+   "wikipedia-presence": {
+    "tier": "recommended",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "npm-sdk-package": {
+    "tier": "recommended",
+    "bonus": true,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "agent-rules-repo": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "agent-plugins-repo": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "chatgpt-app-listed": {
+    "tier": "recommended",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "sitemap": {
+    "tier": "recommended",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "content-no-js": {
+    "tier": "required",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "bot-detection": {
+    "tier": "required",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "agent-discovery-file": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "a2a-agent-card": {
+    "tier": "recommended",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "skills-sh-listed": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "nlweb-schema-feeds": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "mcp-well-known-discovery": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "agent-mode-view": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "link-headers-discovery": {
+    "tier": "recommended",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "markdown-url-fallback": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "modular-llms-txt": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "sitemap-lastmod": {
+    "tier": "recommended",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "llms-txt-exists": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "llms-txt-formatting": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "json-ld": {
+    "tier": "recommended",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "public-api-docs": {
+    "tier": "recommended",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "agent-instruction": {
+    "tier": "recommended",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "skills-sh-quality": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "json-ld-entity-linking": {
+    "tier": "recommended",
+    "bonus": true,
+    "fraction": 0.5,
+    "occurrences": 1,
+    "essentialsGain": 0.13
+   },
+   "metadata-completeness": {
+    "tier": "recommended",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "org-schema-completeness": {
+    "tier": "recommended",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "schema-type-breadth": {
+    "tier": "recommended",
+    "bonus": true,
+    "fraction": 0.5,
+    "occurrences": 1,
+    "essentialsGain": 0.13
+   },
+   "trust-anchors": {
+    "tier": "recommended",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "llms-txt-links-resolve": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "markdown-link-alternate": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "markdown-frontmatter": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "redirect-hygiene": {
+    "tier": "required",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "page-token-budget": {
+    "tier": "recommended",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "code-fence-validity": {
+    "tier": "recommended",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "docs-auth-gate": {
+    "tier": "required",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "openapi-spec": {
+    "tier": "required",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "developer-portal": {
+    "tier": "recommended",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "api-catalog-rfc9727": {
+    "tier": "recommended",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "markdown-negotiation": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "markdown-negotiation-vary": {
+    "tier": "required",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "agent-ua-markdown": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "agent-crawler-reachability": {
+    "tier": "required",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null,
+    "recommendation": "Verify that major agent User-Agents can reach the homepage. If your WAF or bot rules block them, remove or narrow the blocking rule. Add an allow rule only when your security setup denies them by default."
+   },
+   "public-api": {
+    "tier": "recommended",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "oauth-support": {
+    "tier": "required",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "scoped-permissions": {
+    "tier": "required",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "onboarding-friction": {
+    "tier": "recommended",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "web-bot-auth-directory": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "oauth-protected-resource": {
+    "tier": "required",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "auth-md-exists": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "auth-md-structure": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "agent-auth-discovery-metadata": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "agent-auth-www-authenticate": {
+    "tier": "recommended",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "agent-auth-endpoints-reachable": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "webmcp": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "rate-limit-headers": {
+    "tier": "recommended",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "idempotency-key-support": {
+    "tier": "recommended",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "json-error-responses": {
+    "tier": "required",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "api-error-model": {
+    "tier": "recommended",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "api-versioning-policy": {
+    "tier": "recommended",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "pagination-shape": {
+    "tier": "recommended",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "async-job-pattern": {
+    "tier": "recommended",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "cli-tool": {
+    "tier": "recommended",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "rest-sdk-packages": {
+    "tier": "recommended",
+    "bonus": true,
+    "fraction": 0.3333333333333333,
+    "occurrences": 1,
+    "essentialsGain": 0.17
+   },
+   "nlweb-ask": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "nlweb-streaming": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "response-schema-coverage": {
+    "tier": "recommended",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "mcp-server-card": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "mcp-multi-surface-coverage": {
+    "tier": "emerging",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "sandbox-environment": {
+    "tier": "recommended",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "batch-endpoints": {
+    "tier": "recommended",
+    "bonus": true,
+    "fraction": 0,
+    "occurrences": 1,
+    "essentialsGain": 0.25
+   },
+   "agent-friendly-404": {
+    "tier": "required",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "ax-document-structure": {
+    "tier": "required",
+    "bonus": true,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "ax-native-controls": {
+    "tier": "required",
+    "bonus": true,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "ax-accessible-names": {
+    "tier": "required",
+    "bonus": true,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "ax-form-labeling": {
+    "tier": "required",
+    "bonus": true,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "ax-tree-injection-safe": {
+    "tier": "recommended",
+    "bonus": true,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "api-schema-analysis": {
+    "tier": "recommended",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   },
+   "function-calling-compat": {
+    "tier": "recommended",
+    "bonus": false,
+    "fraction": 1,
+    "occurrences": 1,
+    "essentialsGain": null
+   }
+  }
+ }
+}

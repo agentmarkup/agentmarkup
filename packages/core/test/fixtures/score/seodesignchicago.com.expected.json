@@ -1,0 +1,110 @@
+{
+  "site": "seodesignchicago.com",
+  "source": "curl capture 2026-11-02 via probe.sh (UA agentmarkup-checker/0.3.2, 206 range artefact normalised to 200), converted by convert-fixtures.mjs; sample page from samples.txt",
+  "fetchedAt": "2026-11-02T12:07:49.000Z",
+  "catalogVersion": "1.0.0",
+  "formulaVersion": "1.0.0",
+  "score": 97,
+  "grade": "A+",
+  "raw": 96.57,
+  "analysisStatus": "complete",
+  "range": null,
+  "samplePageUrl": "https://seodesignchicago.com/services/search-engine-optimization-seo/",
+  "platform": "wordpress",
+  "required": {
+    "earned": 77.04,
+    "available": 80,
+    "passing": 8,
+    "total": 9
+  },
+  "recommended": {
+    "earned": 17.78,
+    "available": 20,
+    "passing": 6,
+    "total": 9
+  },
+  "bonus": {
+    "points": 1.75,
+    "signals": 7,
+    "cap": 5
+  },
+  "nonPass": {
+    "ax.document-structure": {
+      "status": "partial",
+      "fraction": 0.667,
+      "verified": "main and nav present; headings run h1 ... h2 at heading 26, then h5 'Services' at heading 27 (h3 and h4 skipped) in the footer; captured body read 2026-11-02 (chunk A)"
+    },
+    "meta.completeness": {
+      "status": "partial",
+      "fraction": 0.75,
+      "verified": "canonical self, html lang en-US, og:type website; no og:image meta in the head (3/4); captured body read 2026-11-02 (chunk A)"
+    },
+    "jsonld.org-completeness": {
+      "status": "partial",
+      "fraction": 0.75,
+      "verified": "Organization/ProfessionalService node has a PostalAddress (streetAddress, addressLocality) and top-level telephone +1-773-677-5747 and email; no contactPoint; captured body read 2026-11-02 (chunk A)"
+    },
+    "llms.agent-instruction": {
+      "status": "partial",
+      "fraction": 0.5,
+      "verified": "H1 '# SEO Design Chicago', 560-char blockquote ('SEO Design Chicago is a digital marketing agency ...'), then '## Services' links; no guidance phrase; captured body read 2026-11-02 (chunk A)"
+    },
+    "llms.modular": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "no llms-full.txt or /llms.txt reference in the 3,965-char body; captured body read 2026-11-02 (chunk A)"
+    },
+    "llms.discovery-link": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "head links: canonical, two rss, two oembed, wp-json alternate; no text/plain llms.txt link; captured body read 2026-11-02 (chunk A)"
+    },
+    "markdown.url-fallback": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "/index.md and /services/search-engine-optimization-seo.md answered 404 text/html; captured body read 2026-11-02 (chunk A)"
+    },
+    "markdown.alternate-link": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "no type=text/markdown link in the head; captured body read 2026-11-02 (chunk A)"
+    },
+    "link.headers-discovery": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "Link header: wp-json rel=https://api.w.org/, rel=alternate application/json, rel=shortlink; no rel=sitemap or text/markdown; captured body read 2026-11-02 (chunk A)"
+    },
+    "nav.not-found-markdown": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "probe answered 404 text/html (123,006 bytes); captured body read 2026-11-02 (chunk A)"
+    }
+  },
+  "unverified": [],
+  "na": [
+    "api.required-group",
+    "mcp.required-group",
+    "markdown.code-fences",
+    "search.developer-resources",
+    "commerce.pricing-info",
+    "api.recommended-group",
+    "mcp.recommended-group",
+    "markdown.frontmatter",
+    "sitemap.lastmod"
+  ],
+  "notMeasured": [
+    "reach.agent-ua",
+    "content.markdown-negotiation",
+    "search.brand-accuracy",
+    "markdown.agent-ua",
+    "a2a.agent-card",
+    "agent.discovery-file",
+    "mcp.well-known",
+    "llms.links-resolve"
+  ],
+  "topFixes": [
+    "ax.document-structure",
+    "llms.agent-instruction",
+    "meta.completeness"
+  ]
+}

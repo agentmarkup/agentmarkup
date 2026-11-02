@@ -1,0 +1,131 @@
+{
+  "site": "tagteamdesign.com",
+  "source": "live worker payload 2026-11-02T11:18:09Z (our-check.json); sitemap_index.xml timed out (status 0), no header capture in that worker build",
+  "fetchedAt": "2026-11-02T11:18:09.533Z",
+  "catalogVersion": "1.0.0",
+  "formulaVersion": "1.0.0",
+  "score": 83,
+  "grade": "B",
+  "raw": 83.12,
+  "analysisStatus": "partial",
+  "range": {
+    "pessimistic": 81,
+    "optimistic": 83
+  },
+  "samplePageUrl": "https://www.tagteamdesign.com/about-us/",
+  "platform": "wordpress",
+  "required": {
+    "earned": 64.24,
+    "available": 80,
+    "passing": 6,
+    "total": 9
+  },
+  "recommended": {
+    "earned": 17.5,
+    "available": 20,
+    "passing": 5,
+    "total": 8
+  },
+  "bonus": {
+    "points": 1.38,
+    "signals": 6,
+    "cap": 5
+  },
+  "nonPass": {
+    "ax.document-structure": {
+      "status": "partial",
+      "fraction": 0.333,
+      "verified": "no main element and no role=main; two nav elements; headings h1, h2, h3 'Exceptional Website Design Services', then h5 'Latest News' at heading 4 (h4 skipped); captured body read 2026-11-02 (chunk A)"
+    },
+    "ax.accessible-names": {
+      "status": "partial",
+      "fraction": 0.894,
+      "verified": "93 of 104 named; the 11 unnamed: button.mobile-menu-slide-close (empty), a href=# (empty), input#searchform-submit with value=\"\", seven quickfinder-item-link anchors to /our-services/... with empty content (CSS icons), and the Google Partner badge link wrapping an img without alt; captured body read 2026-11-02 (chunk A)"
+    },
+    "ax.form-labeling": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "two text inputs name=s (#searchform-input placeholder 'Search...' and the fullscreen search input placeholder 'Start typing to search...'); zero label elements in the body, no aria-label or aria-labelledby on either; the spec's guess of a newsletter email field was wrong, both are search boxes; captured body read 2026-11-02 (chunk A)"
+    },
+    "jsonld.identity": {
+      "status": "partial",
+      "fraction": 0.75,
+      "verified": "Yoast @graph Organization/Place/LocalBusiness 'Tag Team Design - Denver Web Design & SEO' has name and url; no description key; captured body read 2026-11-02 (chunk A)"
+    },
+    "jsonld.org-completeness": {
+      "status": "partial",
+      "fraction": 0.75,
+      "verified": "address is an @id reference resolved to the PostalAddress node #local-main-place-address (streetAddress, addressLocality); telephone 303-997-5361 and email top-level; no contactPoint; captured body read 2026-11-02 (chunk A)"
+    },
+    "llms.agent-instruction": {
+      "status": "partial",
+      "fraction": 0.5,
+      "verified": "H1 then a 533-char blockquote ('Tag Team Design is a Denver web design and AI search optimization agency ...') then '## Pages'; no guidance phrase; captured body read 2026-11-02 (chunk A)"
+    },
+    "llms.modular": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "no llms-full.txt or /llms.txt reference in the 7,585-char body; captured body read 2026-11-02 (chunk A)"
+    },
+    "llms.discovery-link": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "head links: canonical, two rss, two oembed, wp-json; no text/plain llms.txt link; captured body read 2026-11-02 (chunk A)"
+    },
+    "markdown.url-fallback": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "/index.md and /about-us.md answered 404 text/html (79,896-char WordPress 404 page); captured body read 2026-11-02 (chunk A)"
+    },
+    "markdown.alternate-link": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "no type=text/markdown link in the head; captured body read 2026-11-02 (chunk A)"
+    },
+    "jsonld.type-breadth": {
+      "status": "partial",
+      "fraction": 0.5,
+      "verified": "types WebPage, ImageObject, BreadcrumbList, WebSite, Organization/Place/LocalBusiness, PostalAddress; only LocalBusiness is outside the baseline set; captured body read 2026-11-02 (chunk A)"
+    },
+    "robots.content-signal": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "robots.txt is Crawl-delay plus the Yoast block; no Content-Signal line; captured body read 2026-11-02 (chunk A)"
+    },
+    "nav.not-found-markdown": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "probe answered 404 text/html (79,896 chars); captured body read 2026-11-02 (chunk A)"
+    }
+  },
+  "unverified": [
+    "sitemap.valid"
+  ],
+  "na": [
+    "api.required-group",
+    "mcp.required-group",
+    "markdown.code-fences",
+    "search.developer-resources",
+    "commerce.pricing-info",
+    "api.recommended-group",
+    "mcp.recommended-group",
+    "markdown.frontmatter",
+    "sitemap.lastmod",
+    "link.headers-discovery"
+  ],
+  "notMeasured": [
+    "reach.agent-ua",
+    "content.markdown-negotiation",
+    "search.brand-accuracy",
+    "markdown.agent-ua",
+    "a2a.agent-card",
+    "agent.discovery-file",
+    "mcp.well-known",
+    "llms.links-resolve"
+  ],
+  "topFixes": [
+    "ax.form-labeling",
+    "ax.document-structure",
+    "llms.agent-instruction"
+  ]
+}

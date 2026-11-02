@@ -1,0 +1,103 @@
+{
+  "site": "animafelix.com",
+  "source": "curl capture 2026-11-02 via probe.sh (UA agentmarkup-checker/0.3.2, 206 range artefact normalised to 200), converted by convert-fixtures.mjs; sample page from samples.txt",
+  "fetchedAt": "2026-11-02T12:07:12.000Z",
+  "catalogVersion": "1.0.0",
+  "formulaVersion": "1.0.0",
+  "score": 100,
+  "grade": "A+",
+  "raw": 100.51,
+  "analysisStatus": "complete",
+  "range": null,
+  "samplePageUrl": "https://animafelix.com/exercises/",
+  "platform": null,
+  "required": {
+    "earned": 79.92,
+    "available": 80,
+    "passing": 8,
+    "total": 9
+  },
+  "recommended": {
+    "earned": 18.15,
+    "available": 20,
+    "passing": 7,
+    "total": 9
+  },
+  "bonus": {
+    "points": 2.44,
+    "signals": 10,
+    "cap": 5
+  },
+  "nonPass": {
+    "ax.accessible-names": {
+      "status": "partial",
+      "fraction": 0.991,
+      "verified": "114 of 115 named; the unnamed one is a#langBannerAction href=# with empty content (filled by script), no aria-label or title; captured body read 2026-11-02 (chunk A)"
+    },
+    "trust.anchors": {
+      "status": "partial",
+      "fraction": 0.667,
+      "verified": "about /about/ (text 'About', 'About Anima Felix') and privacy /privacy/ ('Privacy Policy') linked; no same-origin contact page link and no anchor text 'Contact' among the 103 anchors; captured body read 2026-11-02 (chunk A)"
+    },
+    "llms.agent-instruction": {
+      "status": "partial",
+      "fraction": 0.5,
+      "verified": "llms.txt opens with '# Anima Felix' and a 238-char blockquote ('Anima Felix is an anxiety companion app ...'), then '## About', '## Core Features'; no 'when to use', 'use X when', 'do not use', 'best fit', 'use cases' or 'for agents' line; captured body read 2026-11-02 (chunk A)"
+    },
+    "llms.formatting": {
+      "status": "partial",
+      "fraction": 0.75,
+      "verified": "H1 first line, markdown links and ## sections present; body is 37,235 chars, over the 30,000 limit (3/4); captured body read 2026-11-02 (chunk A)"
+    },
+    "llms.modular": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "no 'llms-full.txt' or '/llms.txt' string anywhere in the 37,235-char llms.txt body (the homepage head links /llms-full.txt, but the rule reads llms.txt); captured body read 2026-11-02 (chunk A)"
+    },
+    "markdown.frontmatter": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "/index.md and /exercises.md are text/markdown and begin with '# Anima Felix - Anxiety App ...' and '# Anxiety Exercises ...'; no --- frontmatter; captured body read 2026-11-02 (chunk A)"
+    },
+    "link.headers-discovery": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "captured homepage headers are content-signal only; no Link header; captured body read 2026-11-02 (chunk A)"
+    },
+    "robots.content-signal": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "robots.txt body (563 bytes) has User-agent, Allow, Disallow and Sitemap lines only; no Content-Signal: line (the response carries a content-signal HTTP header, which this rule does not read); captured body read 2026-11-02 (chunk A)"
+    },
+    "nav.not-found-markdown": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "probe answered 404 text/html with 124,942 bytes (the themed 404 page), not markdown or JSON; captured body read 2026-11-02 (chunk A)"
+    }
+  },
+  "unverified": [],
+  "na": [
+    "api.required-group",
+    "mcp.required-group",
+    "markdown.code-fences",
+    "search.developer-resources",
+    "commerce.pricing-info",
+    "api.recommended-group",
+    "mcp.recommended-group"
+  ],
+  "notMeasured": [
+    "reach.agent-ua",
+    "content.markdown-negotiation",
+    "search.brand-accuracy",
+    "markdown.agent-ua",
+    "a2a.agent-card",
+    "agent.discovery-file",
+    "mcp.well-known",
+    "llms.links-resolve"
+  ],
+  "topFixes": [
+    "llms.agent-instruction",
+    "trust.anchors",
+    "llms.modular"
+  ]
+}

@@ -1,0 +1,132 @@
+{
+  "site": "sandiegowebstudios.com",
+  "source": "curl capture 2026-11-02 via probe.sh (UA agentmarkup-checker/0.3.2, 206 range artefact normalised to 200), converted by convert-fixtures.mjs; sample page from samples.txt",
+  "fetchedAt": "2026-11-02T12:07:39.000Z",
+  "catalogVersion": "1.0.0",
+  "formulaVersion": "1.0.0",
+  "score": 90,
+  "grade": "A",
+  "raw": 90.32,
+  "analysisStatus": "complete",
+  "range": null,
+  "samplePageUrl": "https://sandiegowebstudios.com/portfolio/",
+  "platform": "wordpress",
+  "required": {
+    "earned": 77.04,
+    "available": 80,
+    "passing": 8,
+    "total": 9
+  },
+  "recommended": {
+    "earned": 12.78,
+    "available": 20,
+    "passing": 5,
+    "total": 9
+  },
+  "bonus": {
+    "points": 0.5,
+    "signals": 2,
+    "cap": 5
+  },
+  "nonPass": {
+    "ax.document-structure": {
+      "status": "partial",
+      "fraction": 0.667,
+      "verified": "a role=main container and nav elements are present; heading sequence h1 'San Diego Web Design', h2, then h4 'Website Design' at heading 3 (h3 skipped); captured body read 2026-11-02 (chunk A)"
+    },
+    "jsonld.identity": {
+      "status": "partial",
+      "fraction": 0.75,
+      "verified": "single Yoast block, @graph with WebPage, BreadcrumbList, WebSite and Organization 'San Diego The Web Studios | San Diego Website Design' (name, url, logo); no description key on the Organization; captured body read 2026-11-02 (chunk A)"
+    },
+    "jsonld.org-completeness": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "Organization node keys are @type, @id, name, url, logo and image only; no address, contactPoint, telephone or email; captured body read 2026-11-02 (chunk A)"
+    },
+    "trust.anchors": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "the only contact links are 'CONTACT US' / 'Contact Us' pointing at the homepage section #contact-us (path /); no about or privacy page link among the 56 anchors; captured body read 2026-11-02 (chunk A)"
+    },
+    "llms.agent-instruction": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "/llms.txt answered 404 text/html (WordPress 404 page); captured body read 2026-11-02 (chunk A)"
+    },
+    "llms.exists": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "/llms.txt answered 404; captured body read 2026-11-02 (chunk A)"
+    },
+    "llms.discovery-link": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "head link tags: canonical, rss, two oembed alternates, wp-json alternate; no type=text/plain llms.txt link; captured body read 2026-11-02 (chunk A)"
+    },
+    "markdown.url-fallback": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "/index.md and /portfolio.md answered 404 text/html; captured body read 2026-11-02 (chunk A)"
+    },
+    "markdown.alternate-link": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "no type=text/markdown link in the head; captured body read 2026-11-02 (chunk A)"
+    },
+    "jsonld.same-as": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "the Organization node has no sameAs key; captured body read 2026-11-02 (chunk A)"
+    },
+    "jsonld.type-breadth": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "types WebPage, BreadcrumbList, WebSite, Organization, all in the baseline set; captured body read 2026-11-02 (chunk A)"
+    },
+    "link.headers-discovery": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "Link header carries wp-json rel=https://api.w.org/, rel=alternate type=application/json and rel=shortlink; no rel=sitemap or text/markdown; captured body read 2026-11-02 (chunk A)"
+    },
+    "robots.content-signal": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "robots.txt is the Yoast block (User-agent: *, Disallow:, Sitemap:); no Content-Signal line; captured body read 2026-11-02 (chunk A)"
+    },
+    "nav.not-found-markdown": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "probe answered 404 text/html (93,312 bytes); captured body read 2026-11-02 (chunk A)"
+    }
+  },
+  "unverified": [],
+  "na": [
+    "api.required-group",
+    "mcp.required-group",
+    "markdown.code-fences",
+    "search.developer-resources",
+    "commerce.pricing-info",
+    "api.recommended-group",
+    "mcp.recommended-group",
+    "llms.formatting",
+    "llms.modular",
+    "markdown.frontmatter",
+    "sitemap.lastmod"
+  ],
+  "notMeasured": [
+    "reach.agent-ua",
+    "content.markdown-negotiation",
+    "search.brand-accuracy",
+    "markdown.agent-ua",
+    "a2a.agent-card",
+    "agent.discovery-file",
+    "mcp.well-known",
+    "llms.links-resolve"
+  ],
+  "topFixes": [
+    "ax.document-structure",
+    "jsonld.org-completeness",
+    "trust.anchors"
+  ]
+}
