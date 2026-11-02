@@ -1,4 +1,4 @@
-import { audit } from './audit.js';
+import { audit, type AuditOptions } from './audit.js';
 import { renderJson, renderText } from './report.js';
 
 const HELP = `agentmarkup audit — see a URL the way AI crawlers do
@@ -8,6 +8,8 @@ Usage:
 
 Options:
   --json            Output the full report as JSON (for CI / league tables)
+  --score           Add the deterministic 0-100 agent-readiness score
+                    (published formula, https://agentmarkup.dev/score/)
   --timeout <ms>    Per-request timeout in milliseconds (default 10000)
   --version         Print version
   --help            Show this help
@@ -23,6 +25,8 @@ export interface RunContext {
   now?: () => string;
   stdout?: (text: string) => void;
   stderr?: (text: string) => void;
+  /** Collector options for `--score` (tests inject a fetch and shorten the gap). */
+  collect?: AuditOptions['collect'];
 }
 
 function normalizeUrl(input: string): string {
@@ -44,6 +48,7 @@ export async function run(argv: string[], ctx: RunContext): Promise<number> {
   }
 
   const json = argv.includes('--json');
+  const score = argv.includes('--score');
   let timeoutMs: number | undefined;
   const timeoutIdx = argv.indexOf('--timeout');
   if (timeoutIdx !== -1) {
@@ -69,7 +74,12 @@ export async function run(argv: string[], ctx: RunContext): Promise<number> {
   const url = normalizeUrl(target);
   const fetchedAt = (ctx.now ?? (() => new Date().toISOString()))();
 
-  const report = await audit(url, { timeoutMs, fetchedAt });
+  const report = await audit(url, {
+    timeoutMs,
+    fetchedAt,
+    score,
+    ...(ctx.collect ? { collect: ctx.collect } : {}),
+  });
   out(json ? `${renderJson(report)}\n` : renderText(report));
 
   return report.summary.worst === 'error' ? 1 : 0;

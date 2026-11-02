@@ -1,7 +1,7 @@
 {
   "name": "@agentmarkup/audit",
   "version": "0.2.5",
-  "description": "Audit a live URL the way AI crawlers see it: fetch as GPTBot, ClaudeBot, PerplexityBot and more, diff against a browser to catch accidental CDN blocks and JS-gated content, plus llms.txt, JSON-LD, robots.txt intent, Content-Signal, markdown mirror, sitemap, and page-metadata checks",
+  "description": "Audit a live URL the way AI crawlers see it: fetch as GPTBot, ClaudeBot, PerplexityBot and more, diff against a browser to catch accidental CDN blocks and JS-gated content, plus llms.txt, JSON-LD, robots.txt intent, Content-Signal, markdown mirror, sitemap, and page-metadata checks, with an optional deterministic 0-100 agent-readiness score from a published formula (--score)",
   "type": "module",
   "license": "MIT",
   "author": "Sebastian Cochinescu <hello@animafelix.com> (https://animafelix.com)",
@@ -30,6 +30,8 @@
     "seo",
     "audit",
     "machine-readable",
+    "agent-readiness",
+    "score",
     "ci"
   ],
   "bin": {

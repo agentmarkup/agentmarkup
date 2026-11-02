@@ -1,7 +1,10 @@
 /**
- * A single audit finding. Deterministic pass/warn/error — no scores, matching
- * the repo's checker convention. `evidence` carries the raw observation so the
- * report never asserts more than it saw (see the crawler-access classifier).
+ * A single audit finding. Deterministic pass/warn/error, matching the repo's
+ * checker convention. The optional 0-100 agent-readiness score (`--score`) is a
+ * separate report computed by `@agentmarkup/core/score` from a published
+ * formula over deterministic check results; findings never carry a score of
+ * their own. `evidence` carries the raw observation so the report never asserts
+ * more than it saw (see the crawler-access classifier).
  */
 export type AuditLevel = 'pass' | 'warn' | 'error';
 

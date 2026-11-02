@@ -13,6 +13,8 @@ import {
   analyzeSitemap,
   isXmlSitemap,
 } from './analyzers/site-checks.js';
+import { evaluateSiteChecks, scoreChecks, type ScoreReport } from '@agentmarkup/core/score';
+import { collectSiteEvidence, type CollectOptions } from './collect.js';
 import { countByLevel, worstLevel, type AuditFinding } from './findings.js';
 import { safeFetch, type FetchResult } from './net.js';
 
@@ -20,6 +22,15 @@ export interface AuditOptions {
   timeoutMs?: number;
   /** Injected for tests; defaults to the real SSRF-safe fetch. */
   fetchImpl?: typeof safeFetch;
+  /**
+   * Also run the checker-shaped collector and attach `score`, the
+   * deterministic 0-100 agent-readiness report computed by
+   * `@agentmarkup/core/score`. The crawler-UA probes above stay informational
+   * and never enter the score evidence.
+   */
+  score?: boolean;
+  /** Collector options for `score` (a raw fetch for tests, politeness knobs). */
+  collect?: CollectOptions;
 }
 
 export interface AuditReport {
@@ -35,6 +46,8 @@ export interface AuditReport {
     passed: number;
     worst: 'pass' | 'warn' | 'error';
   };
+  /** Present with the `score` option: the published-formula score report. */
+  score?: ScoreReport;
 }
 
 /**
@@ -192,7 +205,7 @@ export async function audit(
   const passed = counts.pass;
   const checks = findings.length;
 
-  return {
+  const report: AuditReport = {
     url: targetUrl,
     finalUrl: control.finalUrl,
     fetchedAt: options.fetchedAt,
@@ -204,4 +217,15 @@ export async function audit(
       worst: worstLevel(findings),
     },
   };
+
+  if (options.score) {
+    const evidence = await collectSiteEvidence(targetUrl, {
+      perFetchMs: timeoutMs,
+      fetchedAt: options.fetchedAt,
+      ...options.collect,
+    });
+    report.score = scoreChecks(evaluateSiteChecks(evidence));
+  }
+
+  return report;
 }

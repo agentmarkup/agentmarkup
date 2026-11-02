@@ -138,11 +138,16 @@ export function isBlockedHostname(hostname: string): boolean {
   return false;
 }
 
-function isFetchableUrl(url: URL): boolean {
-  return (
-    (url.protocol === 'http:' || url.protocol === 'https:') &&
-    !isBlockedHostname(url.hostname)
-  );
+/**
+ * http(s) only, no blocked hostname, and no port other than the scheme default
+ * (80/443): the same rule the hosted checker applies to every hop, so the
+ * collector and the worker refuse the same URLs. `URL` elides a default port,
+ * so `url.port` is empty for `http://host:80/` and `https://host:443/`.
+ */
+export function isFetchableUrl(url: URL): boolean {
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
+  if (isBlockedHostname(url.hostname)) return false;
+  return url.port === '' || url.port === '80' || url.port === '443';
 }
 
 async function readBounded(
