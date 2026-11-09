@@ -397,6 +397,7 @@ export default defineConfig({
           {
             title: 'Documentation',
             entries: [
+              { title: 'Full site content (llms-full.txt)', url: '/llms-full.txt', description: 'Every public page of this site in one plain-text file, for agents that want the whole site in a single fetch' },
               { title: 'Developer resources', url: `${siteUrl}/developers/`, description: 'npm packages, the OpenAPI 3.1 spec for the public checker and security-scan endpoints, machine-readable files, and the agent skill' },
               { title: 'OpenAPI specification', url: `${siteUrl}/openapi.json`, description: 'OpenAPI 3.1 description of the agentmarkup public tools API: POST /api/check and POST /api/security-scan, with operation IDs, typed parameters and response schemas' },
               { title: 'About agentmarkup', url: `${siteUrl}/about/`, description: 'What agentmarkup is, why it exists, what it deliberately does not do, and who maintains it' },
