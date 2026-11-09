@@ -1,17 +1,14 @@
 {
   "site": "tagteamdesign.com",
-  "source": "live worker payload 2026-11-02T11:18:09Z (our-check.json); sitemap_index.xml timed out (status 0), no header capture in that worker build",
-  "fetchedAt": "2026-11-02T11:18:09.533Z",
+  "source": "live worker capture 2026-11-09T10:52:31Z (node scripts/capture-check-fixture.mjs https://tagteamdesign.com --rerecord): run complete, 9 fetches, response headers captured, sitemap_index.xml answered 200 text/xml; replaces the 2026-11-02 partial capture (sitemap timed out, no header capture). Against that capture the homepage differs only in the Site Kit generator version (1.190.0 to 1.191.0), a spam-protection token and an appended Cloudflare challenge script; llms.txt and robots.txt are byte-identical; 404 bodies are now dropped with bodyBytes 81018",
+  "fetchedAt": "2026-11-09T10:52:31.006Z",
   "catalogVersion": "1.0.0",
   "formulaVersion": "1.0.0",
   "score": 83,
   "grade": "B",
-  "raw": 83.12,
-  "analysisStatus": "partial",
-  "range": {
-    "pessimistic": 81,
-    "optimistic": 83
-  },
+  "raw": 83.39,
+  "analysisStatus": "complete",
+  "range": null,
   "samplePageUrl": "https://www.tagteamdesign.com/about-us/",
   "platform": "wordpress",
   "required": {
@@ -21,10 +18,10 @@
     "total": 9
   },
   "recommended": {
-    "earned": 17.5,
+    "earned": 17.78,
     "available": 20,
-    "passing": 5,
-    "total": 8
+    "passing": 6,
+    "total": 9
   },
   "bonus": {
     "points": 1.38,
@@ -35,72 +32,75 @@
     "ax.document-structure": {
       "status": "partial",
       "fraction": 0.333,
-      "verified": "no main element and no role=main; two nav elements; headings h1, h2, h3 'Exceptional Website Design Services', then h5 'Latest News' at heading 4 (h4 skipped); captured body read 2026-11-02 (chunk A)"
+      "verified": "no main element and no role=main; two nav elements; headings h1, h2, h3 'Exceptional Website Design Services', then h5 'Latest News' at heading 4 (h4 skipped); captured body read 2026-11-02 (chunk A); re-confirmed on the 2026-11-09 re-record"
     },
     "ax.accessible-names": {
       "status": "partial",
       "fraction": 0.894,
-      "verified": "93 of 104 named; the 11 unnamed: button.mobile-menu-slide-close (empty), a href=# (empty), input#searchform-submit with value=\"\", seven quickfinder-item-link anchors to /our-services/... with empty content (CSS icons), and the Google Partner badge link wrapping an img without alt; captured body read 2026-11-02 (chunk A)"
+      "verified": "93 of 104 named; the 11 unnamed: button.mobile-menu-slide-close (empty), a href=# (empty), input#searchform-submit with value=\"\", seven quickfinder-item-link anchors to /our-services/... with empty content (CSS icons), and the Google Partner badge link wrapping an img without alt; captured body read 2026-11-02 (chunk A); re-confirmed on the 2026-11-09 re-record"
     },
     "ax.form-labeling": {
       "status": "fail",
       "fraction": 0,
-      "verified": "two text inputs name=s (#searchform-input placeholder 'Search...' and the fullscreen search input placeholder 'Start typing to search...'); zero label elements in the body, no aria-label or aria-labelledby on either; the spec's guess of a newsletter email field was wrong, both are search boxes; captured body read 2026-11-02 (chunk A)"
+      "verified": "two text inputs name=s (#searchform-input placeholder 'Search...' and the fullscreen search input placeholder 'Start typing to search...'); zero label elements in the body, no aria-label or aria-labelledby on either; the spec's guess of a newsletter email field was wrong, both are search boxes; captured body read 2026-11-02 (chunk A); re-confirmed on the 2026-11-09 re-record"
     },
     "jsonld.identity": {
       "status": "partial",
       "fraction": 0.75,
-      "verified": "Yoast @graph Organization/Place/LocalBusiness 'Tag Team Design - Denver Web Design & SEO' has name and url; no description key; captured body read 2026-11-02 (chunk A)"
+      "verified": "Yoast @graph Organization/Place/LocalBusiness 'Tag Team Design - Denver Web Design & SEO' has name and url; no description key; captured body read 2026-11-02 (chunk A); re-confirmed on the 2026-11-09 re-record"
     },
     "jsonld.org-completeness": {
       "status": "partial",
       "fraction": 0.75,
-      "verified": "address is an @id reference resolved to the PostalAddress node #local-main-place-address (streetAddress, addressLocality); telephone 303-997-5361 and email top-level; no contactPoint; captured body read 2026-11-02 (chunk A)"
+      "verified": "address is an @id reference resolved to the PostalAddress node #local-main-place-address (streetAddress, addressLocality); telephone 303-997-5361 and email top-level; no contactPoint; captured body read 2026-11-02 (chunk A); re-confirmed on the 2026-11-09 re-record"
     },
     "llms.agent-instruction": {
       "status": "partial",
       "fraction": 0.5,
-      "verified": "H1 then a 533-char blockquote ('Tag Team Design is a Denver web design and AI search optimization agency ...') then '## Pages'; no guidance phrase; captured body read 2026-11-02 (chunk A)"
+      "verified": "H1 then a 533-char blockquote ('Tag Team Design is a Denver web design and AI search optimization agency ...') then '## Pages'; no guidance phrase; captured body read 2026-11-02 (chunk A); body byte-identical in the 2026-11-09 re-record"
     },
     "llms.modular": {
       "status": "fail",
       "fraction": 0,
-      "verified": "no llms-full.txt or /llms.txt reference in the 7,585-char body; captured body read 2026-11-02 (chunk A)"
+      "verified": "no llms-full.txt or /llms.txt reference in the 7,585-char body; captured body read 2026-11-02 (chunk A); body byte-identical in the 2026-11-09 re-record"
     },
     "llms.discovery-link": {
       "status": "fail",
       "fraction": 0,
-      "verified": "head links: canonical, two rss, two oembed, wp-json; no text/plain llms.txt link; captured body read 2026-11-02 (chunk A)"
+      "verified": "head links: canonical, two application/rss+xml feeds (Feed, Stories Feed), two oEmbed alternates (application/json+oembed, text/xml+oembed), rel=https://api.w.org/ to /wp-json/ and rel=alternate type=application/json to /wp-json/wp/v2/pages/1561; no text/plain llms.txt link; captured body read 2026-11-09"
     },
     "markdown.url-fallback": {
       "status": "fail",
       "fraction": 0,
-      "verified": "/index.md and /about-us.md answered 404 text/html (79,896-char WordPress 404 page); captured body read 2026-11-02 (chunk A)"
+      "verified": "/index.md and /about-us.md both answered HTTP 404 text/html; charset=UTF-8 (the 81,018-byte WordPress 404 page, body dropped by the collector); captured responses read 2026-11-09"
     },
     "markdown.alternate-link": {
       "status": "fail",
       "fraction": 0,
-      "verified": "no type=text/markdown link in the head; captured body read 2026-11-02 (chunk A)"
-    },
-    "robots.content-signal": {
-      "status": "fail",
-      "fraction": 0,
-      "verified": "robots.txt is Crawl-delay plus the Yoast block; no Content-Signal line; captured body read 2026-11-02 (chunk A)"
-    },
-    "nav.not-found-markdown": {
-      "status": "fail",
-      "fraction": 0,
-      "verified": "probe answered 404 text/html (79,896 chars); captured body read 2026-11-02 (chunk A)"
+      "verified": "no type=text/markdown link in the head; captured body read 2026-11-02 (chunk A); re-confirmed on the 2026-11-09 re-record"
     },
     "jsonld.type-breadth": {
       "status": "partial",
       "fraction": 0.5,
-      "verified": "types WebPage, ReadAction, ImageObject, BreadcrumbList, ListItem, WebSite, SearchAction, EntryPoint, PropertyValueSpecification, Organization, Place, LocalBusiness, GeoCoordinates, OpeningHoursSpecification, PostalAddress (nested types included); only LocalBusiness is outside the baseline set; captured body re-read 2026-11-02 (review fixes)"
+      "verified": "types WebPage, ReadAction, ImageObject, BreadcrumbList, ListItem, WebSite, SearchAction, EntryPoint, PropertyValueSpecification, Organization, Place, LocalBusiness, GeoCoordinates, OpeningHoursSpecification, PostalAddress (nested types included); only LocalBusiness is outside the baseline set; captured body re-read 2026-11-02 (review fixes); re-confirmed on the 2026-11-09 re-record"
+    },
+    "link.headers-discovery": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "homepage Link header carries three entries: /wp-json/ rel=\"https://api.w.org/\", /wp-json/wp/v2/pages/1561 rel=\"alternate\" title=\"JSON\" type=\"application/json\", and https://www.tagteamdesign.com/ rel=shortlink; no rel=sitemap and no type=text/markdown; captured headers read 2026-11-09"
+    },
+    "robots.content-signal": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "robots.txt is Crawl-delay plus the Yoast block; no Content-Signal line; captured body read 2026-11-02 (chunk A); body byte-identical in the 2026-11-09 re-record"
+    },
+    "nav.not-found-markdown": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "probe /agentmarkup-probe-404-does-not-exist-9f3a2c answered HTTP 404 text/html; charset=UTF-8 (81,018 bytes, body dropped by the collector), not markdown; captured response read 2026-11-09"
     }
   },
-  "unverified": [
-    "sitemap.valid"
-  ],
+  "unverified": [],
   "na": [
     "api.required-group",
     "mcp.required-group",
@@ -110,8 +110,7 @@
     "api.recommended-group",
     "mcp.recommended-group",
     "markdown.frontmatter",
-    "sitemap.lastmod",
-    "link.headers-discovery"
+    "sitemap.lastmod"
   ],
   "notMeasured": [
     "reach.agent-ua",

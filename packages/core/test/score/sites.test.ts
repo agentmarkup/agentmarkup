@@ -97,6 +97,55 @@ describe('score fixtures', () => {
   });
 });
 
+// The 2026-11-02 tagteamdesign.com capture timed out on its robots-declared sitemap index;
+// the 2026-11-09 re-record fetched it. Replaying that exact transport failure on the real
+// capture keeps site-level coverage that a timeout yields an unverified check and a partial
+// run with a range, never a fail, and that it moves nothing but sitemap.valid.
+describe('tagteamdesign.com with the 2026-11-02 sitemap timeout replayed', () => {
+  const { evidence } = load('tagteamdesign.com');
+  const sitemapUrl = evidence.sitemap?.requestedUrl ?? '';
+  const replay: SiteEvidence = {
+    ...evidence,
+    sitemap: {
+      requestedUrl: sitemapUrl,
+      finalUrl: sitemapUrl,
+      status: 0,
+      ok: false,
+      contentType: null,
+      body: null,
+      xRobotsTag: null,
+      error: 'Request timed out.',
+    },
+  };
+  const complete = scoreChecks(evaluateSiteChecks(evidence));
+  const partial = scoreChecks(evaluateSiteChecks(replay));
+
+  it('reproduces the 2026-11-02 partial contract and changes only sitemap.valid', () => {
+    expect(sitemapUrl).toBe('https://www.tagteamdesign.com/sitemap_index.xml');
+    expect(evidence.sitemapSource).toBe('robots');
+    expect(classifyResource(replay.sitemap)).toBe('unverified');
+    expect(partial.analysisStatus).toBe('partial');
+    expect(partial.unverifiedChecks).toEqual(['sitemap.valid']);
+    expect(partial.score).toBe(83);
+    expect(partial.raw).toBe(83.12);
+    expect(partial.range).toEqual({ pessimistic: 81, optimistic: 83 });
+    expect(partial.recommended).toEqual({ earned: 17.5, available: 20, passing: 5, total: 8 });
+    const sitemapValid = partial.checks.find((check) => check.id === 'sitemap.valid');
+    expect(sitemapValid?.status).toBe('unverified');
+    expect(sitemapValid?.evidence).toContain('declared in robots.txt');
+    expect(partial.checks.find((check) => check.id === 'sitemap.lastmod')?.status).toBe('na');
+    const moved = partial.checks
+      .filter((check, index) => check.status !== complete.checks[index].status)
+      .map((check) => `${check.id}:${complete.checks.find((other) => other.id === check.id)?.status}->${check.status}`);
+    expect(moved).toEqual(['sitemap.valid:pass->unverified']);
+    for (const check of partial.checks) {
+      if (check.status === 'fail') {
+        expect(check.resources ?? [], `${check.id} fails on the unverified sitemap`).not.toContain('sitemap');
+      }
+    }
+  });
+});
+
 describe.each(hosts)('%s', (host) => {
   const { evidence, expected } = load(host);
   const evaluation = evaluateSiteChecks(evidence);
@@ -202,16 +251,9 @@ describe.each(hosts)('%s', (host) => {
         expect(unverifiedResources.has(key), `${check.id} fails on unverified ${key}`).toBe(false);
       }
     }
-    if (host === 'tagteamdesign.com') {
-      expect(unverifiedResources.has('sitemap')).toBe(true);
-      expect(report.analysisStatus).toBe('partial');
-      expect(report.unverifiedChecks).toEqual(['sitemap.valid']);
-      expect(report.checks.find((check) => check.id === 'sitemap.valid')?.evidence).toContain('declared in robots.txt');
-      expect(report.checks.find((check) => check.id === 'sitemap.lastmod')?.status).toBe('na');
-    } else {
-      expect(unverifiedResources.size).toBe(0);
-      expect(report.analysisStatus).toBe('complete');
-    }
+    expect(unverifiedResources.size).toBe(0);
+    expect(report.analysisStatus).toBe('complete');
+    expect(report.range).toBeNull();
   });
 
   it('is deterministic across runs, key order and an injected now', () => {

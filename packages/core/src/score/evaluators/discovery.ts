@@ -244,7 +244,7 @@ export const discoveryEvaluators: Record<string, EvaluatorEntry> = {
       if (sitemap.unverified) {
         return unverified(
           'sitemap-unverified',
-          `${sitemapLabel(context)} but could not be verified in time (${sitemap.describeState()})`,
+          `${sitemapLabel(context)} but ${sitemap.describeState()}`,
           ['sitemap', 'robotsTxt']
         );
       }
