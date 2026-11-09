@@ -109,6 +109,37 @@ function gainSentence(check: ScoredCheck): string {
   return ` Estimated gain: ${check.estGain} point${check.estGain === 1 ? '' : 's'}.`;
 }
 
+/**
+ * The title a check shows: the catalog's client sentence, except for a partial
+ * result that has no challenge line, no matching variant and no partial sentence,
+ * where core would quote the evidence into the title. That case reads
+ * `{name}: partly in place` and the evidence stays in the check's Found line.
+ */
+export function titleForCheck(check: ScoredCheck): string {
+  const definition = getCheckDefinition(check.id);
+  if (!definition) {
+    return check.id;
+  }
+  if (
+    check.status === 'partial' &&
+    !check.challenge &&
+    !(check.sentenceVariant && definition.clientSentence.variants?.[check.sentenceVariant]) &&
+    !definition.clientSentence.partial
+  ) {
+    return `${definition.name}: partly in place`;
+  }
+  return clientSentenceFor(check);
+}
+
+/**
+ * True when a catalog help line names an agentmarkup capability (`agentmarkup
+ * generates ...`), false for self-referential checker lines (`The checker lists
+ * ...`) and the `Not measured by agentmarkup ...` rows.
+ */
+export function isProductHelp(text: string | undefined): boolean {
+  return typeof text === 'string' && /^(the )?agentmarkup\b/i.test(text.trim());
+}
+
 /** One finding for a scored (pass, partial or fail) check; null for anything else. */
 export function auditItemForCheck(check: ScoredCheck): AuditItem | null {
   const level = levelForCheck(check);
@@ -117,12 +148,11 @@ export function auditItemForCheck(check: ScoredCheck): AuditItem | null {
   }
   const definition = getCheckDefinition(check.id);
   const name = definition?.name ?? check.id;
-  const sentence = definition ? clientSentenceFor(check) : null;
   return {
     id: check.id,
     checkId: check.id,
     level,
-    title: sentence ?? name,
+    title: titleForCheck(check),
     detail: `${name} (${TIER_LABELS[check.tier]}, ${creditLabel(check)}): ${check.evidence}.${gainSentence(check)}`,
     action:
       check.status === 'pass'
@@ -135,8 +165,8 @@ export function auditItemForCheck(check: ScoredCheck): AuditItem | null {
 
 /**
  * One warning per resource whose fetch did not complete. A transport failure is
- * never a finding against the site: the checks that read the resource leave the
- * denominator and the item says so. A sitemap declared in robots.txt keeps the
+ * never a finding against the site: the checks that read the resource are left
+ * out of the score until a rescan and the item says so. A sitemap declared in robots.txt keeps the
  * declaration in its evidence.
  */
 export function auditItemForUnverified(
@@ -150,7 +180,7 @@ export function auditItemForUnverified(
     id: `unverified-${resource}`,
     level: 'warning',
     title: `${label} could not be verified in time`,
-    detail: `${evidence ? `${evidence}. ` : ''}${names.length === 1 ? 'The check waiting on it' : `The ${names.length} checks waiting on it`} (${names.join(', ')}) left the score's denominator, so this reading is provisional and was not cached.`,
+    detail: `${evidence ? `${evidence}. ` : ''}${names.length === 1 ? 'The check waiting on it' : `The ${names.length} checks waiting on it`} (${names.join(', ')}) ${names.length === 1 ? 'is' : 'are'} left out of the score until a rescan.`,
     action: `Re-run the check. If it repeats, confirm by hand that ${label.toLowerCase()} answers within a few seconds.`,
     docUrl: `${SCORE_METHODOLOGY_PATH}#statuses`,
     agentmarkupHelp:
@@ -177,7 +207,7 @@ export function auditItemForUnverifiedResource(
     id: `unverified-${resource}`,
     level: 'warning',
     title: `${label} could not be verified in time`,
-    detail: `${judged}, so this reading is provisional and was not cached.`,
+    detail: `${judged}, so this reading is provisional.`,
     action: `Re-run the check. If it repeats, confirm by hand that ${label.toLowerCase()} answers within a few seconds.`,
     docUrl: `${SCORE_METHODOLOGY_PATH}#statuses`,
     agentmarkupHelp:

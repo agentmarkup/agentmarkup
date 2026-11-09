@@ -50,6 +50,8 @@ export interface SiteCheckResponse extends SiteEvidence {
 
 export interface CheckerErrorResponse {
   error: string;
+  /** Machine-readable worker code (`invalid_request`, `rate_limited`, `verification_required`, `checker_error`, `cross_site_forbidden`, ...). */
+  code?: string;
   retryAfterSeconds?: number | null;
   turnstileRequired?: boolean;
   turnstileSiteKey?: string | null;

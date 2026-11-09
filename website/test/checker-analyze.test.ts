@@ -270,9 +270,13 @@ describe('analyzeSiteCheck', () => {
     expect(analysis.report.analysisStatus).toBe('partial');
     expect(item.level).toBe('warning');
     expect(item.title).toBe('Sample page could not be verified in time');
-    expect(item.detail).toMatch(/^The \d+ checks that read it \(.*Public content not behind a login.*\) were judged without it, so this reading is provisional and was not cached\.$/);
+    expect(item.detail).toMatch(/^The \d+ checks that read it \(.*Public content not behind a login.*\) were judged without it, so this reading is provisional\.$/);
     expect(analysis.items.filter((candidate) => candidate.id === 'unverified-samplePage')).toHaveLength(1);
-    expect(itemById(analyzeSiteCheck(siteCheck({ llms: timedOut(`${ORIGIN}/llms.txt`) })), 'unverified-llmsTxt').detail).toContain('waiting on it');
+    const waiting = itemById(analyzeSiteCheck(siteCheck({ llms: timedOut(`${ORIGIN}/llms.txt`) })), 'unverified-llmsTxt').detail;
+    expect(waiting).toContain('waiting on it');
+    // Report UX copy change (2026-11-09 spec 11.1): no formula jargon in the unverified detail.
+    expect(waiting).toContain('left out of the score until a rescan');
+    expect(waiting).not.toMatch(/denominator|not cached/);
     expect(analyzeSiteCheck(siteCheck()).items.some((candidate) => candidate.id.startsWith('unverified-'))).toBe(false);
   });
 });

@@ -61,7 +61,7 @@ export const checkerFaqs: PageFaqItem[] = [
   },
   {
     question: 'How is the score computed?',
-    answer: 'From a published formula, not a hidden weighting. Required checks share the largest pool at even weight, recommended checks share a smaller pool, bonus signals add a capped extra and never subtract, and a check whose evidence did not arrive in time leaves the denominator instead of lowering the number. Every point is traceable to a check you can see, each finding keeps its evidence and a practical next step, and the full method is published at agentmarkup.dev/score/.',
+    answer: 'From a published formula, not a hidden weighting. Required checks share the largest pool at even weight, recommended checks share a smaller pool, bonus signals add a capped extra and never subtract, and a check whose evidence did not arrive in time is left out of the score instead of lowering the number. Every point is traceable to a check you can see, each finding keeps its evidence and a practical next step, and the full method is published at agentmarkup.dev/score/.',
   },
 ];
 

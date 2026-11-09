@@ -1,56 +1,8 @@
-/* Agent-readiness score panel, top fixes and the /score/ methodology page.
-   Imported by ScorePanel.tsx and ScoreMethodology.tsx so it ships in the
-   entry stylesheet of every page that renders them. */
+/* The /score/ methodology page and the shared Provisional badge.
+   Imported by ScoreMethodology.tsx. The checker report styles live in
+   ui/report/report.css (which carries its own .report .score-badge). */
 
-.score-panel { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(16rem, 0.8fr); margin-bottom: var(--space-6); padding: var(--space-8); gap: var(--space-8); border: 1px solid var(--border-default); border-radius: var(--radius-lg); background: var(--surface-primary); box-shadow: var(--shadow-raised); }
-.score-panel-headline { display: grid; align-content: start; gap: var(--space-3); }
-.score-panel-headline .section-kicker { margin: 0; }
-.score-panel-headline h2 { margin: 0 !important; font-family: var(--font-editorial); font-size: clamp(1.5rem, 2.6vw, 2.1rem) !important; font-weight: 500; line-height: 1.15; }
-.score-panel-number { display: flex; align-items: baseline; gap: var(--space-2); }
-.score-panel-number strong { font-family: var(--font-editorial); font-size: clamp(4rem, 9vw, 6.5rem); font-weight: 500; line-height: 0.9; letter-spacing: -0.02em; }
-.score-panel-number span { color: var(--text-tertiary); font-size: 1.1rem; font-weight: 700; }
-.score-panel-good .score-panel-number strong { color: var(--status-good); }
-.score-panel-attention .score-panel-number strong { color: var(--status-attention); }
-.score-panel-action .score-panel-number strong { color: var(--status-action); }
-.score-panel-raw,
-.score-panel-meta,
-.score-panel-note { margin: 0; color: var(--text-tertiary); font-size: 0.85rem; line-height: 1.55; }
-.score-panel-provisional { display: flex; flex-wrap: wrap; align-items: center; margin: 0; padding: var(--space-4); gap: var(--space-3); border: 1px solid var(--status-attention); border-radius: var(--radius-md); color: var(--text-secondary); background: var(--status-attention-soft); font-size: 0.9rem; line-height: 1.5; }
 .score-badge { display: inline-flex; align-items: center; min-height: 1.6rem; padding: 0 var(--space-2); border: 1px solid currentColor; border-radius: 999px; color: var(--status-attention); font-size: 0.72rem; font-weight: 750; letter-spacing: 0.05em; text-transform: uppercase; }
-.score-panel-blocked { margin: 0; padding: var(--space-4); border: 1px solid var(--status-action); border-radius: var(--radius-md); color: var(--text-secondary); background: var(--status-action-soft); }
-.score-tiers { display: grid; margin: 0; gap: var(--space-4); align-content: start; }
-.score-tier { display: grid; gap: var(--space-2); }
-.score-tier-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
-.score-tier-head dt { color: var(--text-primary); font-size: 0.88rem; font-weight: 700; }
-.score-tier-head dd { margin: 0; color: var(--text-primary); font-family: var(--font-editorial); font-size: 1.15rem; font-weight: 500; }
-.score-bar { position: relative; height: 0.6rem; overflow: hidden; border-radius: 999px; background: var(--surface-secondary); }
-.score-bar-fill { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--brand-primary); }
-.score-tier-required .score-bar-fill { background: var(--brand-strong); }
-.score-tier-bonus .score-bar-fill { background: var(--status-good); }
-.score-tier small { color: var(--text-tertiary); font-size: 0.78rem; }
-.score-panel-lists { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: var(--space-5); padding-top: var(--space-5); border-top: 1px solid var(--border-subtle); }
-.score-panel-lists h3,
-.score-panel-lists summary { margin: 0 0 var(--space-2); font-size: 0.88rem; font-weight: 700; }
-.score-panel-lists summary { cursor: pointer; }
-.score-panel-lists ul { margin: 0; padding-left: var(--space-5); color: var(--text-secondary); font-size: 0.85rem; line-height: 1.5; }
-.score-panel-lists li + li { margin-top: var(--space-1); }
-.score-panel-footer { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4); padding-top: var(--space-5); border-top: 1px solid var(--border-subtle); }
-.score-panel-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
-.score-panel-actions .checker-action { min-height: 2.6rem; padding-block: var(--space-2); font-size: 0.86rem; }
-.score-summary-text { grid-column: 1 / -1; width: 100%; min-height: 14rem; padding: var(--space-4); border: 1px solid var(--border-default); border-radius: var(--radius-md); color: var(--text-primary); background: var(--surface-secondary); font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.5; resize: vertical; }
-
-.top-fixes { margin-top: var(--space-8); }
-.top-fixes > h2 { margin: 0 0 var(--space-2) !important; }
-.top-fixes > p { margin: 0 0 var(--space-5); color: var(--text-secondary); }
-.top-fixes-list { display: grid; margin: 0; padding: 0; gap: 0; border-top: 1px solid var(--border-default); list-style: none; counter-reset: fixes; }
-.top-fixes-item { display: grid; grid-template-columns: 2.25rem minmax(0, 1fr) auto; padding: var(--space-5) 0; gap: var(--space-4); border-bottom: 1px solid var(--border-default); counter-increment: fixes; }
-.top-fixes-item::before { color: var(--brand-accent); font-family: var(--font-editorial); font-size: 1.5rem; font-weight: 500; line-height: 1; content: counter(fixes); }
-.top-fixes-item h3 { margin: 0 0 var(--space-1); font-size: 1.02rem; }
-.top-fixes-item p { margin: var(--space-1) 0 0; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.55; }
-.top-fixes-item p strong { color: var(--text-primary); }
-.top-fixes-gain { align-self: start; min-width: 5.5rem; padding: var(--space-2) var(--space-3); border: 1px solid var(--border-default); border-radius: var(--radius-sm); color: var(--text-primary); background: var(--surface-secondary); font-size: 0.78rem; font-weight: 750; text-align: center; white-space: nowrap; }
-.top-fixes-gain strong { display: block; color: var(--status-good); font-family: var(--font-editorial); font-size: 1.25rem; font-weight: 500; }
-.top-fixes-link { font-size: 0.82rem; }
 
 .score-page { width: min(100%, 72rem); }
 .score-page-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); margin: var(--space-8) 0; gap: var(--space-3); }
@@ -63,9 +15,3 @@
 .score-catalog-table td.score-catalog-narrow { min-width: 8rem; }
 .score-catalog-sentence { display: block; margin-top: var(--space-1); color: var(--text-tertiary); }
 .score-bands td:first-child { font-weight: 700; color: var(--text-primary); }
-
-@media (max-width: 56rem) {
-  .score-panel { grid-template-columns: minmax(0, 1fr); padding: var(--space-5); gap: var(--space-5); }
-  .top-fixes-item { grid-template-columns: 2rem minmax(0, 1fr); }
-  .top-fixes-gain { grid-column: 2; justify-self: start; }
-}

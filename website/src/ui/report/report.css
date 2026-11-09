@@ -1,0 +1,1079 @@
+/* Checker report body (spec 2026-11-09, sections 10 and 11.3).
+   Imported by every component in src/ui/report/ except the shell ones, which
+   import scan.css. Every selector starts with .report so nothing leaks into the
+   security scan page, which shares the .checker-* classes.
+   Rules: Manrope only (the serif display face never appears under .report),
+   tabular numerals, mono only for evidence and URLs, tokens only (light theme
+   needs no overrides), status colour only where section 10.3 allows it. */
+
+/* ---------- Root, tone tokens, typography ---------- */
+
+.report {
+  --tone: var(--status-neutral);
+  --tone-soft: var(--surface-secondary);
+  font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums;
+}
+
+/* One tone vocabulary for every element that carries data-tone, data-status or data-level. */
+.report [data-tone='good'],
+.report [data-level='pass'],
+.report [data-status='pass'] { --tone: var(--status-good); --tone-soft: var(--status-good-soft); }
+.report [data-tone='attention'],
+.report [data-level='warning'],
+.report [data-status='fail-attention'],
+.report [data-status='partial'] { --tone: var(--status-attention); --tone-soft: var(--status-attention-soft); }
+.report [data-tone='action'],
+.report [data-level='error'],
+.report [data-status='fail-action'] { --tone: var(--status-action); --tone-soft: var(--status-action-soft); }
+.report [data-tone='neutral'],
+.report [data-level='info'],
+.report [data-status='unverified'] { --tone: var(--status-neutral); --tone-soft: var(--surface-secondary); }
+.report [data-status='na'],
+.report [data-status='not-measured'] { --tone: var(--text-tertiary); --tone-soft: transparent; }
+
+.report .report-body {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-8);
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.55;
+}
+.report .report-body > *,
+.report .report-sections > * { min-width: 0; }
+.report .report-sections { display: grid; gap: var(--space-8); }
+
+/* Reset element margins inside the body; spacing comes from gaps and the rules below. */
+.report .report-body :where(p, ul, ol, dl, dd, pre, figure, h2, h3, h4, fieldset) { margin: 0; }
+
+/* Headings: these (0,2,0) rules beat the element-level serif h1/h2 rules and scan.css's .report h2 (0,1,1);
+   class rules below, declared later at the same weight, refine them. */
+.report .report-body :where(h2, h3, h4) {
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  letter-spacing: 0;
+  text-wrap: balance;
+}
+.report .report-body :where(h2) { font-size: 1.125rem; font-weight: 750; line-height: 1.3; }
+.report .report-body :where(h3, h4) { font-size: 0.9375rem; font-weight: 700; line-height: 1.35; }
+
+.report .report-body a { overflow-wrap: anywhere; }
+
+/* Disclosure markers: one CSS chevron for every summary in the report. */
+.report .report-body summary { list-style: none; cursor: pointer; }
+.report .report-body summary::-webkit-details-marker { display: none; }
+.report .report-body summary::after {
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-inline: 0.25rem;
+  border-right: 2px solid var(--text-tertiary);
+  border-bottom: 2px solid var(--text-tertiary);
+  content: '';
+  transform: translateY(-0.15rem) rotate(45deg);
+  justify-self: end;
+  align-self: center;
+  flex: none;
+}
+.report .report-body details[open] > summary::after { transform: translateY(0.1rem) rotate(-135deg); }
+
+/* Print-only elements stay hidden on screen. */
+.report .report-print-header,
+.report .report-print-footer,
+.report .area-bar-points { display: none; }
+
+/* ---------- Hero card (section 6) ---------- */
+
+/* The .report-hero frame comes from scan.css, so the done hero keeps the skeleton's geometry.
+   The card is only a wrapper; the tone shows on the frame's 3px top rule. */
+.report .report-hero-card { min-width: 0; }
+.report .report-hero-card > .report-hero { border-top-color: var(--tone); }
+.report .report-hero-main { display: grid; align-content: start; min-width: 0; gap: var(--space-5); }
+.report .report-hero-areas { min-width: 0; }
+
+.report .report-score {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+}
+.report .report-score-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+.report .report-score-number {
+  color: var(--tone);
+  font-size: clamp(4rem, 8vw, 6rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 0.9;
+}
+.report .report-score-range {
+  color: var(--tone);
+  font-size: clamp(3rem, 6vw, 4.5rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+  white-space: nowrap;
+}
+.report .report-score-max,
+.report .report-score-to {
+  color: var(--text-tertiary);
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.report .report-score-to { white-space: pre; }
+.report .report-grade-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+.report .report-grade {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.25rem;
+  min-height: 1.875rem;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--tone);
+  border-radius: 0.375rem;
+  color: var(--tone);
+  background: var(--tone-soft);
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+/* Hierarchy: number, then the band word (the one verdict), then the sentence. */
+.report .report-band {
+  min-width: 0;
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  font-weight: 750;
+  line-height: 1.25;
+}
+.report .report-provisional {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+.report .report-provisional-text { flex: 1 1 16rem; }
+.report .report-change { margin-top: var(--space-3); color: var(--text-tertiary); font-size: 0.8125rem; }
+
+/* The Provisional badge; score.css only loads on /score/, so the report styles it itself. */
+.report .score-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  padding: 0 var(--space-2);
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  color: var(--status-attention);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.report .checker-action.report-rescan-inline {
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.875rem;
+}
+/* Busy Rescan (5.12): aria-disabled, never disabled, so focus stays; a spinner after the label.
+   The .checker-submit busy state belongs to scan.css. */
+.report .checker-action[aria-disabled='true'] { cursor: progress; }
+.report .checker-action.is-busy::after {
+  width: 0.875rem;
+  height: 0.875rem;
+  margin-inline-start: var(--space-2);
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  content: '';
+  animation: report-spin 800ms linear infinite;
+}
+@keyframes report-spin { to { transform: rotate(360deg); } }
+
+/* No frame of its own: the hero card is the only frame, its 3px top rule carries the tone. */
+.report .report-blocked {
+  display: grid;
+  gap: var(--space-2);
+}
+.report .report-body .report-blocked-title { font-size: 1.5rem; font-weight: 750; line-height: 1.2; }
+.report .report-blocked-body { max-width: 60ch; color: var(--text-secondary); }
+
+.report .report-notice {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+  padding: var(--space-4);
+  gap: var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--tone) 40%, var(--border-subtle));
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  background: var(--surface-secondary);
+}
+.report .report-notice-icon { display: inline-flex; padding-top: 0.15rem; color: var(--tone); }
+.report .report-notice-text { display: grid; min-width: 0; gap: var(--space-1); }
+.report .report-notice-title { color: var(--text-primary); font-weight: 700; }
+
+.report .report-sentence {
+  max-width: 62ch;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  font-weight: 450;
+  line-height: 1.5;
+}
+
+/* ---------- Area bars (6.7) ---------- */
+
+.report .area-bars {
+  display: grid;
+  grid-template-columns: 6rem minmax(0, 1fr) minmax(3.25rem, max-content) 0.75rem;
+  align-content: start;
+  gap: var(--space-3) var(--space-2);
+}
+.report .area-bar {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: 6rem minmax(0, 1fr) 3.25rem 0.75rem;
+  grid-template-columns: subgrid;
+  align-items: center;
+}
+.report .area-bar-label { color: var(--text-secondary); font-size: 0.875rem; font-weight: 600; }
+.report .area-bar-track {
+  position: relative;
+  display: block;
+  height: 0.5rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-secondary);
+  /* The track alone was about 1.1:1 against the hero; the hairline shows the 0-100 extent. */
+  box-shadow: inset 0 0 0 1px var(--border-default);
+}
+.report .area-bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: var(--tone);
+  transform-origin: left center;
+}
+.report .area-bar-value {
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+}
+.report .area-bar-flag { display: inline-flex; align-items: center; color: var(--tone); }
+.report .area-bar-flag .status-icon { width: 12px; height: 12px; }
+.report .area-bar[data-unscored] .area-bar-track {
+  background: repeating-linear-gradient(135deg, var(--border-default) 0 4px, transparent 4px 8px);
+  box-shadow: inset 0 0 0 1px var(--border-default);
+}
+.report .area-bar[data-unscored] .area-bar-value { grid-column: span 2; color: var(--text-tertiary); font-weight: 600; text-align: left; }
+.report .area-bar[data-unscored] .area-bar-flag { display: none; }
+/* Provisional area: a dashed track end (5.8). */
+.report .area-bar[data-provisional] .area-bar-track::after {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 1.5rem;
+  background: repeating-linear-gradient(90deg, var(--status-neutral) 0 3px, transparent 3px 6px);
+  content: '';
+  opacity: 0.7;
+}
+.report .area-extras,
+.report .area-footnote { grid-column: 1 / -1; color: var(--text-tertiary); font-size: 0.8125rem; line-height: 1.5; }
+.report .area-extras { margin-top: var(--space-2); color: var(--text-secondary); font-weight: 600; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .report .area-bar-fill { animation: report-bar-grow 400ms ease-out both; }
+}
+@keyframes report-bar-grow { from { transform: scaleX(0); } }
+
+/* ---------- Actions row (6.5) ---------- */
+
+.report .report-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: var(--space-2);
+}
+.report .report-actions .checker-submit,
+.report .report-actions .checker-action {
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.875rem;
+}
+.report .report-actions .report-action-primary,
+.report .report-toast,
+.report .report-summary-fallback-note,
+.report .report-summary-fallback { grid-column: 1 / -1; }
+.report .report-action-check { flex: none; margin-inline-end: var(--space-1); }
+.report .report-toast { margin: 0; color: var(--text-secondary); font-size: 0.8125rem; }
+.report .report-toast:empty { display: block; height: 0; }
+.report .report-summary-fallback-note { margin: 0; color: var(--text-tertiary); font-size: 0.8125rem; }
+.report .report-summary-fallback {
+  width: 100%;
+  min-height: 10rem;
+  padding: var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  background: var(--surface-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+/* The actions row sits close under the hero card. */
+.report .report-hero-card + .report-actions { margin-top: calc(var(--space-4) - var(--space-8)); }
+
+/* ---------- Fix list (8) ---------- */
+
+.report .fix-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2) var(--space-6);
+}
+.report .fix-note { color: var(--text-tertiary); font-size: 0.8125rem; }
+.report .fix-list {
+  display: grid;
+  margin-top: var(--space-2);
+  padding: 0;
+  border-top: 1px solid var(--border-subtle);
+  list-style: none;
+}
+.report .fix-row {
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, 1fr) auto;
+  align-items: start;
+  padding: var(--space-4) 0;
+  gap: var(--space-1) var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.report .fix-rank {
+  color: var(--text-tertiary);
+  font-size: 1rem;
+  font-weight: 750;
+  line-height: 1.35;
+}
+.report .fix-main { display: grid; min-width: 0; gap: var(--space-1); }
+.report .report-body .fix-title { color: var(--text-primary); font-size: 1rem; font-weight: 650; line-height: 1.35; }
+.report .fix-meta { color: var(--text-tertiary); font-size: 0.8125rem; }
+.report .fix-do,
+.report .fix-platform { color: var(--text-secondary); }
+.report .fix-links {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: var(--space-1);
+  gap: var(--space-1) var(--space-4);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.report .fix-gain {
+  min-width: 5.5ch;
+  color: var(--status-good);
+  font-size: 0.9375rem;
+  font-weight: 750;
+  line-height: 1.35;
+  text-align: right;
+  white-space: nowrap;
+}
+.report .fix-row[data-optional] .fix-title { color: var(--text-secondary); }
+.report .fix-row[data-optional] .fix-gain { color: var(--text-tertiary); font-weight: 650; }
+.report .fix-then,
+.report .fix-optional-line,
+.report .fix-empty { color: var(--text-secondary); font-size: 0.875rem; line-height: 1.6; }
+.report .fix-then { display: flex; flex-wrap: wrap; align-items: baseline; margin-top: var(--space-2); gap: var(--space-1) var(--space-3); }
+.report .fix-then-label { color: var(--text-tertiary); font-weight: 700; }
+.report .fix-then-list {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0;
+  gap: var(--space-1) var(--space-4);
+  list-style: none;
+  counter-reset: report-fix-then 3;
+}
+.report ol.fix-then-list > .fix-then-item { counter-increment: report-fix-then; }
+.report ol.fix-then-list > .fix-then-item > span[aria-hidden='true']:first-child { display: none; }
+.report ol.fix-then-list > .fix-then-item::before {
+  margin-inline-end: var(--space-1);
+  color: var(--text-tertiary);
+  font-weight: 750;
+  content: counter(report-fix-then);
+}
+.report .fix-optional-line { color: var(--text-secondary); }
+.report .fix-optional-line .fix-then-list { display: inline; padding: 0; list-style: none; }
+.report .fix-optional-line .fix-then-item { display: inline; }
+
+/* ---------- Groups, status and tier views (7.4 to 7.7) ---------- */
+
+.report .groups-section { display: grid; gap: var(--space-3); }
+.report .groups-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
+}
+.report .groups-head > h2 { margin-inline-end: auto; }
+
+.report .groupby {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  gap: var(--space-2);
+  border: 0;
+}
+/* A floated legend becomes an ordinary flex item, so "Group by" sits in the row. */
+.report .groupby > legend {
+  float: left;
+  padding: 0;
+  margin-inline-end: var(--space-1);
+  color: var(--text-tertiary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.report .groupby-option {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  background: var(--surface-primary);
+  font-size: 0.875rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+.report .groupby-option input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.report .groupby-option:hover { color: var(--text-primary); background: var(--surface-secondary); }
+.report .groupby-option:has(input:checked) {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+  background: var(--surface-secondary);
+}
+.report .groupby-option:has(input:focus-visible) { outline: 3px solid var(--brand-primary); outline-offset: 2px; }
+
+.report .groups-expand {
+  min-height: 2.75rem;
+  padding: 0 var(--space-2);
+  border: 0;
+  color: var(--brand-primary);
+  background: transparent;
+  font-size: 0.875rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+.report .groups-expand:hover { color: var(--brand-hover); text-decoration: underline; }
+
+.report .status-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  color: var(--text-tertiary);
+  font-size: 0.8125rem;
+}
+.report .status-legend > * { display: inline-flex; align-items: center; gap: var(--space-1); }
+.report .status-legend .status-icon { width: 12px; height: 12px; color: var(--tone); }
+.report .status-legend-extra { color: var(--text-tertiary); }
+.report .status-legend-extra .status-icon { color: var(--text-secondary); }
+.report .status-legend-item:nth-child(1):not([data-tone]) { --tone: var(--status-action); }
+.report .status-legend-item:nth-child(2):not([data-tone]) { --tone: var(--status-attention); }
+.report .status-legend-item:nth-child(3):not([data-tone]) { --tone: var(--status-good); }
+.report .status-legend-item:nth-child(4):not([data-tone]) { --tone: var(--status-neutral); }
+
+.report .group-list { display: grid; border-top: 1px solid var(--border-subtle); }
+.report .group-list-blocked { margin: 0; padding: 0; list-style: none; }
+.report .group-row-static {
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr) auto;
+  grid-template-areas: 'num q fig';
+  align-items: center;
+  min-height: 3.5rem;
+  padding: var(--space-3) var(--space-2);
+  gap: var(--space-3);
+}
+.report .group-row-static .group-pct { color: var(--text-tertiary); font-weight: 650; }
+
+.report .group-row,
+.report .status-row,
+.report .tier-row { border-bottom: 1px solid var(--border-subtle); }
+
+.report .group-row > summary,
+.report .status-row > summary,
+.report .tier-row > summary {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr) auto 1rem;
+  grid-template-areas:
+    'num q fig chev'
+    '. chips chips chips';
+  align-items: center;
+  min-height: 3.5rem;
+  padding: var(--space-3) var(--space-2);
+  gap: var(--space-1) var(--space-3);
+}
+.report .group-row > summary::after,
+.report .status-row > summary::after,
+.report .tier-row > summary::after { grid-area: chev; }
+.report .group-row > summary:hover,
+.report .status-row > summary:hover,
+.report .tier-row > summary:hover { background: var(--surface-secondary); }
+
+.report .group-number {
+  grid-area: num;
+  color: var(--text-tertiary);
+  font-size: 0.875rem;
+  font-weight: 750;
+}
+.report .group-question {
+  grid-area: q;
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+.report .group-chips {
+  grid-area: chips;
+  display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+  gap: var(--space-1);
+}
+.report .group-figure {
+  grid-area: fig;
+  display: grid;
+  justify-items: end;
+  text-align: right;
+}
+.report .status-row > summary { grid-template-areas: 'num q fig chev'; }
+.report .tier-row > summary { grid-template-areas: 'q q fig chev' 'tier tier tier tier'; }
+.report .tier-row .report-tier { grid-area: tier; }
+.report .group-pct { color: var(--text-primary); font-size: 1rem; font-weight: 750; white-space: nowrap; }
+.report .group-points { color: var(--text-tertiary); font-size: 0.8125rem; white-space: nowrap; }
+
+/* Expanded body: indented under the question, no cards. */
+.report .group-body { display: grid; min-width: 0; padding: 0 0 var(--space-4) 2rem; }
+.report .group-points-line { margin-bottom: var(--space-2); color: var(--text-tertiary); font-size: 0.8125rem; }
+.report .group-body > .group-na-line { margin-top: var(--space-3); }
+.report .group-body > .group-passes { margin-top: var(--space-2); }
+.report .status-resource { display: grid; padding: var(--space-3) var(--space-2); gap: var(--space-1); border-top: 1px solid var(--border-subtle); }
+.report .status-resource-title { color: var(--text-primary); font-weight: 650; }
+.report .status-row .group-number { display: inline-flex; color: var(--tone); }
+.report .report-body .group-subhead {
+  margin: var(--space-4) 0 var(--space-1);
+  color: var(--text-tertiary);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+.report .group-passes > summary {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+.report .group-passes > summary::after { order: -1; margin-inline: 0 var(--space-1); }
+.report .group-na-line,
+.report .group-footnote { color: var(--text-tertiary); font-size: 0.8125rem; line-height: 1.5; }
+
+/* Chips (7.5) */
+.report .chip {
+  display: inline-flex;
+  align-items: center;
+  height: 1.375rem;
+  padding: 0 var(--space-2);
+  gap: var(--space-1);
+  border: 1px solid color-mix(in srgb, var(--tone) 40%, transparent);
+  border-radius: 0.375rem;
+  color: var(--tone);
+  background: var(--tone-soft);
+  font-size: 0.75rem;
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
+}
+.report .chip[data-status='pass'],
+.report .chip[data-status='unverified'],
+.report .chip[data-status='na'],
+.report .chip[data-status='not-measured'] { background: transparent; }
+.report .chip[data-status='unverified'] { border: 1px dashed var(--border-default); }
+/* A short bonus check (isUncountedExtra): never amber, because no percentage is short because of it. */
+.report .chip[data-extra='true'],
+.report .check-line[data-extra='true'] { --tone: var(--text-secondary); --tone-soft: transparent; }
+.report .chip[data-extra='true'] { border: 1px dashed var(--border-default); background: transparent; }
+.report .chip[data-status='na'] { border: 1px dotted var(--border-subtle); }
+.report .chip[data-status='not-measured'] { border-color: transparent; }
+.report .chip-icon { display: inline-flex; align-items: center; }
+.report .chip-icon:empty { display: none; }
+.report .chip-icon .status-icon { width: 11px; height: 11px; }
+.report .chip-ghost,
+.report .chip-more {
+  border: 1px dotted var(--border-default);
+  color: var(--text-tertiary);
+  background: transparent;
+}
+.report .chip-more { border-style: solid; border-color: var(--border-subtle); }
+/* Overflow: up to 8 chips at 40rem and wider, up to 3 on phones; the matching +n chip shows. */
+.report .chip[data-overflow='wide'],
+.report .chip[data-overflow='narrow'],
+.report .chip-more-wide { display: none; }
+
+/* Tier view (the old tier bars) */
+.report .report-tier { display: grid; gap: var(--space-2); }
+.report .report-tier-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+  color: var(--text-primary);
+  font-weight: 700;
+}
+.report .report-tier-bar {
+  position: relative;
+  height: 0.5rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-secondary);
+  box-shadow: inset 0 0 0 1px var(--border-default);
+}
+.report .report-tier-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: var(--status-neutral);
+}
+.report .report-tier-note { color: var(--text-tertiary); font-size: 0.8125rem; }
+
+/* Check line (7.7) */
+.report .check-line { border-top: 1px solid var(--border-subtle); }
+.report .check-summary {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr) auto 1rem;
+  grid-template-areas:
+    'icon title fig chev'
+    '. tier tier .';
+  align-items: start;
+  min-height: 2.75rem;
+  padding: var(--space-3) var(--space-2);
+  gap: var(--space-1) var(--space-3);
+}
+.report .check-summary::after { grid-area: chev; align-self: start; margin-top: 0.35rem; }
+.report .check-summary:hover { background: var(--surface-secondary); }
+.report .check-icon {
+  grid-area: icon;
+  display: inline-flex;
+  align-items: center;
+  height: 1.35rem;
+  color: var(--tone);
+}
+.report .check-title { grid-area: title; color: var(--text-primary); font-size: 1rem; font-weight: 650; line-height: 1.35; }
+.report .check-tier { grid-area: tier; color: var(--text-tertiary); font-size: 0.75rem; font-weight: 650; }
+.report .check-figure {
+  grid-area: fig;
+  color: var(--text-tertiary);
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.55;
+  text-align: right;
+  white-space: nowrap;
+}
+.report .check-figure[data-kind='gain'] { color: var(--status-good); }
+.report .check-figure[data-kind='above-cap'],
+.report .check-figure[data-kind='muted'] { color: var(--text-tertiary); font-weight: 600; }
+.report .check-figure[data-kind='worth'] { color: var(--text-secondary); }
+
+.report .check-body {
+  display: grid;
+  padding: 0 var(--space-2) var(--space-4) calc(var(--space-2) + 1.25rem + var(--space-3));
+  gap: var(--space-3);
+}
+.report .check-facts { display: grid; gap: var(--space-3); }
+.report .check-fact { display: grid; min-width: 0; gap: var(--space-1); }
+.report .check-facts dt { color: var(--text-tertiary); font-size: 0.8125rem; font-weight: 700; }
+.report .check-facts dd { min-width: 0; margin: 0; color: var(--text-secondary); }
+.report .check-facts dd > p { margin-top: var(--space-1); color: var(--text-tertiary); font-size: 0.8125rem; }
+/* Evidence: mono on a quiet panel. Text tokens, not --code-text: that one is light grey in the light theme. */
+.report .check-evidence {
+  max-width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  background: var(--surface-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.report .check-evidence[data-clamped='true'] {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+.report .check-evidence-toggle {
+  min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  color: var(--brand-primary);
+  background: transparent;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+.report .check-evidence-toggle:hover { color: var(--brand-hover); text-decoration: underline; }
+.report .check-help { color: var(--text-tertiary); font-size: 0.8125rem; }
+.report .check-rule-link { justify-self: start; font-size: 0.8125rem; font-weight: 650; }
+
+/* ---------- Not scored, how this was checked, product line, footer (7.10 to 7.12) ---------- */
+
+.report .not-scored,
+.report .how-checked { border-block: 1px solid var(--border-subtle); }
+.report .not-scored + .how-checked { margin-top: calc(-1 * var(--space-8)); border-top: 0; }
+.report .not-scored > summary,
+.report .how-checked > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 3.5rem;
+  padding: var(--space-3) var(--space-2);
+  gap: var(--space-3);
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+.report .not-scored > summary:hover,
+.report .how-checked > summary:hover { background: var(--surface-secondary); }
+.report .not-scored > :not(summary),
+.report .how-checked > :not(summary) { margin-inline: var(--space-2); }
+.report .not-scored[open],
+.report .how-checked[open] { padding-bottom: var(--space-5); }
+.report .not-scored > h3 { margin-top: var(--space-4); }
+.report .not-scored-list {
+  display: grid;
+  margin-top: var(--space-2);
+  padding-left: var(--space-5);
+  gap: var(--space-1);
+  font-size: 0.875rem;
+}
+.report .not-scored-reason { color: var(--text-tertiary); }
+
+.report .fetch-log { display: grid; margin-bottom: var(--space-4); padding: 0; list-style: none; }
+.report .fetch-row {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr) auto;
+  grid-template-areas:
+    'icon label time'
+    '. status status'
+    '. url url';
+  align-items: start;
+  padding: var(--space-2) 0;
+  gap: 0 var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.875rem;
+}
+.report .fetch-row > .status-icon { grid-area: icon; margin-top: 0.2rem; color: var(--tone); }
+.report .fetch-label { grid-area: label; color: var(--text-primary); font-weight: 650; }
+.report .fetch-status { grid-area: status; color: var(--text-secondary); }
+.report .fetch-url {
+  grid-area: url;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+.report .fetch-time { grid-area: time; color: var(--text-tertiary); font-size: 0.8125rem; white-space: nowrap; }
+.report .how-checked > p,
+.report .score-arithmetic,
+.report .report-versions { color: var(--text-secondary); font-size: 0.875rem; }
+.report .how-checked > p + p { margin-top: var(--space-2); }
+.report .how-checked-note { color: var(--text-tertiary); font-size: 0.8125rem; }
+
+.report .report-product-line,
+.report .report-footer { color: var(--text-tertiary); font-size: 0.8125rem; line-height: 1.5; }
+.report .report-product-line + .report-footer { margin-top: calc(var(--space-2) - var(--space-8)); }
+
+/* ---------- Rescanning (5.12) ---------- */
+
+.report .report-stale { opacity: 0.55; pointer-events: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .report .report-stale { transition: opacity 150ms ease-out; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .report .checker-action.is-busy::after { border-style: dashed; animation: none; }
+}
+
+/* ---------- Sticky score bar (10.7): 40rem and wider only ---------- */
+
+.report .sticky-score { display: none; }
+
+/* ---------- Responsive (10.6) ---------- */
+
+/* Phone, under 40rem: one bar per row, check facts stacked, chips capped at 3. */
+@media (max-width: 39.99rem) {
+  .report .chip[data-overflow='narrow'],
+  .report .chip-more-wide { display: none; }
+  .report .chip-more-narrow { display: inline-flex; }
+  .report .report-score { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+  .report .report-score > :not(.report-score-line, .report-grade-line) { flex: 1 0 100%; }
+  .report .report-grade-line { flex: 1 1 10rem; }
+  /* Section 13 first screen at 390x844: the six bars must fit above the fold. */
+  .report .report-hero-card > .report-hero { padding: var(--space-4); gap: var(--space-6); }
+  .report .report-hero-main { gap: var(--space-4); }
+  .report .report-band { font-size: 1.25rem; }
+  .report .report-sentence { line-height: 1.45; }
+  /* The question keeps its width: the points move to the body's first line on phones. */
+  .report .group-points[data-narrow='hide'] { display: none; }
+  /* The section note already says "above the cap". */
+  .report .fix-gain-cap { display: none; }
+}
+
+/* 40rem and wider */
+@media (min-width: 40rem) {
+  .report .chip[data-overflow='narrow'] { display: inline-flex; }
+  .report .chip-more-wide { display: inline-flex; }
+  .report .chip-more-narrow { display: none; }
+  /* Chips past 8 stay hidden at every width. */
+  .report .chip[data-overflow='wide'] { display: none; }
+
+  .report .report-actions { display: flex; flex-wrap: wrap; }
+  .report .report-actions .report-action-primary { flex: none; }
+  .report .report-toast,
+  .report .report-summary-fallback-note,
+  .report .report-summary-fallback { flex: 1 0 100%; }
+
+  .report .fix-section { grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; }
+  .report .fix-section > :not(.fix-heading, .fix-note) { grid-column: 1 / -1; }
+  .report .fix-note { text-align: right; }
+
+  .report .check-fact { grid-template-columns: 6.5rem minmax(0, 1fr); gap: var(--space-3); }
+  .report .check-facts dt { padding-top: 0.1rem; }
+
+  .report .fetch-row {
+    grid-template-columns: 1.25rem minmax(8rem, 0.8fr) minmax(0, 1.2fr) auto;
+    grid-template-areas:
+      'icon label status time'
+      '. url url url';
+  }
+
+  /* Closes the gap under the floating nav: its glass ends 0.62rem (components.css .site-header padding)
+     above --nav-height, and page text showed through that strip. */
+  .report .sticky-score {
+    position: fixed;
+    z-index: 90;
+    top: calc(var(--nav-height) - 0.62rem);
+    left: 50%;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    width: min(calc(100% - 2 * var(--page-gutter)), 64rem);
+    min-height: 2.75rem;
+    padding: var(--space-2) var(--space-4);
+    gap: var(--space-3);
+    border: 1px solid var(--border-default);
+    border-top: 0;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    color: var(--text-secondary);
+    background: var(--surface-primary);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+    font-size: 0.875rem;
+    font-weight: 600;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, -0.5rem);
+    visibility: hidden;
+  }
+  .report .sticky-score[data-visible='true'] { opacity: 1; transform: translate(-50%, 0); visibility: visible; }
+  .report .sticky-score > * + * { padding-inline-start: var(--space-3); border-inline-start: 1px solid var(--border-default); }
+  .report .sticky-score-host {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text-primary);
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .report .sticky-score-number,
+  .report .sticky-score-grade { color: var(--text-primary); font-weight: 800; white-space: nowrap; }
+  .report .sticky-score-todo { margin-inline-start: auto; white-space: nowrap; }
+  .report .sticky-score-todo { padding-inline-start: 0; border-inline-start: 0; }
+
+  /* Jumps land below the nav and the sticky bar (2.75rem), not under them. */
+  .report .check-line,
+  .report .group-row { scroll-margin-top: calc(var(--nav-height) + 2.75rem + var(--space-4)); }
+}
+
+@media (min-width: 40rem) and (prefers-reduced-motion: no-preference) {
+  .report .sticky-score { transition: opacity 150ms ease-out, transform 150ms ease-out, visibility 150ms; }
+}
+
+/* 40rem to 64rem: the hero stacks (scan.css), bars in two columns of three. */
+@media (min-width: 40rem) and (max-width: 63.99rem) {
+  .report .area-bars {
+    grid-template-columns:
+      max-content minmax(0, 1fr) minmax(3.25rem, max-content) 0.75rem
+      var(--space-4)
+      max-content minmax(0, 1fr) minmax(3.25rem, max-content) 0.75rem;
+  }
+  .report .area-bar:nth-child(-n + 3) { grid-column: 1 / span 4; }
+  .report .area-bar:nth-child(n + 4):nth-child(-n + 6) { grid-column: 6 / span 4; }
+  .report .area-bar:nth-child(1),
+  .report .area-bar:nth-child(4) { grid-row: 1; }
+  .report .area-bar:nth-child(2),
+  .report .area-bar:nth-child(5) { grid-row: 2; }
+  .report .area-bar:nth-child(3),
+  .report .area-bar:nth-child(6) { grid-row: 3; }
+  .report .area-extras { grid-row: 4; }
+  .report .area-footnote { grid-row: 5; }
+}
+
+/* 64rem and wider: group summary on one line, check tier beside the title. */
+@media (min-width: 64rem) {
+  .report .group-row > summary {
+    grid-template-columns: 1.5rem minmax(12rem, 20rem) minmax(0, 1fr) auto 1rem;
+    grid-template-areas: 'num q chips fig chev';
+  }
+  .report .check-summary {
+    grid-template-columns: 1.25rem minmax(0, 1fr) auto auto 1rem;
+    grid-template-areas: 'icon title tier fig chev';
+  }
+  .report .check-tier { align-self: start; line-height: 1.8; }
+  .report .area-bars { align-self: start; }
+}
+
+/* ---------- Forced colors (10.9) ---------- */
+
+@media (forced-colors: active) {
+  .report .chip,
+  .report .report-grade,
+  .report .score-badge,
+  .report .area-bar-track,
+  .report .report-tier-bar,
+  .report .report-notice,
+  .report .sticky-score { border: 1px solid CanvasText; }
+  .report .report-hero-card > .report-hero { border-top-color: CanvasText; }
+  .report .area-bar-fill,
+  .report .report-tier-fill { background: Highlight; forced-color-adjust: none; }
+  .report .groupby-option:has(input:checked) { border-color: Highlight; }
+  .report .report-body summary::after { border-color: CanvasText; }
+}
+
+/* ---------- Print: a client handout (10.8) ---------- */
+
+@media print {
+  @page { margin: 14mm; }
+
+  /* Light status tokens on paper whatever the screen theme was. */
+  .report {
+    --status-good: #087a4a;
+    --status-good-soft: #e8f7ef;
+    --status-attention: #a84f00;
+    --status-attention-soft: #fff2df;
+    --status-action: #c62137;
+    --status-action-soft: #fdecef;
+    --status-neutral: #596579;
+    --surface-primary: #ffffff;
+    --surface-secondary: #f3f4f6;
+    --text-primary: #111827;
+    --text-secondary: #374151;
+    --text-tertiary: #4b5563;
+    --border-default: #9ca3af;
+    --border-subtle: #d1d5db;
+    padding-block: 0;
+  }
+
+  .report button,
+  .report .scan-bar,
+  .report .report-actions,
+  .report .report-toast,
+  .report .report-summary-fallback,
+  .report .report-summary-fallback-note,
+  .report .groupby,
+  .report .groups-expand,
+  .report .status-legend,
+  .report .sticky-score,
+  .report .fetch-log,
+  .report .report-product-line,
+  .report .check-line[data-status='pass'],
+  .report .group-passes,
+  .report .report-body summary::after { display: none !important; }
+
+  .report .report-print-header {
+    display: block;
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--border-default);
+    color: var(--text-tertiary);
+    font-size: 0.8125rem;
+  }
+  .report .report-print-header.report-print-footer { padding: var(--space-2) 0 0; border-top: 1px solid var(--border-default); border-bottom: 0; }
+  .report .report-body:has(.report-print-footer) .report-footer { display: none; }
+
+  .report .report-body,
+  .report .report-sections { gap: var(--space-6); }
+  .report .report-stale { opacity: 1; }
+  .report .report-hero,
+  .report .fix-row,
+  .report .check-line,
+  .report .area-bars { break-inside: avoid; }
+  .report .groups-head,
+  .report .fix-heading { break-after: avoid; }
+
+  .report .area-bar-points { display: inline; color: var(--text-tertiary); font-weight: 500; }
+  /* One bar per row on paper, so the points pair has room beside the percent. */
+  .report .area-bars { grid-template-columns: 7rem minmax(0, 1fr) max-content 0.75rem; }
+  .report .area-bar:nth-child(n) { grid-column: 1 / -1; grid-row: auto; }
+  .report .area-extras,
+  .report .area-footnote { grid-row: auto; }
+  .report .area-bar-fill { animation: none; }
+  .report .area-bar-track,
+  .report .area-bar-fill,
+  .report .report-tier-fill,
+  .report .chip,
+  .report .report-grade { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+
+  .report .check-evidence[data-clamped='true'] { display: block; overflow: visible; -webkit-line-clamp: unset; line-clamp: none; }
+  .report .group-row > summary:hover,
+  .report .check-summary:hover { background: none; }
+}
+
+/* ---------- Site nav over the report ----------
+   The glass nav is translucent; under it the dense fix list read through (the same fix as the
+   f500 report rule in components.css, scoped to pages that hold a checker report). */
+body:has(.report .report-body) .site-header-glass.glass-surface-svg,
+body:has(.report .report-body) .site-header-glass.glass-surface-fallback {
+  background: rgba(12, 12, 17, 0.96);
+}
+:root[data-theme='light'] body:has(.report .report-body) .site-header-glass.glass-surface-svg,
+:root[data-theme='light'] body:has(.report .report-body) .site-header-glass.glass-surface-fallback {
+  background: rgba(255, 255, 255, 0.96);
+}

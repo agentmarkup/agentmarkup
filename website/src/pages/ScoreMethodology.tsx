@@ -19,6 +19,8 @@ import {
 import type { CheckDefinition, CheckTier } from '@agentmarkup/core/score'
 
 import { RESOURCE_LABELS } from '../checker/check-copy'
+import { GROUP_COPY } from '../checker/report-copy'
+import { GROUP_ORDER } from '../checker/report-model'
 import '../ui/score.css'
 
 // Every number on this page is computed from the catalog and formula constants
@@ -171,6 +173,7 @@ function ScoreMethodology() {
                     <tr>
                       <th>Check</th>
                       <th>Bucket</th>
+                      <th>Goal</th>
                       <th>Applies when</th>
                       <th>Reads</th>
                       <th>Rule</th>
@@ -197,6 +200,7 @@ function ScoreMethodology() {
                           ))}
                         </td>
                         <td className="score-catalog-narrow score-catalog-bucket">{definition.bucket}</td>
+                        <td className="score-catalog-goal">{GROUP_COPY[definition.bucket].question}</td>
                         <td>{definition.applicability}</td>
                         <td>{definition.evidence}</td>
                         <td>{definition.rule}</td>
@@ -255,6 +259,29 @@ function ScoreMethodology() {
           </p>
         </section>
 
+        <section id="groups">
+          <h2>How the report groups checks</h2>
+          <p>
+            The checker report sorts every check into one of six areas, one per catalog bucket, in the
+            same order on every report. Each area answers one question:
+          </p>
+          <ol>
+            {GROUP_ORDER.map((bucket) => (
+              <li key={bucket}>
+                <strong>{GROUP_COPY[bucket].label}</strong> (<code>{bucket}</code>): {GROUP_COPY[bucket].question}
+              </li>
+            ))}
+          </ol>
+          <p>
+            Each check is worth a published share of the score: a required check ={' '}
+            {POOLS.required} / eligible required checks; recommended = {POOLS.recommended} / eligible
+            recommended checks; bonus = {BONUS_PER_SIGNAL}. An area&apos;s figure is the sum of its
+            checks&apos; worth times their credit; bonus is shown separately and never lowers an area; an
+            area never shows 100% while a check in it is short of full credit; the six areas add up to
+            required + recommended earned.
+          </p>
+        </section>
+
         <section id="gain">
           <h2>Estimated gain and top fixes</h2>
           <p>Every non-passing eligible check carries the gain this score would get if the check reached fraction 1 with the current denominator:</p>
@@ -267,8 +294,8 @@ function ScoreMethodology() {
             Top fixes are ranked by estimated gain, then tier (required, recommended, bonus), then catalog
             order; the panel lists the first {TOP_FIXES_LIMIT}. Gains assume the current denominator: a fix
             that makes other checks eligible (serving markdown makes markdown.code-fences eligible) changes
-            the count, so gains are estimates. When the score is already {SCORE_CEILING} the panel says &quot;at the
-            cap&quot; and still lists the remaining gains so required gaps stay visible.
+            the count, so gains are estimates. When the score is already {SCORE_CEILING} the report says &quot;Already
+            at {SCORE_CEILING}&quot; and still lists the remaining gains so required gaps stay visible.
           </p>
         </section>
 
@@ -310,7 +337,7 @@ function ScoreMethodology() {
         <section id="reproduce">
           <h2>Reproduce it yourself</h2>
           <p>
-            The checker&apos;s &quot;Technical details and resources&quot; panel shows the fetched
+            The checker&apos;s &quot;How this was checked&quot; section shows the fetched
             resources, and every finding carries the evidence string the rule read: counts, ids, URLs,
             attribute and header values, never raw HTML. The engine itself is open source in the{' '}
             <a href="https://github.com/agentmarkup/agentmarkup" target="_blank" rel="noopener noreferrer">agentmarkup repository</a>{' '}

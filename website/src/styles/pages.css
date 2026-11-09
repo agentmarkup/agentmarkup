@@ -392,19 +392,12 @@
 .checker-start { display: grid; justify-items: center; padding-block: clamp(var(--space-8), 6vh, var(--space-16)) 0; gap: clamp(var(--space-10), 7vh, var(--space-16)); }
 .checker-heading { display: grid; justify-items: center; width: min(100%, 64rem); text-align: center; }
 .checker-heading .section-kicker { margin-bottom: var(--space-5); }
-.checker-heading h1 { max-width: 19ch; margin: 0; font-size: clamp(3rem, 5.4vw, 5.8rem); line-height: 0.98; }
+.checker-heading h1 { max-width: 19ch; margin: 0; font-size: clamp(2.5rem, 4.4vw, 4.25rem); line-height: 0.98; }
 .checker-intro { max-width: 38rem; margin: var(--space-6) auto 0; font-size: clamp(1rem, 1.4vw, 1.15rem); line-height: 1.65; }
 .checker-panel { width: min(100%, 68rem); margin: 0 auto; padding: clamp(var(--space-5), 3vw, var(--space-8)); border: 1px solid var(--border-default); border-radius: var(--radius-lg); background: var(--surface-primary); box-shadow: var(--shadow-raised); }
 .checker-panel .checker-label { font-size: 1rem; }
 .checker-panel .checker-form-row { margin-top: var(--space-2); }
 .checker-panel .checker-note { margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid var(--border-subtle); }
-.checker-answer-overview { margin-top: clamp(var(--space-16), 8vw, var(--space-24)); }
-.checker-answer-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: hidden; border: 1px solid var(--border-default); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--surface-primary) 92%, transparent); }
-.checker-answer-grid article { min-height: 10rem; padding: var(--space-6); border-right: 1px solid var(--border-default); }
-.checker-answer-grid article:last-child { border-right: 0; }
-.checker-answer-grid span { color: var(--brand-accent); font-size: 0.7rem; font-weight: 750; letter-spacing: 0.06em; text-transform: uppercase; }
-.checker-answer-grid h3 { margin: var(--space-3) 0 var(--space-2); font-size: 1rem; line-height: 1.35; }
-.checker-answer-grid p { margin: 0; color: var(--text-secondary); font-size: 0.86rem; line-height: 1.55; }
 .checker-scope { display: grid; grid-template-columns: minmax(16rem, 0.72fr) minmax(0, 1.28fr); margin-top: clamp(var(--space-16), 8vw, var(--space-24)); overflow: hidden; border: 1px solid var(--border-default); border-radius: var(--radius-lg); background: var(--surface-primary); }
 .checker-scope-heading { padding: clamp(var(--space-6), 4vw, var(--space-10)); border-right: 1px solid var(--border-default); }
 .checker-scope-heading h2 { margin: 0 !important; font-size: clamp(2rem, 3.2vw, 3.25rem) !important; }
@@ -616,7 +609,6 @@
   .hero-primary-actions .quick-install { border-top: 1px solid var(--border-default); }
   .hero-primary-actions .product-check { border-top: 0; }
   .package-grid,
-  .checker-answer-grid,
   .checker-scope-grid,
   .checker-method,
   .blog-list,
@@ -635,10 +627,7 @@
   .package-card:last-child { border-bottom: 0; }
   .blog-card { border-right: 1px solid var(--border-default); }
   .developer-route { grid-template-columns: auto minmax(0, 1fr); min-height: 6rem; gap: var(--space-4); }
-  .checker-answer-grid article { border-right: 0; border-bottom: 1px solid var(--border-default); }
-  .checker-answer-grid article:last-child { border-bottom: 0; }
   .checker-start { padding-top: var(--space-8); gap: var(--space-10); }
-  .checker-heading h1 { font-size: clamp(2.8rem, 13vw, 3.8rem); }
   .checker-panel { padding: var(--space-5); }
   .checker-scope-grid article { border-right: 0; }
   .checker-method { grid-template-columns: 1fr; gap: var(--space-3); }

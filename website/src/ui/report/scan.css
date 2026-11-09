@@ -1,0 +1,400 @@
+/*
+ * Checker shell (spec 5.0-5.5, 9, 10, 11.2): the report root, the ScanBar, the
+ * header, the scanning card and skeleton, the challenge and error notices, the
+ * landing's goals list and busy button. Tokens only; Manrope only (no editorial
+ * serif anywhere under .report). The report body itself is styled in report.css.
+ */
+
+/* Root. Not a .doc-page, so the long-form heading rules do not apply. */
+.checker-page.report {
+  display: grid;
+  width: min(100%, 64rem);
+  margin-inline: auto;
+  padding-block: var(--space-8) var(--space-16);
+  gap: var(--space-8);
+  font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums;
+}
+
+.report h1,
+.report h2,
+.report h3 {
+  font-family: var(--font-ui);
+  letter-spacing: normal;
+}
+
+.report h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.125rem;
+  font-weight: 750;
+  line-height: 1.3;
+}
+
+/* Programmatic focus targets (tabIndex -1) never show a ring (spec 9). Real controls keep the global ring. */
+.report [tabindex='-1']:focus,
+.report [tabindex='-1']:focus-visible {
+  outline: none;
+}
+
+/* ScanBar */
+.scan-bar { display: grid; gap: var(--space-2); }
+.scan-bar-row { display: flex; align-items: stretch; gap: var(--space-3); }
+.scan-bar-input { flex: 1 1 auto; min-width: 0; }
+.scan-bar-input[readonly] { color: var(--text-secondary); background: var(--surface-secondary); cursor: default; }
+/* (0,2,0) on purpose: components.css sets `.checker-submit { width: 100% }` under 40rem for the
+   landing's stacked row; in this flex row that width pushed the page to 417 px at 390. */
+.scan-bar .scan-bar-button { flex: 0 0 auto; width: auto; min-width: 7rem; }
+.scan-bar-quota { margin: 0; color: var(--text-tertiary); font-size: 0.8125rem; font-weight: 500; }
+
+/* Header */
+.report-header { display: grid; gap: var(--space-3); }
+.report-header .section-kicker { margin: 0; }
+.report .report-domain {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(1.5rem, 2.4vw, 2rem);
+  font-weight: 750;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.report-meta {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.55;
+}
+.report-meta-elapsed { font-variant-numeric: tabular-nums; }
+.report-meta-cancel {
+  padding: 0;
+  border: 0;
+  color: var(--brand-primary);
+  background: none;
+  font: inherit;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+}
+.report-meta-cancel:hover { color: var(--brand-hover); }
+.report-redirect {
+  display: flex;
+  align-items: flex-start;
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  gap: var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--status-attention);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  background: var(--surface-secondary);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.55;
+}
+
+.report-banner { display: grid; gap: var(--space-3); }
+
+/* Hero grid, shared by the skeleton and the real hero */
+.report-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  padding: clamp(var(--space-5), 3vw, var(--space-8));
+  gap: var(--space-8);
+  border: 1px solid var(--border-default);
+  border-top-width: 3px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-primary);
+}
+.report-hero.is-skeleton { border-top-color: var(--border-default); }
+@media (min-width: 64rem) {
+  .report-hero { grid-template-columns: minmax(0, 1fr) minmax(20rem, 1fr); }
+  /* The right column (progress card or area bars) keeps one height so nothing jumps. */
+  .report-hero > :last-child:not(:first-child) { min-height: 17rem; }
+  /* A blocked run has no right column: its headline gets the whole card. */
+  .report-hero[data-blocked] { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Skeleton: no status colour until values exist */
+.score-skeleton { display: grid; align-content: start; gap: var(--space-3); }
+.skeleton-score-row,
+.skeleton-grade-row { display: flex; align-items: baseline; margin: 0; gap: var(--space-2); }
+.skeleton-score {
+  display: inline-flex;
+  align-items: flex-end;
+  height: 0.9em;
+  gap: 0.06em;
+  font-size: clamp(4rem, 8vw, 6rem);
+  line-height: 0.9;
+}
+/* Two digit-sized blocks on the score's baseline, in place of a '--' glyph that renders at x-height. */
+.skeleton-digit { width: 0.55em; height: 0.72em; }
+.skeleton-score-max { color: var(--text-tertiary); font-size: 1.125rem; font-weight: 700; }
+.skeleton-digit,
+.skeleton-grade,
+.skeleton-band,
+.skeleton-line,
+.skeleton-chip {
+  display: block;
+  border-radius: var(--radius-sm);
+  background: var(--surface-secondary);
+}
+.skeleton-grade { width: 2.5rem; height: 1.75rem; }
+.skeleton-band { width: 10rem; height: 1.25rem; }
+.score-skeleton .skeleton-line { width: 100%; height: 0.9rem; }
+.score-skeleton .skeleton-line-short { width: 70%; }
+
+.report-skeleton { display: grid; gap: var(--space-4); }
+.report-skeleton-heading {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 0.75rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.report-skeleton-fixes { display: grid; gap: var(--space-3); margin-bottom: var(--space-4); }
+.report-skeleton-fixes .skeleton-line { height: 3rem; }
+.report-skeleton-groups { display: grid; }
+.report-skeleton-row {
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr) auto auto;
+  align-items: center;
+  min-height: 3.5rem;
+  gap: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-tertiary);
+  font-size: 1rem;
+  font-weight: 650;
+}
+.report-skeleton-row .group-number { color: var(--text-tertiary); font-weight: 750; }
+.report-skeleton-question { color: var(--text-secondary); }
+.report-skeleton-chips { display: flex; gap: var(--space-1); }
+.skeleton-chip { width: 3rem; height: 1.25rem; border-radius: 999px; }
+.report-skeleton-figure { min-width: 3.25rem; text-align: right; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton-digit,
+  .skeleton-grade,
+  .skeleton-band,
+  .skeleton-line,
+  .skeleton-chip {
+    background: linear-gradient(90deg, var(--surface-secondary) 0%, var(--border-subtle) 50%, var(--surface-secondary) 100%);
+    background-size: 200% 100%;
+    animation: report-skeleton-sweep 1.4s linear infinite;
+  }
+}
+@keyframes report-skeleton-sweep {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+/* Scanning card */
+.scan-progress {
+  display: grid;
+  align-content: start;
+  min-height: 17rem;
+  padding: var(--space-5);
+  gap: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-secondary);
+}
+/* 5.3: the content is rendered at once and only revealed after 300 ms, so the card never grows. */
+.scan-progress[data-visible='false'] > * { visibility: hidden; }
+.scan-progress-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
+.report .scan-progress-head h2 {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+}
+.scan-progress-timer { color: var(--text-tertiary); font-size: 0.8125rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.scan-steps { display: grid; margin: 0; padding: 0; gap: var(--space-3); list-style: none; }
+.scan-step {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+  align-items: start;
+  column-gap: var(--space-2);
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.scan-step[data-state='working'] { color: var(--text-primary); }
+.scan-step[data-state='waiting'] { color: var(--text-tertiary); }
+.scan-step-mark {
+  width: 0.875rem;
+  height: 0.875rem;
+  margin-top: 0.3rem;
+  border: 2px solid var(--border-default);
+  border-radius: 50%;
+}
+.scan-step[data-state='done'] .scan-step-mark { display: inline-flex; width: auto; height: auto; margin-top: 0.2rem; border: 0; border-radius: 0; color: var(--status-good); }
+.scan-step[data-state='working'] .scan-step-mark { border-color: var(--brand-primary); border-right-color: transparent; }
+@media (prefers-reduced-motion: no-preference) {
+  .scan-step[data-state='working'] .scan-step-mark { animation: spinner 800ms linear infinite; }
+}
+.scan-files {
+  grid-column: 2;
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-4);
+  color: var(--text-tertiary);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+.scan-files li + li { margin-top: var(--space-1); }
+
+.scan-bar-indeterminate {
+  position: relative;
+  height: 0.375rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--border-subtle);
+}
+.scan-bar-indeterminate-fill {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 40%;
+  border-radius: inherit;
+  background: var(--brand-primary);
+  animation: scan-indeterminate 1.2s linear infinite;
+}
+.scan-bar-indeterminate-word { display: none; }
+@keyframes scan-indeterminate {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scan-bar-indeterminate {
+    display: flex;
+    align-items: center;
+    height: auto;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    background: repeating-linear-gradient(135deg, var(--border-subtle) 0 4px, transparent 4px 8px);
+  }
+  .scan-bar-indeterminate-fill { display: none; }
+  .scan-bar-indeterminate-word { display: inline; color: var(--text-tertiary); font-size: 0.75rem; font-weight: 650; }
+}
+.scan-progress-note { margin: 0; color: var(--text-tertiary); font-size: 0.8125rem; font-weight: 500; line-height: 1.55; }
+.scan-progress-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+/* Challenge and error notices */
+.scan-notice {
+  display: grid;
+  padding: var(--space-6);
+  gap: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--status-attention);
+  border-radius: var(--radius-md);
+  background: var(--surface-secondary);
+}
+.scan-notice-error { border-left-color: var(--status-neutral); }
+.scan-notice[data-variant='banner'] { padding: var(--space-4) var(--space-5); }
+.scan-notice-kicker {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 0.75rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.report .scan-notice-title { margin: 0; font-size: 1.125rem; font-weight: 750; line-height: 1.3; }
+.scan-notice-body { margin: 0; color: var(--text-secondary); font-size: 0.9375rem; font-weight: 500; line-height: 1.55; }
+.scan-notice-note { margin: 0; color: var(--text-tertiary); font-size: 0.8125rem; font-weight: 500; line-height: 1.55; }
+.scan-notice-countdown { color: var(--text-secondary); font-weight: 650; font-variant-numeric: tabular-nums; }
+.scan-notice-link {
+  padding: 0;
+  border: 0;
+  color: var(--brand-primary);
+  background: none;
+  font: inherit;
+  font-weight: 650;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.scan-notice-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.scan-notice .checker-turnstile { min-height: 4.0625rem; margin-block: var(--space-1); }
+
+/* Busy and aria-disabled buttons: never `disabled`, keep the fill */
+.checker-submit.is-busy,
+.checker-submit[aria-disabled='true'] { cursor: progress; }
+.checker-submit.is-busy:hover,
+.checker-submit[aria-disabled='true']:hover { transform: none; }
+.checker-action[aria-disabled='true'] { color: var(--text-tertiary); cursor: progress; }
+.checker-action[aria-disabled='true']:hover { border-color: var(--border-default); background: var(--surface-primary); }
+
+/* Deploy 1 legacy body: dimmed and inert while a rescan runs */
+.report-legacy { display: grid; gap: var(--space-4); }
+.report-legacy .checker-results-top { margin: 0; }
+.report-legacy-body[inert] { opacity: 0.55; }
+
+/* Landing additions */
+.checker-promise { margin: var(--space-4) 0 0; color: var(--text-secondary); font-size: 0.9375rem; font-weight: 600; line-height: 1.55; }
+.checker-goals-overview { margin-top: clamp(var(--space-16), 8vw, var(--space-24)); }
+.doc-page .checker-goals-overview > h2 {
+  margin: 0 0 var(--space-6);
+  font-size: clamp(1.85rem, 3vw, 2.7rem);
+}
+.checker-goals {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-primary);
+  list-style: none;
+}
+.doc-page .checker-goals li {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) auto;
+  align-items: baseline;
+  margin: 0;
+  padding: var(--space-5) var(--space-6);
+  gap: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.4;
+}
+.checker-goals li:nth-child(odd) { border-right: 1px solid var(--border-subtle); }
+.checker-goal-number { color: var(--text-tertiary); font-size: 0.9375rem; font-weight: 750; font-variant-numeric: tabular-nums; }
+.checker-goal-label {
+  color: var(--text-tertiary);
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Phone */
+@media (max-width: 39.99rem) {
+  .scan-bar .scan-bar-button { width: auto; min-width: 0; padding-inline: var(--space-4); }
+  .checker-goals { grid-template-columns: minmax(0, 1fr); }
+  .checker-goals li:nth-child(odd) { border-right: 0; }
+  .doc-page .checker-goals li { padding: var(--space-4); }
+  .report-skeleton-row { grid-template-columns: 1.5rem minmax(0, 1fr) auto; }
+  .report-skeleton-chips { grid-column: 2 / 4; grid-row: 2; padding-bottom: var(--space-3); }
+}
+
+@media (forced-colors: active) {
+  .scan-notice,
+  .scan-progress,
+  .report-redirect { border: 1px solid CanvasText; }
+  .scan-bar-indeterminate-fill { background: Highlight; }
+}
+
+@media print {
+  .scan-bar,
+  .report-meta-cancel,
+  .report-banner,
+  .report-legacy .checker-results-top { display: none; }
+}
