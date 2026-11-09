@@ -68,6 +68,11 @@ export function ReportActions({
   const latestReport = useRef(report);
   useLayoutEffect(() => {
     latestReport.current = report;
+    // Timers from a copy of the previous report must not clear the next copy's feedback early.
+    if (copiedTimer.current !== null) window.clearTimeout(copiedTimer.current);
+    if (toastTimer.current !== null) window.clearTimeout(toastTimer.current);
+    copiedTimer.current = null;
+    toastTimer.current = null;
   }, [report]);
 
   // A new report (a rescan landed) clears copy feedback and a stale clipboard

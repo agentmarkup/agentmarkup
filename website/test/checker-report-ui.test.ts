@@ -932,6 +932,26 @@ describe('scan honesty (H11, H12)', () => {
     expect(at(4, 600)).toBeNull();
   });
 
+  it('5.3: the scanning card content is in the DOM before the 300 ms reveal, hidden by CSS, so nothing shifts', async () => {
+    const container = await mount(
+      createElement(ScanProgress, {
+        host: HOST,
+        startedAt: performance.now(),
+        slowPromptDismissed: false,
+        onKeepWaiting: () => {},
+        onCancel: () => {},
+      })
+    );
+    const card = container.querySelector('section.scan-progress');
+    expect(card?.getAttribute('data-visible')).toBe('false');
+    expect(card?.querySelector('h2')?.textContent).toBe(`Checking ${HOST}`);
+    expect(card?.querySelectorAll('ul.scan-files li')).toHaveLength(6);
+    const css = readFileSync(resolve(WEBSITE_ROOT, 'src/ui/report/scan.css'), 'utf8');
+    expect(css).toMatch(/\.scan-progress\[data-visible='false'\]\s*>\s*\*\s*\{\s*visibility:\s*hidden;?\s*\}/);
+    await settle(400);
+    expect(card?.getAttribute('data-visible')).toBe('true');
+  });
+
   it('H12: a cached answer is labelled as saved, with the time a fresh scan becomes possible', () => {
     const fresh = siteCheck();
     const freshSegments = scanMeta(fresh, reference);
