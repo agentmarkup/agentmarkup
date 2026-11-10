@@ -1,0 +1,121 @@
+{
+ "targetUrl": "https://www.emag.ro/",
+ "origin": "https://www.emag.ro",
+ "fetchedAt": "2026-11-09T21:25:18.894Z",
+ "normalizedFrom": "https://emag.ro",
+ "homepage": {
+  "requestedUrl": "https://emag.ro/",
+  "finalUrl": "https://www.emag.ro/",
+  "status": 511,
+  "ok": false,
+  "contentType": "text/html",
+  "body": "<!doctype html><html lang=ro><head><meta charset=utf-8><meta name=viewport content=\"width=device-width,initial-scale=1\"><title>eMAG Captcha</title> <script src=\"https://b69364f89bbe.eu-central-1.captcha-sdk.awswaf.com/b69364f89bbe/jsapi.js\" defer></script> <link rel=stylesheet href=\"https://s13emagst.akamaized.net/as/s.3.css\"></head><body><div class=c> <img class=l src=\"https://s13emagst.akamaized.net/as/l.svg\" alt=eMAG><div style=\"text-align:center;margin-bottom:20px\"><p>Am detectat trafic neobișnuit de mare<br> din rețeaua de internet în care te afli.</p></div><div id=b><div class=loader></div></div><div id=o></div></div> <script>let m,u,v,g,t0,t1={};let pi=pt=tp=0;t0=new Date().getTime();const cs=\"awswaf-captcha\",cc=\"aws-waf-token\",sc=\"https://www.emag.ro/save_captcha_token?cookieValue=\",ck=\"https://www.emag.ro/always_captcha\";</script> <script src=\"https://s13emagst.akamaized.net/as/js.3.js\"></script> <script>async function a(){try{g=await(await fetch(\"https://s13emagst.akamaized.net/as/ro.json\")).json();}catch{g={};}} function d(t){return(new Date().getTime()-t);} async function fc(url){let t={status:511};try{t=await AwsWafIntegration.fetch(ck+url,{credentials:'include'});} catch(t){} return t;} function y(t){try{const e=`; ${document.cookie}`.split(`; ${t}=`);if(e.length===2)return e.pop().split(\";\").shift();}catch{} return\"\";} async function w(){await a();window.awsWafCookieDomainList=[\".emag.ro\",\".www.emag.ro\",\".sapi.emag.ro\",\".m.emag.ro\",\"pdr.emag.ro\"];const t=await fc('?t1='+t1+'&t2='+d(t0));let t3=d(t0);if(t.status===511||t.status===501||t.status===405){AwsWafCaptcha.renderCaptcha(document.querySelector(\"#b\"),{apiKey:\"oZZQS0WGqC8U3r/edC5ufKV6gFSy0/jYFysnW/GOn4iH7c5XN3S7toVCpz7L+ymXd33LsYCXjF84M1n5pC3dJR0p7Ow8IJjl8FmdPUTCUhwqM49H59MxcwYPL/iBJp91szsJ49eR8h0YaV4JfQ29I/M9pyf2ZA1uEHg8432zyKWDISjKiyit9oK/dfbadRnAggCKr9edUk4LsGh+RFMWqDkfPwH0+rwQ+vj6WuS5benfG5apcn3lunvHfBO3LoxrQjCDn2J+8ASf5Hqk2eo3BAnZz2txKwbx9vnhUH/cZomYFMRMI6aDIWWxo2r/1cVrhP+I6xZ8s5FXtu3RcUWG+m9vC5tU+L5kbxxBqnpOQLsmaJ18Gp3McjA5k9VK5n9+/2r9bESDfm8TlAWz91RzcMcY3N89/hGQ+Vy+HSpd6aHcFq5u5gMfD9f5t8kmqF2zps/DyBHHJEUg8dQ2PKwVF9Q77UEALQU/ULNiVYj8zGKv4iMfw5RDy36Gqhtdv3GegLEmIZzRZ2U+JThPgJJcw/+kctJRBeGDksijztnz3XqJ8Z2lP5i5Zkc+7GHpk5vTcibB6fcoGw2IS+p4e9MXKwhfVXVkzFNSgLNDy3N4/hBiuURD8cEQT+d5W8J3k1Bcs8hsrwGblXJh72p8iVbE2EArAb6zUBh//o0yNZBEpgY=_1_1\",onSuccess:async function(){y(cc);let sf='?t3='+t3+'&t4='+d(t0);sf+='&pi='+pi+'&pt='+pt+'&tp='+tp;let x=await fc(sf);location.href=sc+y(cc);},onPuzzleTimeout:function(){pt+=1},onPuzzleIncorrect:function(){pi+=1},onLoad:function(){tp=d(t0)},onError:function(){let x=fc('?e=1&pi='+pi+'&pt='+pt+'&tp='+tp+'&te='+d(t0));}});setTimeout(()=>{Tr.z();Tr.f();},500);return;} location.href=sc+y(cc);document.querySelector(\"#o\").innerHTML=await t.text();} onload=()=>{t1=d(t0);w();};</script> <script>var EM=EM||{};EM.as={f:true,t:'a',a:'11'};</script> <script src=\"https://s13emagst.akamaized.net/assets/all/js/aid_script-5dc3f9176b66698cb3d4.min.js\" ></script> </body></html>",
+  "xRobotsTag": null,
+  "bodyBytes": 3015,
+  "durationMs": 269,
+  "hops": 1,
+  "headers": {
+   "content-length": "3015"
+  },
+  "outcome": "unverified"
+ },
+ "homepageMarkdown": {
+  "requestedUrl": "https://www.emag.ro/index.md",
+  "finalUrl": "https://www.emag.ro/index.md",
+  "status": 511,
+  "ok": false,
+  "contentType": "text/html",
+  "body": "<!doctype html><html lang=ro><head><meta charset=utf-8><meta name=viewport content=\"width=device-width,initial-scale=1\"><title>eMAG Captcha</title> <script src=\"https://b69364f89bbe.eu-central-1.captcha-sdk.awswaf.com/b69364f89bbe/jsapi.js\" defer></script> <link rel=stylesheet href=\"https://s13emagst.akamaized.net/as/s.3.css\"></head><body><div class=c> <img class=l src=\"https://s13emagst.akamaized.net/as/l.svg\" alt=eMAG><div style=\"text-align:center;margin-bottom:20px\"><p>Am detectat trafic neobișnuit de mare<br> din rețeaua de internet în care te afli.</p></div><div id=b><div class=loader></div></div><div id=o></div></div> <script>let m,u,v,g,t0,t1={};let pi=pt=tp=0;t0=new Date().getTime();const cs=\"awswaf-captcha\",cc=\"aws-waf-token\",sc=\"https://www.emag.ro/save_captcha_token?cookieValue=\",ck=\"https://www.emag.ro/always_captcha\";</script> <script src=\"https://s13emagst.akamaized.net/as/js.3.js\"></script> <script>async function a(){try{g=await(await fetch(\"https://s13emagst.akamaized.net/as/ro.json\")).json();}catch{g={};}} function d(t){return(new Date().getTime()-t);} async function fc(url){let t={status:511};try{t=await AwsWafIntegration.fetch(ck+url,{credentials:'include'});} catch(t){} return t;} function y(t){try{const e=`; ${document.cookie}`.split(`; ${t}=`);if(e.length===2)return e.pop().split(\";\").shift();}catch{} return\"\";} async function w(){await a();window.awsWafCookieDomainList=[\".emag.ro\",\".www.emag.ro\",\".sapi.emag.ro\",\".m.emag.ro\",\"pdr.emag.ro\"];const t=await fc('?t1='+t1+'&t2='+d(t0));let t3=d(t0);if(t.status===511||t.status===501||t.status===405){AwsWafCaptcha.renderCaptcha(document.querySelector(\"#b\"),{apiKey:\"oZZQS0WGqC8U3r/edC5ufKV6gFSy0/jYFysnW/GOn4iH7c5XN3S7toVCpz7L+ymXd33LsYCXjF84M1n5pC3dJR0p7Ow8IJjl8FmdPUTCUhwqM49H59MxcwYPL/iBJp91szsJ49eR8h0YaV4JfQ29I/M9pyf2ZA1uEHg8432zyKWDISjKiyit9oK/dfbadRnAggCKr9edUk4LsGh+RFMWqDkfPwH0+rwQ+vj6WuS5benfG5apcn3lunvHfBO3LoxrQjCDn2J+8ASf5Hqk2eo3BAnZz2txKwbx9vnhUH/cZomYFMRMI6aDIWWxo2r/1cVrhP+I6xZ8s5FXtu3RcUWG+m9vC5tU+L5kbxxBqnpOQLsmaJ18Gp3McjA5k9VK5n9+/2r9bESDfm8TlAWz91RzcMcY3N89/hGQ+Vy+HSpd6aHcFq5u5gMfD9f5t8kmqF2zps/DyBHHJEUg8dQ2PKwVF9Q77UEALQU/ULNiVYj8zGKv4iMfw5RDy36Gqhtdv3GegLEmIZzRZ2U+JThPgJJcw/+kctJRBeGDksijztnz3XqJ8Z2lP5i5Zkc+7GHpk5vTcibB6fcoGw2IS+p4e9MXKwhfVXVkzFNSgLNDy3N4/hBiuURD8cEQT+d5W8J3k1Bcs8hsrwGblXJh72p8iVbE2EArAb6zUBh//o0yNZBEpgY=_1_1\",onSuccess:async function(){y(cc);let sf='?t3='+t3+'&t4='+d(t0);sf+='&pi='+pi+'&pt='+pt+'&tp='+tp;let x=await fc(sf);location.href=sc+y(cc);},onPuzzleTimeout:function(){pt+=1},onPuzzleIncorrect:function(){pi+=1},onLoad:function(){tp=d(t0)},onError:function(){let x=fc('?e=1&pi='+pi+'&pt='+pt+'&tp='+tp+'&te='+d(t0));}});setTimeout(()=>{Tr.z();Tr.f();},500);return;} location.href=sc+y(cc);document.querySelector(\"#o\").innerHTML=await t.text();} onload=()=>{t1=d(t0);w();};</script> <script>var EM=EM||{};EM.as={f:true,t:'a',a:'11'};</script> <script src=\"https://s13emagst.akamaized.net/assets/all/js/aid_script-5dc3f9176b66698cb3d4.min.js\" ></script> </body></html>",
+  "xRobotsTag": null,
+  "bodyBytes": 3015,
+  "durationMs": 9,
+  "hops": 0,
+  "headers": {
+   "content-length": "3015"
+  },
+  "outcome": "unverified"
+ },
+ "llmsTxt": {
+  "requestedUrl": "https://www.emag.ro/llms.txt",
+  "finalUrl": "https://www.emag.ro/llms.txt",
+  "status": 511,
+  "ok": false,
+  "contentType": "text/html",
+  "body": "<!doctype html><html lang=ro><head><meta charset=utf-8><meta name=viewport content=\"width=device-width,initial-scale=1\"><title>eMAG Captcha</title> <script src=\"https://b69364f89bbe.eu-central-1.captcha-sdk.awswaf.com/b69364f89bbe/jsapi.js\" defer></script> <link rel=stylesheet href=\"https://s13emagst.akamaized.net/as/s.3.css\"></head><body><div class=c> <img class=l src=\"https://s13emagst.akamaized.net/as/l.svg\" alt=eMAG><div style=\"text-align:center;margin-bottom:20px\"><p>Am detectat trafic neobișnuit de mare<br> din rețeaua de internet în care te afli.</p></div><div id=b><div class=loader></div></div><div id=o></div></div> <script>let m,u,v,g,t0,t1={};let pi=pt=tp=0;t0=new Date().getTime();const cs=\"awswaf-captcha\",cc=\"aws-waf-token\",sc=\"https://www.emag.ro/save_captcha_token?cookieValue=\",ck=\"https://www.emag.ro/always_captcha\";</script> <script src=\"https://s13emagst.akamaized.net/as/js.3.js\"></script> <script>async function a(){try{g=await(await fetch(\"https://s13emagst.akamaized.net/as/ro.json\")).json();}catch{g={};}} function d(t){return(new Date().getTime()-t);} async function fc(url){let t={status:511};try{t=await AwsWafIntegration.fetch(ck+url,{credentials:'include'});} catch(t){} return t;} function y(t){try{const e=`; ${document.cookie}`.split(`; ${t}=`);if(e.length===2)return e.pop().split(\";\").shift();}catch{} return\"\";} async function w(){await a();window.awsWafCookieDomainList=[\".emag.ro\",\".www.emag.ro\",\".sapi.emag.ro\",\".m.emag.ro\",\"pdr.emag.ro\"];const t=await fc('?t1='+t1+'&t2='+d(t0));let t3=d(t0);if(t.status===511||t.status===501||t.status===405){AwsWafCaptcha.renderCaptcha(document.querySelector(\"#b\"),{apiKey:\"oZZQS0WGqC8U3r/edC5ufKV6gFSy0/jYFysnW/GOn4iH7c5XN3S7toVCpz7L+ymXd33LsYCXjF84M1n5pC3dJR0p7Ow8IJjl8FmdPUTCUhwqM49H59MxcwYPL/iBJp91szsJ49eR8h0YaV4JfQ29I/M9pyf2ZA1uEHg8432zyKWDISjKiyit9oK/dfbadRnAggCKr9edUk4LsGh+RFMWqDkfPwH0+rwQ+vj6WuS5benfG5apcn3lunvHfBO3LoxrQjCDn2J+8ASf5Hqk2eo3BAnZz2txKwbx9vnhUH/cZomYFMRMI6aDIWWxo2r/1cVrhP+I6xZ8s5FXtu3RcUWG+m9vC5tU+L5kbxxBqnpOQLsmaJ18Gp3McjA5k9VK5n9+/2r9bESDfm8TlAWz91RzcMcY3N89/hGQ+Vy+HSpd6aHcFq5u5gMfD9f5t8kmqF2zps/DyBHHJEUg8dQ2PKwVF9Q77UEALQU/ULNiVYj8zGKv4iMfw5RDy36Gqhtdv3GegLEmIZzRZ2U+JThPgJJcw/+kctJRBeGDksijztnz3XqJ8Z2lP5i5Zkc+7GHpk5vTcibB6fcoGw2IS+p4e9MXKwhfVXVkzFNSgLNDy3N4/hBiuURD8cEQT+d5W8J3k1Bcs8hsrwGblXJh72p8iVbE2EArAb6zUBh//o0yNZBEpgY=_1_1\",onSuccess:async function(){y(cc);let sf='?t3='+t3+'&t4='+d(t0);sf+='&pi='+pi+'&pt='+pt+'&tp='+tp;let x=await fc(sf);location.href=sc+y(cc);},onPuzzleTimeout:function(){pt+=1},onPuzzleIncorrect:function(){pi+=1},onLoad:function(){tp=d(t0)},onError:function(){let x=fc('?e=1&pi='+pi+'&pt='+pt+'&tp='+tp+'&te='+d(t0));}});setTimeout(()=>{Tr.z();Tr.f();},500);return;} location.href=sc+y(cc);document.querySelector(\"#o\").innerHTML=await t.text();} onload=()=>{t1=d(t0);w();};</script> <script>var EM=EM||{};EM.as={f:true,t:'a',a:'11'};</script> <script src=\"https://s13emagst.akamaized.net/assets/all/js/aid_script-5dc3f9176b66698cb3d4.min.js\" ></script> </body></html>",
+  "xRobotsTag": null,
+  "bodyBytes": 3015,
+  "durationMs": 11,
+  "hops": 0,
+  "headers": {
+   "content-length": "3015"
+  },
+  "outcome": "unverified"
+ },
+ "robotsTxt": {
+  "requestedUrl": "https://www.emag.ro/robots.txt",
+  "finalUrl": "https://www.emag.ro/robots.txt",
+  "status": 200,
+  "ok": true,
+  "contentType": "text/plain; charset=UTF-8",
+  "body": "User-agent: *\nDisallow: /user/*\nDisallow: /addtocart*\nDisallow: /proces_comanda\nDisallow: /cart/*\nDisallow: /checkout\nDisallow: /imagini/*\nDisallow: /images/*\nDisallow: /compare/*\nDisallow: /mesaje/\nDisallow: /thank-you$\nDisallow: /cat-*/pid-*/ord-*/p-*\nAllow: */review/*\nDisallow: */review/add*\nDisallow: /adauga-intrebare\nDisallow: /header-cart\nDisallow: /header-wl\nDisallow: /widgets/track.json\nDisallow: /get_back_to_search_url\nDisallow: /search-tools/*\nDisallow: /ajax_live_products\nDisallow: /box_user_history\nDisallow: /configurator_auto/\nDisallow: /search/listall\nDisallow: /search/m.emag.ro\nDisallow: /product/\nDisallow: /label/*\nDisallow: /favorites/\nDisallow: /favorites$\nDisallow: /favorites/*\nAllow: /*/*/*all-products\n\nUser-agent: 008\nDisallow: /\n\nUser-agent: Yandex\nDisallow: /\n\nUser-agent: Baiduspider\nDisallow: /\n\nUser-agent: AhrefsBot\nDisallow: /\n\nUser-agent: Synthesio\nDisallow: /\n\nSitemap: https://www.emag.ro/sitemaps/category-filters-index.xml \nSitemap: https://www.emag.ro/sitemaps/categories-index.xml \nSitemap: https://www.emag.ro/sitemaps/offers-available-index.xml \nSitemap: https://www.emag.ro/sitemaps/offers-unavailable-index.xml \nSitemap: https://www.emag.ro/sitemaps/offers-latest-index.xml \nSitemap: https://www.emag.ro/sitemaps/sub-department-pages-index.xml \nSitemap: https://www.emag.ro/sitemaps/department-pages-index.xml \nSitemap: https://www.emag.ro/sitemaps/vendors-index.xml \nSitemap: https://www.emag.ro/sitemaps/brands-index.xml \nSitemap: https://www.emag.ro/sitemaps/miscellaneous-pages-index.xml \nSitemap: https://www.emag.ro/sitemaps/resealed-departments-index.xml \n",
+  "xRobotsTag": null,
+  "bodyBytes": 1612,
+  "durationMs": 184,
+  "hops": 0,
+  "headers": {
+   "vary": "Accept-Encoding, User-Agent"
+  },
+  "outcome": "ok"
+ },
+ "sitemap": {
+  "requestedUrl": "https://www.emag.ro/sitemaps/category-filters-index.xml",
+  "finalUrl": "https://www.emag.ro/sitemaps/category-filters-index.xml",
+  "status": 511,
+  "ok": false,
+  "contentType": "text/html",
+  "body": "<!doctype html><html lang=ro><head><meta charset=utf-8><meta name=viewport content=\"width=device-width,initial-scale=1\"><title>eMAG Captcha</title> <script src=\"https://b69364f89bbe.eu-central-1.captcha-sdk.awswaf.com/b69364f89bbe/jsapi.js\" defer></script> <link rel=stylesheet href=\"https://s13emagst.akamaized.net/as/s.3.css\"></head><body><div class=c> <img class=l src=\"https://s13emagst.akamaized.net/as/l.svg\" alt=eMAG><div style=\"text-align:center;margin-bottom:20px\"><p>Am detectat trafic neobișnuit de mare<br> din rețeaua de internet în care te afli.</p></div><div id=b><div class=loader></div></div><div id=o></div></div> <script>let m,u,v,g,t0,t1={};let pi=pt=tp=0;t0=new Date().getTime();const cs=\"awswaf-captcha\",cc=\"aws-waf-token\",sc=\"https://www.emag.ro/save_captcha_token?cookieValue=\",ck=\"https://www.emag.ro/always_captcha\";</script> <script src=\"https://s13emagst.akamaized.net/as/js.3.js\"></script> <script>async function a(){try{g=await(await fetch(\"https://s13emagst.akamaized.net/as/ro.json\")).json();}catch{g={};}} function d(t){return(new Date().getTime()-t);} async function fc(url){let t={status:511};try{t=await AwsWafIntegration.fetch(ck+url,{credentials:'include'});} catch(t){} return t;} function y(t){try{const e=`; ${document.cookie}`.split(`; ${t}=`);if(e.length===2)return e.pop().split(\";\").shift();}catch{} return\"\";} async function w(){await a();window.awsWafCookieDomainList=[\".emag.ro\",\".www.emag.ro\",\".sapi.emag.ro\",\".m.emag.ro\",\"pdr.emag.ro\"];const t=await fc('?t1='+t1+'&t2='+d(t0));let t3=d(t0);if(t.status===511||t.status===501||t.status===405){AwsWafCaptcha.renderCaptcha(document.querySelector(\"#b\"),{apiKey:\"oZZQS0WGqC8U3r/edC5ufKV6gFSy0/jYFysnW/GOn4iH7c5XN3S7toVCpz7L+ymXd33LsYCXjF84M1n5pC3dJR0p7Ow8IJjl8FmdPUTCUhwqM49H59MxcwYPL/iBJp91szsJ49eR8h0YaV4JfQ29I/M9pyf2ZA1uEHg8432zyKWDISjKiyit9oK/dfbadRnAggCKr9edUk4LsGh+RFMWqDkfPwH0+rwQ+vj6WuS5benfG5apcn3lunvHfBO3LoxrQjCDn2J+8ASf5Hqk2eo3BAnZz2txKwbx9vnhUH/cZomYFMRMI6aDIWWxo2r/1cVrhP+I6xZ8s5FXtu3RcUWG+m9vC5tU+L5kbxxBqnpOQLsmaJ18Gp3McjA5k9VK5n9+/2r9bESDfm8TlAWz91RzcMcY3N89/hGQ+Vy+HSpd6aHcFq5u5gMfD9f5t8kmqF2zps/DyBHHJEUg8dQ2PKwVF9Q77UEALQU/ULNiVYj8zGKv4iMfw5RDy36Gqhtdv3GegLEmIZzRZ2U+JThPgJJcw/+kctJRBeGDksijztnz3XqJ8Z2lP5i5Zkc+7GHpk5vTcibB6fcoGw2IS+p4e9MXKwhfVXVkzFNSgLNDy3N4/hBiuURD8cEQT+d5W8J3k1Bcs8hsrwGblXJh72p8iVbE2EArAb6zUBh//o0yNZBEpgY=_1_1\",onSuccess:async function(){y(cc);let sf='?t3='+t3+'&t4='+d(t0);sf+='&pi='+pi+'&pt='+pt+'&tp='+tp;let x=await fc(sf);location.href=sc+y(cc);},onPuzzleTimeout:function(){pt+=1},onPuzzleIncorrect:function(){pi+=1},onLoad:function(){tp=d(t0)},onError:function(){let x=fc('?e=1&pi='+pi+'&pt='+pt+'&tp='+tp+'&te='+d(t0));}});setTimeout(()=>{Tr.z();Tr.f();},500);return;} location.href=sc+y(cc);document.querySelector(\"#o\").innerHTML=await t.text();} onload=()=>{t1=d(t0);w();};</script> <script>var EM=EM||{};EM.as={f:true,t:'a',a:'11'};</script> <script src=\"https://s13emagst.akamaized.net/assets/all/js/aid_script-5dc3f9176b66698cb3d4.min.js\" ></script> </body></html>",
+  "xRobotsTag": null,
+  "bodyBytes": 3015,
+  "durationMs": 8,
+  "hops": 0,
+  "headers": {
+   "content-length": "3015"
+  },
+  "outcome": "unverified"
+ },
+ "sitemapUrl": "https://www.emag.ro/sitemaps/category-filters-index.xml",
+ "sitemapSource": "robots",
+ "notFoundProbe": {
+  "requestedUrl": "https://www.emag.ro/agentmarkup-probe-404-does-not-exist-9f3a2c",
+  "finalUrl": "https://www.emag.ro/agentmarkup-probe-404-does-not-exist-9f3a2c",
+  "status": 511,
+  "ok": false,
+  "contentType": "text/html",
+  "body": "<!doctype html><html lang=ro><head><meta charset=utf-8><meta name=viewport content=\"width=device-width,initial-scale=1\"><title>eMAG Captcha</title> <script src=\"https://b69364f89bbe.eu-central-1.captcha-sdk.awswaf.com/b69364f89bbe/jsapi.js\" defer></script> <link rel=stylesheet href=\"https://s13emagst.akamaized.net/as/s.3.css\"></head><body><div class=c> <img class=l src=\"https://s13emagst.akamaized.net/as/l.svg\" alt=eMAG><div style=\"text-align:center;margin-bottom:20px\"><p>Am detectat trafic neobișnuit de mare<br> din rețeaua de internet în care te afli.</p></div><div id=b><div class=loader></div></div><div id=o></div></div> <script>let m,u,v,g,t0,t1={};let pi=pt=tp=0;t0=new Date().getTime();const cs=\"awswaf-captcha\",cc=\"aws-waf-token\",sc=\"https://www.emag.ro/save_captcha_token?cookieValue=\",ck=\"https://www.emag.ro/always_captcha\";</script> <script src=\"https://s13emagst.akamaized.net/as/js.3.js\"></script> <script>async function a(){try{g=await(await fetch(\"https://s13emagst.akamaized.net/as/ro.json\")).json();}catch{g={};}} function d(t){return(new Date().getTime()-t);} async function fc(url){let t={status:511};try{t=await AwsWafIntegration.fetch(ck+url,{credentials:'include'});} catch(t){} return t;} function y(t){try{const e=`; ${document.cookie}`.split(`; ${t}=`);if(e.length===2)return e.pop().split(\";\").shift();}catch{} return\"\";} async function w(){await a();window.awsWafCookieDomainList=[\".emag.ro\",\".www.emag.ro\",\".sapi.emag.ro\",\".m.emag.ro\",\"pdr.emag.ro\"];const t=await fc('?t1='+t1+'&t2='+d(t0));let t3=d(t0);if(t.status===511||t.status===501||t.status===405){AwsWafCaptcha.renderCaptcha(document.querySelector(\"#b\"),{apiKey:\"oZZQS0WGqC8U3r/edC5ufKV6gFSy0/jYFysnW/GOn4iH7c5XN3S7toVCpz7L+ymXd33LsYCXjF84M1n5pC3dJR0p7Ow8IJjl8FmdPUTCUhwqM49H59MxcwYPL/iBJp91szsJ49eR8h0YaV4JfQ29I/M9pyf2ZA1uEHg8432zyKWDISjKiyit9oK/dfbadRnAggCKr9edUk4LsGh+RFMWqDkfPwH0+rwQ+vj6WuS5benfG5apcn3lunvHfBO3LoxrQjCDn2J+8ASf5Hqk2eo3BAnZz2txKwbx9vnhUH/cZomYFMRMI6aDIWWxo2r/1cVrhP+I6xZ8s5FXtu3RcUWG+m9vC5tU+L5kbxxBqnpOQLsmaJ18Gp3McjA5k9VK5n9+/2r9bESDfm8TlAWz91RzcMcY3N89/hGQ+Vy+HSpd6aHcFq5u5gMfD9f5t8kmqF2zps/DyBHHJEUg8dQ2PKwVF9Q77UEALQU/ULNiVYj8zGKv4iMfw5RDy36Gqhtdv3GegLEmIZzRZ2U+JThPgJJcw/+kctJRBeGDksijztnz3XqJ8Z2lP5i5Zkc+7GHpk5vTcibB6fcoGw2IS+p4e9MXKwhfVXVkzFNSgLNDy3N4/hBiuURD8cEQT+d5W8J3k1Bcs8hsrwGblXJh72p8iVbE2EArAb6zUBh//o0yNZBEpgY=_1_1\",onSuccess:async function(){y(cc);let sf='?t3='+t3+'&t4='+d(t0);sf+='&pi='+pi+'&pt='+pt+'&tp='+tp;let x=await fc(sf);location.href=sc+y(cc);},onPuzzleTimeout:function(){pt+=1},onPuzzleIncorrect:function(){pi+=1},onLoad:function(){tp=d(t0)},onError:function(){let x=fc('?e=1&pi='+pi+'&pt='+pt+'&tp='+tp+'&te='+d(t0));}});setTimeout(()=>{Tr.z();Tr.f();},500);return;} location.href=sc+y(cc);document.querySelector(\"#o\").innerHTML=await t.text();} onload=()=>{t1=d(t0);w();};</script> <script>var EM=EM||{};EM.as={f:true,t:'a',a:'11'};</script> <script src=\"https://s13emagst.akamaized.net/assets/all/js/aid_script-5dc3f9176b66698cb3d4.min.js\" ></script> </body></html>",
+  "xRobotsTag": null,
+  "bodyBytes": 3015,
+  "durationMs": 32,
+  "hops": 0,
+  "headers": {
+   "content-length": "3015"
+  },
+  "outcome": "unverified"
+ },
+ "samplePage": null,
+ "samplePageMarkdown": null,
+ "fetchSummary": {
+  "analysisStatus": "blocked",
+  "unverified": [
+   "homepage",
+   "homepageMarkdown",
+   "llmsTxt",
+   "sitemap",
+   "notFoundProbe"
+  ],
+  "elapsedMs": 519,
+  "fetches": 7,
+  "hops": 1,
+  "d1Statements": 15,
+  "samplePageUrl": null
+ }
+}

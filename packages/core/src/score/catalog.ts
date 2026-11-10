@@ -1,12 +1,16 @@
-// Check catalog v1.0.0 for the agentmarkup score.
+// Check catalog v1.1.0 for the agentmarkup score.
 //
 // Versioning rule: any change to required or recommended membership (adding,
 // removing, re-tiering) bumps MAJOR because it changes denominators; a rule change
 // inside a check bumps MINOR; copy-only changes bump PATCH. Scores compare only
 // across equal major versions.
+//
+// 1.1.0: challenge detection also reads HTTP 405 and 511, the AWS WAF
+// `x-amzn-waf-action` header, and two AWS WAF body markers that count only on a
+// challenge status (never on a 2xx page, where the AWS SDK is normal integration).
 import type { CheckDefinition, CheckTier } from './types.js';
 
-export const SCORE_CATALOG_VERSION = '1.0.0';
+export const SCORE_CATALOG_VERSION = '1.1.0';
 
 /** AI search and user agents whose root access is scored. */
 export const AI_SEARCH_AGENTS = [
@@ -126,7 +130,25 @@ export const BASELINE_JSONLD_TYPES = [
   'OpeningHoursSpecification',
 ] as const;
 
-/** Published challenge-page markers; additions bump MINOR. */
+/**
+ * HTTP statuses on which a challenge marker makes a response a bot challenge
+ * (`challenge`); without a marker they keep their plain meaning (401/403/405 a
+ * completed error, 429/503/511 unverified). Additions bump MINOR.
+ */
+export const CHALLENGE_STATUSES = [401, 403, 405, 429, 503, 511] as const;
+
+/**
+ * Published challenge headers: a response header whose value contains one of the
+ * listed words (case-insensitive) is a challenge marker on any status, reported as
+ * `name: value`. AWS WAF sends `x-amzn-waf-action: captcha` with HTTP 405 and
+ * `x-amzn-waf-action: challenge` with HTTP 202. Additions bump MINOR.
+ */
+export const CHALLENGE_HEADERS: ReadonlyArray<{ readonly name: string; readonly values: ReadonlyArray<string> }> = [
+  { name: 'cf-mitigated', values: ['challenge'] },
+  { name: 'x-amzn-waf-action', values: ['captcha', 'challenge'] },
+];
+
+/** Published challenge-page markers, read on any status; additions bump MINOR. */
 export const CHALLENGE_MARKERS = [
   '__cf_chl',
   'challenge-platform',
@@ -138,6 +160,17 @@ export const CHALLENGE_MARKERS = [
   '_Incapsula_Resource',
   'captcha-delivery',
   'px-captcha',
+] as const;
+
+/**
+ * Published challenge-page markers read only on a challenge status (one of
+ * `CHALLENGE_STATUSES`), never on a 2xx answer: AWS tells sites to load its WAF
+ * SDK (`jsapi.js`, `challenge.js`) on normal pages, so these strings on a 2xx page
+ * mean integration, not a block. Additions bump MINOR.
+ */
+export const CHALLENGE_MARKERS_NON_2XX = [
+  'awswaf.com',
+  'AwsWafIntegration',
 ] as const;
 
 /** Published prompt-injection patterns for `ax.injection-safe`. */
@@ -172,8 +205,8 @@ export const SCORE_CATALOG: ReadonlyArray<CheckDefinition> = [
     tier: 'required',
     bucket: 'reachability',
     applicability: 'Always.',
-    evidence: 'Homepage status, the cf-mitigated header and the first 20,480 characters of the body.',
-    rule: 'A 2xx HTML homepage with no challenge marker scores 1. A challenge page, or a 401/403 without markers, scores 0 and the evidence quotes the status and the marker. Status 0, 429 or 5xx without markers, or a null body, is unverified and the whole run is blocked.',
+    evidence: 'Homepage status, the cf-mitigated and x-amzn-waf-action headers and the first 20,480 characters of the body.',
+    rule: 'A 2xx HTML homepage with no challenge marker scores 1. Challenge markers: a cf-mitigated header containing "challenge" or an x-amzn-waf-action header containing "captcha" or "challenge" (any status), a published challenge-page string (any status), or awswaf.com or AwsWafIntegration on a 401, 403, 405, 429, 503 or 511 only (on a 2xx page they are the AWS WAF SDK, not a block). A 2xx with a marker, a 401, 403, 405, 429, 503 or 511 with a marker, or a 401/403 without one scores 0 and the evidence quotes the status and the marker. Status 0, 429 or 5xx without markers, or a 2xx with a null body, is unverified and the whole run is blocked.',
     availability: 'now',
     oraCounterpart: 'bot-detection',
     clientSentence: {

@@ -28,6 +28,8 @@ import {
 import { blockedExplanation } from '../ui/status-model';
 import { RESOURCE_LABELS, SCORE_METHODOLOGY_PATH, platformFixFor } from './check-copy';
 import {
+  blocked as blockedRow,
+  blockedReasonStatus,
   checkWorth,
   formatPoints,
   gatedInfo,
@@ -379,6 +381,19 @@ export function blockedCopy(
         headline: 'No score yet',
         body: blockedExplanation('http-status', report.blockedReason),
       };
+    case 'server-status': {
+      const code = blocked.httpStatus;
+      if (code !== null && code >= 200 && code < 300) {
+        return {
+          headline: 'No score yet',
+          body: `${host} answered HTTP ${code} without a readable page, so nothing was scored. This is never counted against a site. Scan again in a few minutes.`,
+        };
+      }
+      return {
+        headline: 'No score yet',
+        body: `${host} answered ${code !== null ? `HTTP ${code}` : 'an error status'} instead of a page, so nothing was scored. A server error or a rate limit is never counted against a site. Scan again in a few minutes.`,
+      };
+    }
     case 'timeout':
     default:
       return {
@@ -510,22 +525,18 @@ export interface DeveloperBriefOptions {
   origin: string;
   /**
    * The blocked case from `blockedCase(report, result)` (needs the worker response).
-   * Without it a blocked brief falls back to the http-status row or the timeout row.
+   * Without it a blocked brief falls back to the http-status row, the server-status
+   * row (the reason carries the HTTP status the homepage answered) or the timeout row.
    */
   blocked?: BlockedCase | null;
 }
 
 function fallbackBlockedCase(report: ScoreReport): BlockedCase {
-  const http = report.blockedKind === 'http-status';
-  const status = http ? report.blockedReason?.match(/HTTP (\d{3})/)?.[1] : undefined;
-  return {
-    kind: http ? 'http-status' : 'timeout',
-    detail: null,
-    tone: http ? 'action' : 'neutral',
-    rescan: !http,
-    httpStatus: status ? Number(status) : null,
-    lastHopHost: null,
-  };
+  const status = blockedReasonStatus(report);
+  if (report.blockedKind === 'http-status') {
+    return blockedRow('http-status', { httpStatus: status });
+  }
+  return status !== null ? blockedRow('server-status', { httpStatus: status }) : blockedRow('timeout');
 }
 
 function compareRest(left: ScoredCheck, right: ScoredCheck): number {

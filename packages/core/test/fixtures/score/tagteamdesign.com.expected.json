@@ -2,7 +2,7 @@
   "site": "tagteamdesign.com",
   "source": "live worker capture 2026-11-09T10:52:31Z (node scripts/capture-check-fixture.mjs https://tagteamdesign.com --rerecord): run complete, 9 fetches, response headers captured, sitemap_index.xml answered 200 text/xml; replaces the 2026-11-02 partial capture (sitemap timed out, no header capture). Against that capture the homepage differs only in the Site Kit generator version (1.190.0 to 1.191.0), a spam-protection token and an appended Cloudflare challenge script; llms.txt and robots.txt are byte-identical; 404 bodies are now dropped with bodyBytes 81018",
   "fetchedAt": "2026-11-09T10:52:31.006Z",
-  "catalogVersion": "1.0.0",
+  "catalogVersion": "1.1.0",
   "formulaVersion": "1.0.0",
   "score": 83,
   "grade": "B",

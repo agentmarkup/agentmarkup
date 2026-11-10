@@ -402,7 +402,10 @@ export type BlockedKind =
   | 'redirect-loop'
   | 'size-limit'
   | 'safety-rule'
-  | 'http-status';
+  | 'http-status'
+  // The homepage answered (a 429 or 5xx without challenge markers, or a 2xx
+  // without a readable body), so the engine could not verify it; not a timeout.
+  | 'server-status';
 
 export interface BlockedCase {
   kind: BlockedKind;
@@ -440,6 +443,7 @@ const BLOCKED_TONE: Readonly<Record<BlockedKind, Tone>> = {
   'size-limit': 'attention',
   'safety-rule': 'neutral',
   'http-status': 'action',
+  'server-status': 'neutral',
 };
 
 const BLOCKED_RESCAN: Readonly<Record<BlockedKind, boolean>> = {
@@ -450,6 +454,7 @@ const BLOCKED_RESCAN: Readonly<Record<BlockedKind, boolean>> = {
   'size-limit': false,
   'safety-rule': false,
   'http-status': false,
+  'server-status': true,
 };
 
 function isWorkerErrorMessage(value: string): value is WorkerErrorMessage {
@@ -471,7 +476,8 @@ function withoutWww(host: string): string {
   return host.replace(/^www\./, '');
 }
 
-function blocked(kind: BlockedKind, extra: Partial<BlockedCase> = {}): BlockedCase {
+/** A blocked case with the row's tone and Rescan flag. */
+export function blocked(kind: BlockedKind, extra: Partial<BlockedCase> = {}): BlockedCase {
   return {
     kind,
     detail: null,
@@ -483,18 +489,43 @@ function blocked(kind: BlockedKind, extra: Partial<BlockedCase> = {}): BlockedCa
   };
 }
 
+/** The status in the engine's blocked reason (`homepage answered HTTP 511 ...`), or null. */
+export function blockedReasonStatus(report: Pick<ScoreReport, 'blockedReason'>): number | null {
+  const status = report.blockedReason?.match(/HTTP (\d{3})/)?.[1];
+  return status ? Number(status) : null;
+}
+
+/**
+ * The status an unverified homepage answered with, when it did answer: no worker
+ * error and a status above 0 (a 429 or 5xx without challenge markers, or a 2xx
+ * without a readable body). Read from the recorded homepage, else from the
+ * engine's reason. Null for a fetch that never completed.
+ */
+function answeredStatus(report: ScoreReport, homepage: SiteCheckResponse['homepage'] | null | undefined): number | null {
+  if (homepage?.error) {
+    return null;
+  }
+  if (homepage && typeof homepage.status === 'number' && Number.isFinite(homepage.status)) {
+    return homepage.status > 0 ? homepage.status : null;
+  }
+  return blockedReasonStatus(report);
+}
+
 /** Which blocked row of section 5.9 applies; null unless the run is blocked. */
 export function blockedCase(report: ScoreReport, result: SiteCheckResponse): BlockedCase | null {
   if (report.analysisStatus !== 'blocked') {
     return null;
   }
   if (report.blockedKind === 'http-status') {
-    const status = report.blockedReason?.match(/HTTP (\d{3})/)?.[1];
-    return blocked('http-status', { httpStatus: status ? Number(status) : null });
+    return blocked('http-status', { httpStatus: blockedReasonStatus(report) });
   }
   const homepage = result.homepage;
   if (homepage?.skipped) {
     return blocked('budget');
+  }
+  const answered = answeredStatus(report, homepage);
+  if (answered !== null) {
+    return blocked('server-status', { httpStatus: answered });
   }
   // The worker's error string; without one, the reason the engine recorded
   // ("homepage could not be verified in time (Request timed out)").

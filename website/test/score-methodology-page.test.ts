@@ -2,7 +2,16 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { CHALLENGE_SCAN_CHARS, POOLS, SCORE_CATALOG } from '@agentmarkup/core/score';
+import {
+  CHALLENGE_HEADERS,
+  CHALLENGE_MARKERS,
+  CHALLENGE_MARKERS_NON_2XX,
+  CHALLENGE_SCAN_CHARS,
+  CHALLENGE_STATUSES,
+  POOLS,
+  SCORE_CATALOG,
+  SCORE_CATALOG_VERSION,
+} from '@agentmarkup/core/score';
 
 import { GROUP_COPY } from '../src/checker/report-copy';
 import { GROUP_ORDER } from '../src/checker/report-model';
@@ -63,5 +72,32 @@ describe('ScoreMethodology catalog table', () => {
     const sampling = container.querySelector('#sampling')?.textContent ?? '';
     expect(sampling).toContain(`the first ${CHALLENGE_SCAN_CHARS.toLocaleString('en-US')} characters of the body`);
     expect(sampling).not.toContain('20 KB');
+  });
+
+  it('lists the challenge statuses, headers and both marker lists from the shared constants', () => {
+    const container = render();
+    const items = Array.from(container.querySelectorAll('#sampling li')).map((li) => li.textContent ?? '');
+    const item = (label: string): string => items.find((text) => text.startsWith(label)) ?? '';
+
+    expect(item('Challenge statuses')).toContain(`Challenge statuses: ${CHALLENGE_STATUSES.join(', ')}.`);
+    const headers = item('Challenge headers');
+    for (const header of CHALLENGE_HEADERS) {
+      expect(headers).toContain(`${header.name} containing ${header.values.join(' or ')}`);
+    }
+    const anyStatus = item('Challenge markers (');
+    for (const marker of CHALLENGE_MARKERS) {
+      expect(anyStatus, marker).toContain(marker);
+    }
+    const challengeStatusOnly = item('Challenge markers on a challenge status only');
+    expect(challengeStatusOnly).toContain('never on a 2xx answer');
+    for (const marker of CHALLENGE_MARKERS_NON_2XX) {
+      expect(challengeStatusOnly, marker).toContain(marker);
+      expect(anyStatus, marker).not.toContain(marker);
+    }
+    expect(items.join('\n')).not.toMatch(/[–—]/);
+
+    const changelog = container.querySelector('#changelog')?.textContent ?? '';
+    expect(changelog).toContain(`Catalog ${SCORE_CATALOG_VERSION} (November 2026)`);
+    expect(changelog).toContain('Catalog 1.0.0 and formula 1.0.0 (November 2026): first public version.');
   });
 });

@@ -1,6 +1,7 @@
 # Score engine fixtures
 
-Recorded `SiteEvidence` for the seven-site panel plus the Ora calibration point. Each
+Recorded `SiteEvidence` for the seven-site panel, the emag.ro bot-wall case and the Ora
+calibration point. Each
 `<host>.json` is the input the engine reads; each `<host>.expected.json` is the executable
 contract enforced by `test/score/sites.test.ts`: exact score, grade, status, range and the
 first three top fixes, and one `verified` note per `fail` or `partial` check naming what was
@@ -23,6 +24,7 @@ should replace that attribution when it happens.
 | `seodesignchicago.com.json` | same capture set; sample page `/services/search-engine-optimization-seo/` | WordPress without og:image, ProfessionalService JSON-LD, Content-Signal in robots.txt |
 | `visualwebz.com.json` | same capture set; sample page `/website-deposit/` | 411 KB homepage, three h1, missing paths 301 to the homepage, `/index.md` redirects to the homepage |
 | `tagteamdesign.com.json` | the live Pages worker payload of 2026-11-02T11:18:09Z (`our-check.json` with `cache`, `protection` and `storage` removed); the curl probe of this host hit the apex and is not used | WordPress + Yoast, llms.txt without discovery link, `sitemap_index.xml` timed out (status 0, so the run is `partial`), no response headers captured by that worker build |
+| `emag.ro.json` | the live Pages worker answer of 2026-11-09T21:25:18Z for `https://emag.ro` (`live-emag.json` with `cache`, `protection` and `storage` removed, written as the capture script writes); recorded by the catalog 1.0.0 worker, so its `outcome` fields say `unverified` and its `fetchSummary` says `blocked` (the engine ignores both and reclassifies every resource). The capture predates the `x-amzn-waf-action` header allowlist entry (catalog 1.1.0): only `content-length` was captured on the 511 answers, so the AWS WAF header, if emag sent one, is not in the record and the run is gated on the `awswaf.com` body marker alone | AWS WAF captcha page (`eMAG Captcha`, `captcha-sdk.awswaf.com/.../jsapi.js`, `AwsWafIntegration.fetch`) served with HTTP 511 on the homepage, `/index.md`, `/llms.txt`, the robots-declared sitemap and the probe; robots.txt answered 200. Catalog 1.1.0 scores it as a gated run (reach.bot-detection 0, homepage-derived checks `na`); the challenged probe leaves nav.not-found unverified, so the run is partial |
 | `ora-agentmarkup.dev.json` | the `essentials` object of Ora's audit of agentmarkup.dev (contractVersion 1.38.0, scanned 2026-10-10), trimmed from `ora-am.json`; used by `formula.test.ts` (reproduction of 80 / 18.4 / 3.8 / 100 and the 38 gains) and `ora-comparison.test.ts` | the only calibration point; the other six sites have no Ora audit |
 
 Conversion details for the curl captures: the resources are `/`, `/llms.txt`,
@@ -31,7 +33,8 @@ Conversion details for the curl captures: the resources are `/`, `/llms.txt`,
 and the probe `/agentmarkup-probe-404-does-not-exist-9f3a2c` (no redirects, `Location`
 kept). `sitemapSource` is `default` for every curl fixture. Headers are the worker's
 allowlist (`link`, `vary`, `cf-mitigated`, `content-signal`, `x-robots-tag`,
-`last-modified`, `content-length`, `www-authenticate`). 404 and 410 bodies are dropped
+`last-modified`, `content-length`, `www-authenticate`; `x-amzn-waf-action` joined the
+allowlist with catalog 1.1.0, after every capture here). 404 and 410 bodies are dropped
 (`body: null`, `bodyBytes`, `bodyDropped: true`) as the worker does since chunk B; the
 tagteamdesign payload predates that and keeps its 404 bodies, which exercises the other
 path. `fetchedAt` is the `Date` header of the homepage response.

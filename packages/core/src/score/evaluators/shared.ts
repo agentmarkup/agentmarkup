@@ -137,8 +137,13 @@ export class ResourceView {
       if (resource.error) {
         return `could not be verified in time (${resource.error.replace(/\.$/, '')})`;
       }
-      if (resource.status > 0 && resource.body === null && resource.status < 300) {
+      if (resource.status > 0 && resource.status < 300) {
         return `HTTP ${resource.status} with no readable body`;
+      }
+      // A completed answer (429 or 5xx without challenge markers): it answered, so
+      // never say "in time".
+      if (resource.status > 0) {
+        return `answered HTTP ${resource.status} without a usable page`;
       }
       return `could not be verified in time (HTTP ${resource.status})`;
     }

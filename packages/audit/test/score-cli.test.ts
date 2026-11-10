@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ScoreReport } from '@agentmarkup/core/score';
+import { SCORE_CATALOG_VERSION, type ScoreReport } from '@agentmarkup/core/score';
 import { run } from '../src/cli.js';
 import { renderScoreLines } from '../src/report.js';
 import { createFetchStub, healthySite, settleWithFakeTimers } from './helpers/fetch-stub.js';
@@ -46,7 +46,7 @@ describe('--score on the audit CLI', () => {
     };
     expect(report.fetchedAt).toBe('2026-11-02T12:00:00.000Z');
     expect(report.findings.some((f) => f.code.startsWith('crawler.'))).toBe(true);
-    expect(report.score.catalogVersion).toBe('1.0.0');
+    expect(report.score.catalogVersion).toBe(SCORE_CATALOG_VERSION);
     expect(report.score.formulaVersion).toBe('1.0.0');
     expect(report.score.analysisStatus).toBe('complete');
     expect(report.score.score).toBeGreaterThanOrEqual(0);
@@ -73,7 +73,7 @@ describe('--score on the audit CLI', () => {
     await settleWithFakeTimers(run(['--score', 'example.com'], withScore.ctx));
     const text = withScore.out.join('');
     expect(text).toContain('Agent-readiness score');
-    expect(text).toContain('catalog 1.0.0, formula 1.0.0');
+    expect(text).toContain(`catalog ${SCORE_CATALOG_VERSION}, formula 1.0.0`);
     expect(text).toContain('https://agentmarkup.dev/score/');
 
     const without = capture();
@@ -84,7 +84,7 @@ describe('--score on the audit CLI', () => {
 
   it('describes a blocked run without a number and a partial run with its range', () => {
     const base: ScoreReport = {
-      catalogVersion: '1.0.0',
+      catalogVersion: SCORE_CATALOG_VERSION,
       formulaVersion: '1.0.0',
       analysisStatus: 'blocked',
       blockedKind: 'unverified',
@@ -110,6 +110,13 @@ describe('--score on the audit CLI', () => {
       surfaces: null,
     };
     expect(renderScoreLines(base).join('\n')).toContain('could not reach the site in time');
+    // A homepage that answered (511 without markers, a 2xx without a body) did not time out.
+    const answered = renderScoreLines({ ...base, blockedReason: 'homepage answered HTTP 511 without a usable page' }).join('\n');
+    expect(answered).toContain('the homepage answered HTTP 511 instead of a page (never counted against the site); re-run in a few minutes');
+    expect(answered).not.toContain('in time');
+    const emptyBody = renderScoreLines({ ...base, blockedReason: 'homepage HTTP 200 with no readable body' }).join('\n');
+    expect(emptyBody).toContain('the homepage answered HTTP 200 without a readable page');
+    expect(emptyBody).not.toContain('in time');
     const notFoundLines = renderScoreLines({ ...base, blockedKind: 'http-status', blockedReason: 'homepage answered HTTP 404' }).join('\n');
     expect(notFoundLines).toContain('the homepage answered HTTP 404, so there is nothing to score');
     expect(notFoundLines).not.toContain('in time');

@@ -366,8 +366,10 @@ describe('version comparison', () => {
     const other: ScoreReport = { ...base, catalogVersion: '2.0.0' };
     expect(reportsComparable(base, other)).toEqual({
       comparable: false,
-      reason: 'catalog changed (1.0.0 to 2.0.0), re-baseline',
+      reason: `catalog changed (${SCORE_CATALOG_VERSION} to 2.0.0), re-baseline`,
     });
+    // 1.0.0 and 1.1.0 readings stay comparable: the minor bump changed rules, not tiers.
+    expect(reportsComparable({ ...base, catalogVersion: '1.0.0' }, { ...base, catalogVersion: '1.1.0' }).comparable).toBe(true);
     expect(reportsComparable(base, { ...base, formulaVersion: '2.1.0' }).comparable).toBe(false);
     expect(reportsComparable(base, { ...base, catalogVersion: '1.4.2' }).comparable).toBe(true);
     expect(compareReports(base, other).comparable).toBe(false);

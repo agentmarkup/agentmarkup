@@ -2,7 +2,7 @@
   "site": "agentmarkup.dev",
   "source": "curl capture 2026-11-02 via probe.sh (UA agentmarkup-checker/0.3.2, 206 range artefact normalised to 200), converted by convert-fixtures.mjs; sample page from samples.txt",
   "fetchedAt": "2026-11-02T12:07:10.000Z",
-  "catalogVersion": "1.0.0",
+  "catalogVersion": "1.1.0",
   "formulaVersion": "1.0.0",
   "score": 100,
   "grade": "A+",

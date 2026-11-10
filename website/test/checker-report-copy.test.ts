@@ -152,6 +152,9 @@ const BLOCKED_RESULTS: Record<string, SiteCheckResponse> = {
     finalUrl: 'http://10.0.0.7/',
   }),
   'http-status 404': RESULTS.homepage404,
+  'server-status 511': siteCheck({ homepage: status(HOME, 511, { body: '<html><body>Network Authentication Required</body></html>' }) }),
+  'server-status 429': siteCheck({ homepage: status(HOME, 429) }),
+  'server-status 200 without a body': siteCheck({ homepage: resource(HOME, { status: 200, body: null }) }),
 };
 
 function blockedFor(result: SiteCheckResponse): { report: ScoreReport; blocked: BlockedCase } {
@@ -221,6 +224,10 @@ describe('verdictSentence (6.6)', () => {
       'sandiegowebstudios.com is in strong shape for AI assistants: access, readable content and navigation are in place, but the biggest gain is in usable controls (Document structure, +3 points).',
     'seodesignchicago.com':
       'seodesignchicago.com is ready for AI assistants: access, readable content and navigation are in place, but the biggest gain is in usable controls (Document structure, +3 points).',
+    // The AWS WAF captcha served with HTTP 511 (catalog 1.1.0): gated, provisional because
+    // the challenged probe leaves nav.not-found unverified.
+    'emag.ro':
+      'Provisional: emag.ro turns AI assistants away at the door (HTTP 511 bot check), so 19 checks that need the homepage could not run and are left out of the score. 1 check could not be checked in time.',
   };
 
   it.each(Object.entries(EXPECTED))('says exactly the 6.6 sentence for %s', (host, sentence) => {
@@ -622,6 +629,53 @@ describe('partial, blocked and gated copy (5.8, 5.9, 5.10, H2, H4)', () => {
       const { report, blocked } = blockedFor(BLOCKED_RESULTS[message]);
       expect(blockedCopy(blocked, HOST, report).body, message).toMatch(/never counted against/);
     }
+  });
+
+  it('names the status a homepage answered instead of claiming a timeout (server-status row)', () => {
+    const copy = (key: string) => {
+      const { report, blocked } = blockedFor(BLOCKED_RESULTS[key]);
+      expect(blocked.kind, key).toBe('server-status');
+      return blockedCopy(blocked, HOST, report);
+    };
+    expect(copy('server-status 511')).toEqual({
+      headline: 'No score yet',
+      body: `${HOST} answered HTTP 511 instead of a page, so nothing was scored. A server error or a rate limit is never counted against a site. Scan again in a few minutes.`,
+    });
+    expect(copy('server-status 429')).toEqual({
+      headline: 'No score yet',
+      body: `${HOST} answered HTTP 429 instead of a page, so nothing was scored. A server error or a rate limit is never counted against a site. Scan again in a few minutes.`,
+    });
+    expect(copy('server-status 200 without a body')).toEqual({
+      headline: 'No score yet',
+      body: `${HOST} answered HTTP 200 without a readable page, so nothing was scored. This is never counted against a site. Scan again in a few minutes.`,
+    });
+    for (const key of ['server-status 511', 'server-status 429', 'server-status 200 without a body']) {
+      expect(copy(key).body, key).not.toMatch(/within 10 seconds|in time|timed out/);
+    }
+  });
+
+  it('falls back to the server-status row from blockedReason when no blocked case is passed', () => {
+    const { report, blocked } = blockedFor(BLOCKED_RESULTS['server-status 511']);
+    const expected = blockedCopy(blocked, HOST, report);
+    expect(renderDeveloperBrief(report, { host: HOST, origin: BRIEF_ORIGIN })).toContain(`${expected.headline}. ${expected.body}`);
+    expect(announceReport(report, HOST, null)).toBe(`No score for ${HOST}: ${expected.headline}. ${expected.body}`);
+    expect(announceReport(report, HOST, blocked, { rescan: true })).toBe(`Report updated. No score for ${HOST}: ${expected.headline}. ${expected.body}`);
+    // A real timeout still falls back to the timeout row.
+    const timeout = blockedFor(RESULTS.blocked);
+    expect(announceReport(timeout.report, HOST, null)).toContain('did not answer our checker within 10 seconds');
+  });
+
+  it('explains an answered status in the shared blocked explanation, keeping the timeout sentence for timeouts', () => {
+    expect(blockedExplanation('unverified', 'homepage answered HTTP 511 without a usable page')).toBe(
+      'The homepage answered HTTP 511 instead of a page, so there is no score yet. Re-run the check in a few minutes; a server error or a rate limit is never counted against a site.'
+    );
+    expect(blockedExplanation('unverified', 'homepage HTTP 200 with no readable body')).toBe(
+      'The homepage answered HTTP 200 without a readable page, so there is no score yet. Re-run the check in a few minutes; this is never counted against a site.'
+    );
+    expect(blockedExplanation('unverified', 'homepage could not be verified in time (Request timed out)')).toBe(
+      'The site could not be reached in time, so there is no score yet. Re-run the check; a timed-out fetch is never counted against a site.'
+    );
+    expect(blockedExplanation(null, null)).toContain('could not be reached in time');
   });
 
   it('counts the checks a bot wall kept out (5.10)', () => {

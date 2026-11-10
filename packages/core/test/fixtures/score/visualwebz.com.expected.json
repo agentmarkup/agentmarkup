@@ -2,7 +2,7 @@
   "site": "visualwebz.com",
   "source": "curl capture 2026-11-02 via probe.sh (UA agentmarkup-checker/0.3.2, 206 range artefact normalised to 200), converted by convert-fixtures.mjs; sample page from samples.txt; ax.form-labeling passes 12 of 12 since the D2 round (2026-11-02): the search input (type=search name=s class=et-search-field) has title=\"Search for:\", which counts as a label (HTML-AAM names a control from its title when nothing else does)",
   "fetchedAt": "2026-11-02T12:07:28.000Z",
-  "catalogVersion": "1.0.0",
+  "catalogVersion": "1.1.0",
   "formulaVersion": "1.0.0",
   "score": 83,
   "grade": "B",

@@ -4,7 +4,12 @@
 // A transport failure (status 0, an error, a 2xx with no body, a skipped fetch, a
 // 429 or a 5xx without challenge markers) is `unverified` and can never become a
 // finding; only completed responses are judged.
-import { CHALLENGE_MARKERS } from './catalog.js';
+import {
+  CHALLENGE_HEADERS,
+  CHALLENGE_MARKERS,
+  CHALLENGE_MARKERS_NON_2XX,
+  CHALLENGE_STATUSES,
+} from './catalog.js';
 import type { RemoteResource, ResourceOutcome } from './types.js';
 
 /** Every check reads at most this many characters of a body; longer bodies are flagged. */
@@ -50,14 +55,30 @@ function headerValue(resource: RemoteResource, name: string): string | null {
   return null;
 }
 
+function statusOf(resource: RemoteResource): number {
+  return Number.isFinite(resource.status) ? resource.status : 0;
+}
+
+/** One of the published `CHALLENGE_STATUSES` (401, 403, 405, 429, 503, 511). */
+export function isChallengeStatus(status: number): boolean {
+  return (CHALLENGE_STATUSES as readonly number[]).includes(status);
+}
+
 /**
- * Returns the challenge marker found on a response: the `cf-mitigated` header
- * containing `challenge`, or one of the published body markers in the first 20,480 characters.
+ * Returns the challenge marker found on a response, in this order: a published
+ * challenge header (`cf-mitigated` containing `challenge`, `x-amzn-waf-action`
+ * containing `captcha` or `challenge`) on any status; one of `CHALLENGE_MARKERS` in
+ * the first 20,480 characters of the body on any status; one of
+ * `CHALLENGE_MARKERS_NON_2XX` there, only when the status is a challenge status.
+ * The status gate lives here so no caller can read the AWS SDK strings of a normal
+ * 2xx page as a block.
  */
 export function findChallengeMarker(resource: RemoteResource): string | null {
-  const mitigated = headerValue(resource, 'cf-mitigated');
-  if (mitigated && /challenge/i.test(mitigated)) {
-    return `cf-mitigated: ${mitigated}`;
+  for (const header of CHALLENGE_HEADERS) {
+    const value = headerValue(resource, header.name);
+    if (value && header.values.some((word) => value.toLowerCase().includes(word))) {
+      return `${header.name}: ${value}`;
+    }
   }
   const body = resource.body;
   if (!body) {
@@ -65,6 +86,14 @@ export function findChallengeMarker(resource: RemoteResource): string | null {
   }
   const head = body.slice(0, CHALLENGE_SCAN_CHARS);
   for (const marker of CHALLENGE_MARKERS) {
+    if (head.includes(marker)) {
+      return marker;
+    }
+  }
+  if (!isChallengeStatus(statusOf(resource))) {
+    return null;
+  }
+  for (const marker of CHALLENGE_MARKERS_NON_2XX) {
     if (head.includes(marker)) {
       return marker;
     }
@@ -78,7 +107,7 @@ export function classifyResource(
   if (!resource) {
     return 'absent';
   }
-  const status = Number.isFinite(resource.status) ? resource.status : 0;
+  const status = statusOf(resource);
   if (resource.skipped || status <= 0 || resource.error) {
     return 'unverified';
   }
@@ -88,10 +117,8 @@ export function classifyResource(
   if (status === 404 || status === 410) {
     return 'not-found';
   }
-  if (status === 401 || status === 403 || status === 429 || status === 503) {
-    if (findChallengeMarker(resource)) {
-      return 'challenge';
-    }
+  if (isChallengeStatus(status) && findChallengeMarker(resource)) {
+    return 'challenge';
   }
   if (status === 429 || status >= 500) {
     return 'unverified';

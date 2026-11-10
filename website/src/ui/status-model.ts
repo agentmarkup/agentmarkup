@@ -35,9 +35,16 @@ export function blockedExplanation(
   blockedKind?: BlockedKind | null,
   blockedReason?: string | null
 ): string {
+  const status = blockedReason?.match(/HTTP (\d{3})/)?.[1]
   if (blockedKind === 'http-status') {
-    const status = blockedReason?.match(/HTTP (\d{3})/)?.[1]
     return `The homepage answered ${status ? `HTTP ${status}` : 'an error status'}, so there is nothing to score yet. Make the site root serve a page, then run the check again.`
+  }
+  // An unverified homepage that answered (a 429 or 5xx without challenge markers,
+  // or a 2xx without a readable body) did not time out: name its status.
+  if (status) {
+    return Number(status) >= 300
+      ? `The homepage answered HTTP ${status} instead of a page, so there is no score yet. Re-run the check in a few minutes; a server error or a rate limit is never counted against a site.`
+      : `The homepage answered HTTP ${status} without a readable page, so there is no score yet. Re-run the check in a few minutes; this is never counted against a site.`
   }
   return 'The site could not be reached in time, so there is no score yet. Re-run the check; a timed-out fetch is never counted against a site.'
 }

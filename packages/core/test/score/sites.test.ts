@@ -5,7 +5,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { SCORE_CATALOG, SCORE_CATALOG_VERSION } from '../../src/score/catalog.js';
-import { evaluateSiteChecks } from '../../src/score/evaluate.js';
+import { EVALUATORS, evaluateSiteChecks } from '../../src/score/evaluate.js';
 import { classifyResource } from '../../src/score/evidence.js';
 import { SCORE_FORMULA_VERSION, scoreChecks } from '../../src/score/formula.js';
 import type {
@@ -80,11 +80,12 @@ function shuffleKeys<T extends object>(value: T, seed: number): T {
 }
 
 describe('score fixtures', () => {
-  it('has the seven-site panel and an expected contract for every fixture', () => {
+  it('has the seven-site panel plus the emag.ro bot wall and an expected contract for every fixture', () => {
     expect(hosts).toEqual([
       'agentmarkup.dev',
       'animafelix.com',
       'cochinescu.com',
+      'emag.ro',
       'sandiegowebstudios.com',
       'seodesignchicago.com',
       'tagteamdesign.com',
@@ -143,6 +144,41 @@ describe('tagteamdesign.com with the 2026-11-02 sitemap timeout replayed', () =>
         expect(check.resources ?? [], `${check.id} fails on the unverified sitemap`).not.toContain('sitemap');
       }
     }
+  });
+});
+
+// emag.ro, 2026-11-09: every resource but robots.txt answered HTTP 511 with an AWS WAF
+// captcha page. Catalog 1.0.0 read that as transport noise and blocked the run ("did not
+// answer within 10 seconds" on the website); 1.1.0 reads it as the bot wall it is.
+describe('emag.ro: an AWS WAF captcha served with HTTP 511', () => {
+  const { evidence } = load('emag.ro');
+  const evaluation = evaluateSiteChecks(evidence);
+  const report = scoreChecks(evaluation);
+
+  it('is gated, not blocked: bot-detection fails quoting the 511 and the awswaf.com marker', () => {
+    expect(evidence.homepage.status).toBe(511);
+    expect(evidence.fetchSummary?.analysisStatus).toBe('blocked');
+    for (const key of ['homepage', 'homepageMarkdown', 'llmsTxt', 'sitemap', 'notFoundProbe'] as const) {
+      expect(classifyResource(evidence[key]), key).toBe('challenge');
+    }
+    expect(classifyResource(evidence.robotsTxt)).toBe('ok');
+    expect(evaluation.blocked).toBe(false);
+    expect(evaluation.blockedKind).toBeNull();
+    expect(evaluation.blockedReason).toBe('Agents cannot reach this site: HTTP 511 challenge page (awswaf.com)');
+    expect(report.checks.find((check) => check.id === 'reach.bot-detection')).toMatchObject({
+      status: 'fail',
+      fraction: 0,
+      evidence: 'HTTP 511, challenge marker "awswaf.com"',
+    });
+    for (const [id, entry] of Object.entries(EVALUATORS)) {
+      if (entry.needsHomepage) {
+        const check = report.checks.find((candidate) => candidate.id === id);
+        expect(check?.status, id).toBe('na');
+        expect(check?.reason, id).toBe('homepage-blocked');
+      }
+    }
+    expect(report.score).not.toBeNull();
+    expect(report.blockedKind).toBeNull();
   });
 });
 
@@ -252,8 +288,15 @@ describe.each(hosts)('%s', (host) => {
       }
     }
     expect(unverifiedResources.size).toBe(0);
-    expect(report.analysisStatus).toBe('complete');
-    expect(report.range).toBeNull();
+    // Every recorded fetch completed. The one unverified check a fixture may carry is
+    // nav.not-found on a challenged probe (emag.ro): a bot wall, never a transport failure.
+    const unverifiedChecks = report.checks.filter((check) => check.status === 'unverified');
+    for (const check of unverifiedChecks) {
+      expect(check.reason, check.id).toBe('probe-challenged');
+    }
+    expect(report.unverifiedResources).toEqual([]);
+    expect(report.analysisStatus).toBe(unverifiedChecks.length === 0 ? 'complete' : 'partial');
+    expect(report.range === null).toBe(unverifiedChecks.length === 0);
   });
 
   it('is deterministic across runs, key order and an injected now', () => {

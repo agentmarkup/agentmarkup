@@ -65,6 +65,20 @@ export function renderClientSummary(report: ScoreReport, options: ClientSummaryO
       lines.push('Make the site root serve a page, then run the check again.');
       return lines.join('\n');
     }
+    // The homepage answered (a 429 or 5xx without challenge markers, or a 2xx
+    // without a body): say so instead of claiming it timed out.
+    const answered = report.blockedReason?.match(/HTTP (\d{3})/)?.[1];
+    if (answered) {
+      const code = Number(answered);
+      if (code >= 300) {
+        lines.push(`${site}: the homepage answered HTTP ${code} instead of a page, so there is no score yet.`);
+        lines.push('Please re-run the check in a few minutes; a server error or a rate limit is never counted against the site.');
+      } else {
+        lines.push(`${site}: the homepage answered HTTP ${code} without a readable page, so there is no score yet.`);
+        lines.push('Please re-run the check in a few minutes; this is never counted against the site.');
+      }
+      return lines.join('\n');
+    }
     lines.push(`${site}: we could not reach the site in time, so there is no score yet.`);
     lines.push('Please re-run the check; a timed-out fetch is never counted against you.');
     return lines.join('\n');

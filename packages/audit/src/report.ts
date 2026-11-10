@@ -58,10 +58,15 @@ export function renderText(report: AuditReport): string {
 export function renderScoreLines(score: ScoreReport): string[] {
   const lines: string[] = [];
   if (score.analysisStatus === 'blocked' || score.score === null) {
+    // An unverified homepage that answered (429/5xx without challenge markers, or a
+    // 2xx without a body) carries its status in the reason; it did not time out.
+    const answered = score.blockedKind === 'http-status' ? undefined : score.blockedReason?.match(/HTTP (\d{3})/)?.[1];
     lines.push(
       score.blockedKind === 'http-status'
         ? `  ${BOLD}Agent-readiness score${RESET}: not available - the ${score.blockedReason ?? 'homepage answered an error status'}, so there is nothing to score; make the site root serve a page`
-        : `  ${BOLD}Agent-readiness score${RESET}: not available - we could not reach the site in time; re-run`
+        : answered
+          ? `  ${BOLD}Agent-readiness score${RESET}: not available - the homepage answered HTTP ${answered} ${Number(answered) >= 300 ? 'instead of a page' : 'without a readable page'} (never counted against the site); re-run in a few minutes`
+          : `  ${BOLD}Agent-readiness score${RESET}: not available - we could not reach the site in time; re-run`
     );
     lines.push(`    ${DIM}catalog ${score.catalogVersion}, formula ${score.formulaVersion}, methodology: https://agentmarkup.dev/score/${RESET}`);
     return lines;

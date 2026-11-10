@@ -1,9 +1,37 @@
 // @vitest-environment node
 import { createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
+import { runInNewContext } from 'node:vm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  CHALLENGE_HEADERS,
+  CHALLENGE_MARKERS,
+  CHALLENGE_MARKERS_NON_2XX,
+  CHALLENGE_STATUSES,
+  classifyResource,
+  evaluateSiteChecks,
+  scoreChecks,
+  type SiteEvidence,
+} from '@agentmarkup/core/score'
 
 // @ts-expect-error - the deployed Pages worker is plain JS with no type declarations
 import worker from '../public/_worker.js'
+
+const WORKER_SOURCE = readFileSync(new URL('../public/_worker.js', import.meta.url), 'utf8')
+
+/** A top-level `const NAME = [...];` literal of the worker, evaluated in an empty context. */
+function workerConstant(name: string): unknown {
+  const match = WORKER_SOURCE.match(new RegExp(`^const ${name} = (\\[[\\s\\S]*?\\]);$`, 'm'))
+  if (!match) throw new Error(`no top-level array const ${name} in public/_worker.js`)
+  return runInNewContext(`(${match[1]})`)
+}
+
+// AWS WAF answers (catalog 1.1.0): the Captcha action is 405 with x-amzn-waf-action:
+// captcha, the Challenge action 202 with x-amzn-waf-action: challenge; emag.ro served
+// its captcha page with 511 (observed 2026-11-09). AWS tells sites to load the SDK on
+// normal pages, so the same strings on a 2xx page are integration, not a block.
+const AWS_CAPTCHA_PAGE =
+  '<!doctype html><html><head><title>Captcha</title><script src="https://b1.eu-central-1.captcha-sdk.awswaf.com/b1/jsapi.js" defer></script></head><body><div id="b"></div><script>AwsWafIntegration.fetch("/x")</script></body></html>'
 
 const PROBE_PATH = '/agentmarkup-probe-404-does-not-exist-9f3a2c'
 const PROBE_ACCEPT = 'text/markdown, application/json;q=0.9, text/html;q=0.8, */*;q=0.1'
@@ -17,6 +45,10 @@ const ABOUT_HTML =
   '<!doctype html><html lang="en"><head><title>About</title></head><body><main><h1>About</h1><p>About us.</p></main></body></html>'
 const NOT_FOUND_HTML = '<html><body><h1>Not found</h1></body></html>'
 const ROBOTS_TXT = 'User-agent: *\nAllow: /\nSitemap: https://example.com/sitemap_index.xml\n'
+const AWS_SDK_HOMEPAGE = HOMEPAGE_HTML.replace(
+  '</head>',
+  '<script src="https://x.token.awswaf.com/x/challenge.js" defer></script><script>AwsWafIntegration.getToken()</script></head>'
+)
 
 interface Reply {
   status: number
@@ -770,6 +802,101 @@ describe('worker check chain', () => {
     expect(payload.fetchSummary.analysisStatus).toBe('complete')
     expect(payload.fetchSummary.unverified).toEqual([])
     // A challenge is often per-IP and transient, so the run is not pinned.
+    expect(db.statements.filter(isCacheWrite)).toEqual([])
+    expect(payload.cache).toEqual({ hit: false, cachedAt: null, expiresAt: null })
+  })
+
+  // Catalog 1.1.0 parity: the worker keeps its own copies of core's challenge rule.
+  it('keeps the challenge statuses, headers and both marker lists equal to core, and captures every challenge header', () => {
+    expect(workerConstant('CHALLENGE_STATUSES')).toEqual([...CHALLENGE_STATUSES])
+    expect(workerConstant('CHALLENGE_MARKERS')).toEqual([...CHALLENGE_MARKERS])
+    expect(workerConstant('CHALLENGE_MARKERS_NON_2XX')).toEqual([...CHALLENGE_MARKERS_NON_2XX])
+    expect(workerConstant('CHALLENGE_HEADERS')).toEqual(
+      CHALLENGE_HEADERS.map((header) => ({ name: header.name, values: [...header.values] }))
+    )
+    const allowlist = workerConstant('DISCOVERY_HEADER_NAMES') as string[]
+    for (const header of CHALLENGE_HEADERS) {
+      expect(allowlist, header.name).toContain(header.name)
+    }
+  })
+
+  it('classifies AWS WAF answers exactly as core: 511/405 walls are challenges, the SDK on a 2xx is not, no marker keeps the old outcome', async () => {
+    const routes = healthySite()
+    routes['/'] = () => ({
+      status: 200,
+      body: AWS_SDK_HOMEPAGE,
+      headers: { 'content-type': 'text/html; charset=utf-8' },
+    })
+    routes['/llms.txt'] = () => ({ status: 511, body: AWS_CAPTCHA_PAGE, headers: { 'content-type': 'text/html' } })
+    routes['/index.md'] = () => ({ status: 405, body: '', headers: { 'x-amzn-waf-action': 'captcha' } })
+    routes['/about.md'] = () => ({ status: 405, body: 'Method Not Allowed', headers: { 'content-type': 'text/plain' } })
+    routes['/sitemap_index.xml'] = () => ({ status: 511, body: '<html><body>Network Authentication Required</body></html>' })
+    routes[PROBE_PATH] = () => ({ status: 511, body: AWS_CAPTCHA_PAGE, headers: { 'content-type': 'text/html' } })
+    installFetch(routes)
+    const db = fakeD1()
+
+    const { payload } = await runCheck({ CHECKS_DB: db })
+
+    expect(payload.homepage.outcome).toBe('ok')
+    expect(payload.llmsTxt.outcome).toBe('challenge')
+    expect(payload.homepageMarkdown?.outcome).toBe('challenge')
+    expect(payload.homepageMarkdown?.headers?.['x-amzn-waf-action']).toBe('captcha')
+    expect(payload.samplePageMarkdown?.outcome).toBe('http-error')
+    expect(payload.sitemap?.outcome).toBe('unverified')
+    expect(payload.notFoundProbe?.outcome).toBe('challenge')
+    for (const key of RESOURCE_KEYS) {
+      const recorded = payload[key]
+      if (recorded) {
+        expect(recorded.outcome, key).toBe(classifyResource(recorded as unknown as SiteEvidence['homepage']))
+      }
+    }
+    // Same run status as the engine: the unmarked 511 sitemap and the challenged
+    // probe (nav.not-found unverified) both count.
+    const engine = scoreChecks(evaluateSiteChecks(payload as unknown as SiteEvidence))
+    expect(payload.fetchSummary.analysisStatus).toBe(engine.analysisStatus)
+    expect(payload.fetchSummary.unverified).toEqual(['sitemap', 'notFoundProbe'])
+    expect(engine.checks.find((check) => check.id === 'reach.bot-detection')?.status).toBe('pass')
+    expect(db.statements.filter(isCacheWrite)).toEqual([])
+  })
+
+  it('a 511 AWS WAF captcha homepage (emag.ro) is a challenge, not a blocked run, and is never cached', async () => {
+    const routes = healthySite()
+    routes['/'] = () => ({ status: 511, body: AWS_CAPTCHA_PAGE, headers: { 'content-type': 'text/html' } })
+    installFetch(routes)
+    const db = fakeD1()
+
+    const { payload } = await runCheck({ CHECKS_DB: db })
+
+    expect(payload.homepage).toMatchObject({ status: 511, outcome: 'challenge' })
+    const engine = scoreChecks(evaluateSiteChecks(payload as unknown as SiteEvidence))
+    expect(engine.blockedKind).toBeNull()
+    expect(payload.fetchSummary.analysisStatus).not.toBe('blocked')
+    expect(payload.fetchSummary.analysisStatus).toBe(engine.analysisStatus)
+    expect(engine.checks.find((check) => check.id === 'reach.bot-detection')).toMatchObject({
+      status: 'fail',
+      evidence: 'HTTP 511, challenge marker "awswaf.com"',
+    })
+    expect(engine.naChecks.some((entry) => entry.reason === 'homepage-blocked')).toBe(true)
+    expect(db.statements.filter(isCacheWrite)).toEqual([])
+  })
+
+  it('a 202 homepage with x-amzn-waf-action: challenge is gated like the engine gates it and never cached', async () => {
+    const routes = healthySite()
+    routes['/'] = () => ({ status: 202, body: '', headers: { 'x-amzn-waf-action': 'challenge' } })
+    installFetch(routes)
+    const db = fakeD1()
+
+    const { payload } = await runCheck({ CHECKS_DB: db })
+
+    expect(payload.homepage).toMatchObject({ status: 202, outcome: 'ok', headers: { 'x-amzn-waf-action': 'challenge' } })
+    const engine = scoreChecks(evaluateSiteChecks(payload as unknown as SiteEvidence))
+    expect(engine.analysisStatus).toBe('complete')
+    expect(payload.fetchSummary.analysisStatus).toBe(engine.analysisStatus)
+    expect(engine.checks.find((check) => check.id === 'reach.bot-detection')?.evidence).toBe(
+      'HTTP 202 with challenge marker "x-amzn-waf-action: challenge"'
+    )
+    expect(engine.naChecks.some((entry) => entry.reason === 'homepage-blocked')).toBe(true)
+    // A challenge is per-IP and transient: the gated run is not pinned for three minutes.
     expect(db.statements.filter(isCacheWrite)).toEqual([])
     expect(payload.cache).toEqual({ hit: false, cachedAt: null, expiresAt: null })
   })

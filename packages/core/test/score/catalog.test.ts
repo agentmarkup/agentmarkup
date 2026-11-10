@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CHALLENGE_HEADERS,
+  CHALLENGE_MARKERS,
+  CHALLENGE_MARKERS_NON_2XX,
+  CHALLENGE_STATUSES,
   IDENTITY_TYPES,
   SCORE_CATALOG,
   SCORE_CATALOG_VERSION,
@@ -26,9 +30,9 @@ function strings(value: unknown, out: string[] = []): string[] {
   return out;
 }
 
-describe('SCORE_CATALOG v1.0.0', () => {
+describe('SCORE_CATALOG v1.1.0', () => {
   it('has semver versions', () => {
-    expect(SCORE_CATALOG_VERSION).toBe('1.0.0');
+    expect(SCORE_CATALOG_VERSION).toBe('1.1.0');
     expect(SCORE_CATALOG_VERSION).toMatch(SEMVER);
     expect(SCORE_FORMULA_VERSION).toMatch(SEMVER);
   });
@@ -86,6 +90,33 @@ describe('SCORE_CATALOG v1.0.0', () => {
   it('states the challenge scan window in the same characters the engine scans', () => {
     const row = SCORE_CATALOG.find((definition) => definition.id === 'reach.bot-detection');
     expect(row?.evidence).toContain(`the first ${CHALLENGE_SCAN_CHARS.toLocaleString('en-US')} characters of the body`);
+  });
+
+  it('publishes the 1.1.0 challenge statuses, headers and both marker lists, and the bot-detection rule names each', () => {
+    expect(CHALLENGE_STATUSES).toEqual([401, 403, 405, 429, 503, 511]);
+    expect(CHALLENGE_HEADERS).toEqual([
+      { name: 'cf-mitigated', values: ['challenge'] },
+      { name: 'x-amzn-waf-action', values: ['captcha', 'challenge'] },
+    ]);
+    expect(CHALLENGE_MARKERS_NON_2XX).toEqual(['awswaf.com', 'AwsWafIntegration']);
+    // No unverified vendor markers (Akamai, Kasada, Vercel, Sucuri) in 1.1.0.
+    expect(CHALLENGE_MARKERS).toHaveLength(10);
+    for (const marker of CHALLENGE_MARKERS_NON_2XX) {
+      expect(CHALLENGE_MARKERS as readonly string[], marker).not.toContain(marker);
+    }
+    const row = getCheckDefinition('reach.bot-detection');
+    expect(row?.rule).toContain(`${CHALLENGE_STATUSES.slice(0, -1).join(', ')} or ${CHALLENGE_STATUSES[CHALLENGE_STATUSES.length - 1]} only`);
+    expect(row?.rule).toContain('on a 2xx page they are the AWS WAF SDK, not a block');
+    for (const header of CHALLENGE_HEADERS) {
+      expect(row?.rule, header.name).toContain(`${header.name} header containing`);
+      expect(row?.evidence, header.name).toContain(header.name);
+      for (const value of header.values) {
+        expect(row?.rule, `${header.name} ${value}`).toContain(`"${value}"`);
+      }
+    }
+    for (const marker of CHALLENGE_MARKERS_NON_2XX) {
+      expect(row?.rule, marker).toContain(marker);
+    }
   });
 
   it('counts PropertyValueSpecification, the Yoast SearchAction query-input, as a baseline type', () => {

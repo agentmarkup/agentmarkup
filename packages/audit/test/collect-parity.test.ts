@@ -4,11 +4,22 @@
 // same `scoreChecks` report. Evaluator output, not raw evidence, so harmless
 // field-order and timing differences do not count; the raw resources are still
 // compared on every field except `durationMs`.
+import { readFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { evaluateSiteChecks, scoreChecks, type SiteEvidence } from '@agentmarkup/core/score';
+import {
+  CHALLENGE_HEADERS,
+  CHALLENGE_MARKERS,
+  CHALLENGE_MARKERS_NON_2XX,
+  CHALLENGE_STATUSES,
+  classifyResource,
+  evaluateSiteChecks,
+  scoreChecks,
+  type SiteEvidence,
+} from '@agentmarkup/core/score';
 // @ts-expect-error - the deployed Pages worker is plain JS with no type declarations
 import worker from '../../../website/public/_worker.js';
-import { collectSiteEvidence } from '../src/collect.js';
+import { DISCOVERY_HEADER_NAMES, collectSiteEvidence } from '../src/collect.js';
 import {
   ABOUT_HTML,
   NOT_FOUND_HTML,
@@ -56,6 +67,27 @@ function parityOrigin(): Record<string, Route> {
 }
 
 type Resource = Record<string, unknown> & { durationMs?: number };
+
+const WORKER_SOURCE = readFileSync(new URL('../../../website/public/_worker.js', import.meta.url), 'utf8');
+
+/** A top-level `const NAME = [...];` literal of the worker, evaluated in an empty context. */
+function workerConstant(name: string): unknown {
+  const match = WORKER_SOURCE.match(new RegExp(`^const ${name} = (\\[[\\s\\S]*?\\]);$`, 'm'));
+  if (!match) throw new Error(`no top-level array const ${name} in website/public/_worker.js`);
+  return runInNewContext(`(${match[1]})`);
+}
+
+const RESOURCE_KEYS = ['homepage', 'homepageMarkdown', 'llmsTxt', 'robotsTxt', 'sitemap', 'notFoundProbe', 'samplePage', 'samplePageMarkdown'] as const;
+
+// AWS WAF answers (catalog 1.1.0): the Captcha action is 405 with x-amzn-waf-action:
+// captcha, the Challenge action 202 with x-amzn-waf-action: challenge; emag.ro served
+// its captcha page with 511 (observed 2026-11-09).
+const AWS_CAPTCHA_PAGE =
+  '<!doctype html><html><head><title>Captcha</title><script src="https://b1.eu-central-1.captcha-sdk.awswaf.com/b1/jsapi.js" defer></script></head><body><div id="b"></div><script>AwsWafIntegration.fetch("/x")</script></body></html>';
+const AWS_SDK_HOMEPAGE = HOMEPAGE.replace(
+  '</head>',
+  '<script src="https://x.token.awswaf.com/x/challenge.js" defer></script><script>AwsWafIntegration.getToken()</script></head>'
+);
 
 function withoutTiming(resource: Resource | null): Resource | null {
   if (!resource) return null;
@@ -194,6 +226,107 @@ describe('collector and worker parity', () => {
     expect(workerPayload.fetchSummary?.analysisStatus).toBe(engine.analysisStatus);
     if (expected === 'complete') {
       expect(engine.checks.find((check) => check.id === 'reach.bot-detection')?.status).toBe('fail');
+    }
+  });
+
+  // Core, the worker and the collector share one challenge rule (catalog 1.1.0). The
+  // worker is plain JS with its own copies, so its published lists are read from its
+  // source; the collector imports classifyResource from core and owns only the header
+  // allowlist, which must carry every challenge header or the marker never arrives.
+  it('keeps the worker challenge lists and both header allowlists equal to core', () => {
+    expect(workerConstant('CHALLENGE_STATUSES')).toEqual([...CHALLENGE_STATUSES]);
+    expect(workerConstant('CHALLENGE_MARKERS')).toEqual([...CHALLENGE_MARKERS]);
+    expect(workerConstant('CHALLENGE_MARKERS_NON_2XX')).toEqual([...CHALLENGE_MARKERS_NON_2XX]);
+    expect(workerConstant('CHALLENGE_HEADERS')).toEqual(
+      CHALLENGE_HEADERS.map((header) => ({ name: header.name, values: [...header.values] }))
+    );
+    expect(workerConstant('DISCOVERY_HEADER_NAMES')).toEqual([...DISCOVERY_HEADER_NAMES]);
+    for (const header of CHALLENGE_HEADERS) {
+      expect(DISCOVERY_HEADER_NAMES as readonly string[], header.name).toContain(header.name);
+    }
+  });
+
+  it.each([
+    {
+      name: 'a 511 AWS WAF captcha homepage',
+      routes: { '/': { status: 511, body: AWS_CAPTCHA_PAGE, headers: { 'content-type': 'text/html' } } },
+      outcomes: { homepage: 'challenge' },
+      status: 'complete',
+      bot: 'HTTP 511, challenge marker "awswaf.com"',
+    },
+    {
+      name: 'a 405 homepage with x-amzn-waf-action: captcha',
+      routes: { '/': { status: 405, body: AWS_CAPTCHA_PAGE, headers: { 'content-type': 'text/html', 'x-amzn-waf-action': 'captcha' } } },
+      outcomes: { homepage: 'challenge' },
+      status: 'complete',
+      bot: 'HTTP 405, challenge marker "x-amzn-waf-action: captcha"',
+    },
+    {
+      name: 'a 202 homepage with x-amzn-waf-action: challenge',
+      routes: { '/': { status: 202, body: '', headers: { 'x-amzn-waf-action': 'challenge' } } },
+      outcomes: { homepage: 'ok' },
+      status: 'complete',
+      bot: 'HTTP 202 with challenge marker "x-amzn-waf-action: challenge"',
+    },
+    {
+      name: 'a 200 homepage that loads the AWS WAF SDK',
+      routes: { '/': { status: 200, body: AWS_SDK_HOMEPAGE, headers: { 'content-type': 'text/html; charset=utf-8' } } },
+      outcomes: { homepage: 'ok' },
+      status: 'partial',
+      bot: 'HTTP 200, HTML, no challenge markers',
+    },
+    {
+      name: 'a 511 homepage without markers',
+      routes: { '/': { status: 511, body: '<html><body>Network Authentication Required</body></html>', headers: { 'content-type': 'text/html' } } },
+      outcomes: { homepage: 'unverified' },
+      status: 'blocked',
+      bot: null,
+    },
+    {
+      name: 'a 405 homepage without markers',
+      routes: { '/': { status: 405, body: 'Method Not Allowed', headers: { 'content-type': 'text/plain' } } },
+      outcomes: { homepage: 'http-error' },
+      status: 'blocked',
+      bot: null,
+    },
+    {
+      name: 'AWS WAF answers on secondary resources',
+      routes: {
+        '/llms.txt': { status: 511, body: AWS_CAPTCHA_PAGE, headers: { 'content-type': 'text/html' } },
+        '/index.md': { status: 405, body: '', headers: { 'x-amzn-waf-action': 'captcha' } },
+        [PROBE_PATH]: { status: 511, body: AWS_CAPTCHA_PAGE, headers: { 'content-type': 'text/html' } },
+      },
+      outcomes: { llmsTxt: 'challenge', homepageMarkdown: 'challenge', notFoundProbe: 'challenge' },
+      status: 'partial',
+      bot: 'HTTP 200, HTML, no challenge markers',
+    },
+  ])('$name: same resources, same outcomes as core, same status in both summaries and the engine', async ({ routes, outcomes, status, bot }) => {
+    const origin = (): Record<string, Route> => ({
+      ...parityOrigin(),
+      ...Object.fromEntries(Object.entries(routes).map(([path, reply]) => [path, () => reply])),
+    });
+    const { workerPayload, collectorEvidence } = await runBoth(origin);
+
+    for (const key of RESOURCE_KEYS) {
+      const workerResource = workerPayload[key] as (Resource & SiteEvidence['homepage']) | null;
+      const collectorResource = collectorEvidence[key] as (Resource & SiteEvidence['homepage']) | null;
+      expect(withoutTiming(collectorResource), key).toEqual(withoutTiming(workerResource));
+      if (workerResource) {
+        // The worker's own classifyResource agrees with core's on what it recorded.
+        expect(workerResource.outcome, key).toBe(classifyResource(workerResource));
+      }
+    }
+    for (const [key, outcome] of Object.entries(outcomes)) {
+      expect(workerPayload[key as (typeof RESOURCE_KEYS)[number]]?.outcome, key).toBe(outcome);
+    }
+    const evaluation = evaluateSiteChecks(collectorEvidence);
+    expect(evaluateSiteChecks(workerPayload)).toEqual(evaluation);
+    const engine = scoreChecks(evaluation);
+    expect(engine.analysisStatus).toBe(status);
+    expect(collectorEvidence.fetchSummary?.analysisStatus).toBe(engine.analysisStatus);
+    expect(workerPayload.fetchSummary?.analysisStatus).toBe(engine.analysisStatus);
+    if (bot) {
+      expect(engine.checks.find((check) => check.id === 'reach.bot-detection')?.evidence).toBe(bot);
     }
   });
 });

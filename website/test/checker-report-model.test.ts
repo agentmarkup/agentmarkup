@@ -84,6 +84,8 @@ function score(result: SiteCheckResponse): ScoreReport {
 const FIXTURES: Record<string, ScoreReport> = Object.fromEntries(
   FIXTURE_HOSTS.map((host) => [host, score(fixtureResult(host))])
 );
+/** Recorded fixtures whose homepage is a bot wall (scored, gated). */
+const GATED_FIXTURES = ['emag.ro'];
 
 const CHALLENGE_BODY = '<html><head><title>Just a moment...</title></head><body></body></html>';
 const FAILING_PARTS = {
@@ -395,13 +397,29 @@ describe('gatedInfo (5.10)', () => {
     expect(info?.evidence).toBe(gated.checks.find((check) => check.id === 'reach.bot-detection')?.evidence);
   });
 
-  it('is null on ordinary, partial and blocked runs and on every recorded fixture', () => {
+  it('is null on ordinary, partial and blocked runs and on every recorded fixture but the emag.ro bot wall', () => {
     for (const report of [SYNTHETIC.reference, SYNTHETIC.provisional, SYNTHETIC.failing, SYNTHETIC.blocked, SYNTHETIC.homepage404]) {
       expect(gatedInfo(report)).toBeNull();
     }
-    for (const host of FIXTURE_HOSTS) {
+    for (const host of FIXTURE_HOSTS.filter((candidate) => !GATED_FIXTURES.includes(candidate))) {
       expect(gatedInfo(FIXTURES[host]), host).toBeNull();
     }
+  });
+
+  it('reads the emag.ro 511 AWS WAF captcha as gated, never blocked (catalog 1.1.0)', () => {
+    const result = fixtureResult('emag.ro');
+    const report = FIXTURES['emag.ro'];
+    expect(result.homepage.status).toBe(511);
+    expect(report.analysisStatus).not.toBe('blocked');
+    expect(blockedCase(report, result)).toBeNull();
+    const affected = report.naChecks.filter((entry) => entry.reason === 'homepage-blocked').length;
+    expect(gatedInfo(report)).toEqual({
+      status: 511,
+      marker: true,
+      evidence: 'HTTP 511, challenge marker "awswaf.com"',
+      affected,
+    });
+    expect(affected).toBeGreaterThan(0);
   });
 
   it('marks an area whose eligible checks all needed the homepage, and scores it as not scored', () => {
@@ -480,6 +498,53 @@ describe('blockedCase (5.9, H4)', () => {
       const withoutError: SiteCheckResponse = { ...result, homepage: { ...result.homepage, error: undefined } };
       expect(blockedCase(report, withoutError)?.kind, message).toBe(kind);
     }
+  });
+
+  it('maps a homepage that answered (429/5xx without markers, a 2xx without a body) to server-status, never to the timeout row', () => {
+    for (const [home, code] of [
+      [status(HOME, 511, { body: '<html><body>Network Authentication Required</body></html>' }), 511],
+      [status(HOME, 503), 503],
+      [status(HOME, 429), 429],
+      [status(HOME, 500), 500],
+      [resource(HOME, { status: 200, body: null }), 200],
+    ] as const) {
+      const result = siteCheck({ homepage: home });
+      const report = score(result);
+      expect(report.analysisStatus, String(code)).toBe('blocked');
+      expect(report.blockedKind, String(code)).toBe('unverified');
+      expect(blockedCase(report, result), String(code)).toEqual({
+        kind: 'server-status',
+        detail: null,
+        tone: 'neutral',
+        rescan: true,
+        httpStatus: code,
+        lastHopHost: null,
+      });
+      expect(reportTone(report, blockedCase(report, result))).toBe('neutral');
+    }
+  });
+
+  it('reads the server-status code from blockedReason when the response lacks the homepage status', () => {
+    const result = siteCheck({ homepage: status(HOME, 502) });
+    const report = score(result);
+    expect(report.blockedReason).toBe('homepage answered HTTP 502 without a usable page');
+    const withoutStatus = { ...result, homepage: { ...result.homepage, status: undefined } } as unknown as SiteCheckResponse;
+    expect(blockedCase(report, withoutStatus)).toMatchObject({ kind: 'server-status', httpStatus: 502 });
+    const withoutHomepage = { ...result, homepage: undefined } as unknown as SiteCheckResponse;
+    expect(blockedCase(report, withoutHomepage)).toMatchObject({ kind: 'server-status', httpStatus: 502 });
+  });
+
+  it('keeps the timeout row for a homepage that never answered or carries a worker error, whatever its status', () => {
+    expect(blockedCase(SYNTHETIC.blocked, RESULTS.blocked)?.kind).toBe('timeout');
+    // The status line arrived but the body read timed out: the worker error wins.
+    const bodyTimeout = siteCheck({
+      homepage: resource(HOME, { status: 200, body: null, error: 'Request timed out.' }),
+    });
+    expect(blockedCase(score(bodyTimeout), bodyTimeout)?.kind).toBe('timeout');
+    const zeroWithoutError = siteCheck({
+      homepage: resource(HOME, { status: 0, ok: false, contentType: null, body: null }),
+    });
+    expect(blockedCase(score(zeroWithoutError), zeroWithoutError)?.kind).toBe('timeout');
   });
 
   it('names the last redirect hop only when it left the requested host', () => {
@@ -589,8 +654,13 @@ describe('partialInfo (5.8)', () => {
     expect(partialInfo(SYNTHETIC.reference)).toBeNull();
     expect(partialInfo(SYNTHETIC.blocked)).toBeNull();
     for (const host of FIXTURE_HOSTS) {
-      expect(partialInfo(FIXTURES[host]), host).toBeNull();
+      if (FIXTURES[host].analysisStatus === 'complete') {
+        expect(partialInfo(FIXTURES[host]), host).toBeNull();
+      }
     }
+    // emag.ro is the one recorded partial: its challenged probe leaves nav.not-found unverified.
+    expect(FIXTURE_HOSTS.filter((host) => FIXTURES[host].analysisStatus !== 'complete')).toEqual(['emag.ro']);
+    expect(partialInfo(FIXTURES['emag.ro'])).toMatchObject({ unverified: 1, resourceLabels: [] });
   });
 
   it('reports the range ends, their grades and the unverified count', () => {

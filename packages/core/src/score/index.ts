@@ -35,7 +35,10 @@ export type {
 export {
   AI_SEARCH_AGENTS,
   BASELINE_JSONLD_TYPES,
+  CHALLENGE_HEADERS,
   CHALLENGE_MARKERS,
+  CHALLENGE_MARKERS_NON_2XX,
+  CHALLENGE_STATUSES,
   IDENTITY_TYPES,
   INJECTION_PATTERNS,
   NON_ORGANIZATION_IDENTITY_TYPES,
@@ -77,6 +80,7 @@ export {
   WORKER_ERROR_MESSAGES,
   classifyResource,
   findChallengeMarker,
+  isChallengeStatus,
   isHtmlBody,
   isMarkdownResource,
   isTextResource,

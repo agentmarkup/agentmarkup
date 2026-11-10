@@ -72,6 +72,14 @@ const RESULTS = {
   blocked: siteCheck({ homepage: timedOut(HOME) }),
   sampleTimedOut: siteCheck({ sample: timedOut(`${ORIGIN}/services/`), sampleMd: null }),
   homepage404: siteCheck({ homepage: notFound(HOME) }),
+  // A 511 with no challenge marker: the server answered, so the copy names the status
+  // instead of claiming a timeout (emag.ro, 2026-11-10, before the AWS WAF markers).
+  serverStatus511: siteCheck({
+    homepage: status(HOME, 511, {
+      contentType: 'text/html; charset=UTF-8',
+      body: '<html><body>Network Authentication Required</body></html>',
+    }),
+  }),
   failing: siteCheck(FAILING_PARTS),
   // 91 (A) with a range of 82 to 91: the pessimistic end grades B (H13).
   failingProbe: siteCheck({ ...FAILING_PARTS, probe: timedOut(PROBE_URL) }),
@@ -354,6 +362,35 @@ describe('score block, areas and disclosures (ported from ScorePanel)', () => {
       rescan.click();
     });
     expect(onRescan).toHaveBeenCalledTimes(1);
+  });
+
+  it('names the status a homepage answered instead of a page, stays neutral, offers Rescan and never claims a timeout', async () => {
+    const { container, onRescan, report } = await mountCase('serverStatus511');
+    const sentence = textOf(container, '.report-blocked-body');
+
+    expect(report.blockedKind).toBe('unverified');
+    expect(textOf(container, '.report-blocked-title')).toBe('No score yet');
+    expect(container.querySelector('.report-score-number')).toBeNull();
+    expect(container.querySelector('.report-grade')).toBeNull();
+    expect(container.querySelector('.area-bar')).toBeNull();
+    expect(container.querySelector('.fix-section')).toBeNull();
+    expect(sentence).toBe(
+      `${HOST} answered HTTP 511 instead of a page, so nothing was scored. A server error or a rate limit is never counted against a site. Scan again in a few minutes.`
+    );
+    expect(container.textContent).not.toMatch(/within 10 seconds|did not answer|timed out/i);
+    expect(container.querySelector('.report-hero-card')?.getAttribute('data-tone')).toBe('neutral');
+
+    const rescan = buttonByText(container.querySelector('.report-actions') ?? container, 'Rescan');
+    expect(rescan.className).toContain('report-action-primary');
+    await act(async () => {
+      rescan.click();
+    });
+    expect(onRescan).toHaveBeenCalledTimes(1);
+
+    const explanation = verdictExplanationForGrade(report.grade, report.analysisStatus, report.blockedKind, report.blockedReason);
+    expect(explanation).toContain('answered HTTP 511 instead of a page');
+    expect(explanation).toContain('never counted against a site');
+    expect(explanation).not.toMatch(/in time|timed out/i);
   });
 
   it('names the final homepage status, offers no Rescan and never mentions a timeout', async () => {

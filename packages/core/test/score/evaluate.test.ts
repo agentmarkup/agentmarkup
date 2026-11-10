@@ -358,6 +358,95 @@ describe('homepage states', () => {
     expect(challenged503.evaluation.blocked).toBe(false);
   });
 
+  // Catalog 1.1.0: AWS WAF Captcha (405 + header), Challenge (202 + header) and the
+  // emag.ro captcha page served with 511 are gated exactly like a Cloudflare challenge.
+  const AWS_CAPTCHA_PAGE =
+    '<!doctype html><html><head><title>Captcha</title><script src="https://b1.eu-central-1.captcha-sdk.awswaf.com/b1/jsapi.js" defer></script></head><body><div id="b"></div><script>AwsWafIntegration.fetch("/x")</script></body></html>';
+
+  it.each([
+    {
+      name: 'a 202 with x-amzn-waf-action: challenge',
+      home: resource(HOME, { status: 202, body: '', headers: { 'x-amzn-waf-action': 'challenge' } }),
+      evidence: 'HTTP 202 with challenge marker "x-amzn-waf-action: challenge"',
+      reason: 'HTTP 202 with challenge marker "x-amzn-waf-action: challenge"',
+    },
+    {
+      name: 'a 405 with x-amzn-waf-action: captcha',
+      home: resource(HOME, { status: 405, ok: false, body: AWS_CAPTCHA_PAGE, headers: { 'x-amzn-waf-action': 'captcha' } }),
+      evidence: 'HTTP 405, challenge marker "x-amzn-waf-action: captcha"',
+      reason: 'HTTP 405 challenge page (x-amzn-waf-action: captcha)',
+    },
+    {
+      name: 'a 511 AWS WAF captcha page without the header',
+      home: resource(HOME, { status: 511, ok: false, body: AWS_CAPTCHA_PAGE }),
+      evidence: 'HTTP 511, challenge marker "awswaf.com"',
+      reason: 'HTTP 511 challenge page (awswaf.com)',
+    },
+  ])('$name gates the homepage: scored, bot-detection 0, homepage-derived checks na', ({ home, evidence, reason }) => {
+    const { evaluation, get } = run({ homepage: home });
+    expect(evaluation.blocked).toBe(false);
+    expect(evaluation.blockedKind).toBeNull();
+    expect(evaluation.blockedReason).toBe(`Agents cannot reach this site: ${reason}`);
+    expect(get('reach.bot-detection')).toMatchObject({ status: 'fail', fraction: 0, evidence });
+    for (const [id, entry] of Object.entries(EVALUATORS)) {
+      if (entry.needsHomepage) {
+        expect(get(id).status, id).toBe('na');
+        expect(get(id).reason, id).toBe('homepage-blocked');
+      }
+    }
+    expect(get('robots.ai-search-access').status).toBe('pass');
+    const report = scoreChecks(evaluation);
+    expect(report.analysisStatus).toBe('complete');
+    expect(report.score).not.toBeNull();
+  });
+
+  it('a 2xx homepage that loads the AWS WAF SDK is integration, not a block, and scores as a normal page', () => {
+    const sdk = '<script src="https://x.token.awswaf.com/x/challenge.js" defer></script><script>AwsWafIntegration.getToken()</script>';
+    const reference = scoreChecks(run().evaluation);
+    const { evaluation, get } = run({ homepage: homepage(DEFAULT_BODY, { extra: sdk }) });
+    expect(get('reach.bot-detection')).toMatchObject({ status: 'pass', evidence: 'HTTP 200, HTML, no challenge markers' });
+    expect(evaluation.blockedReason).toBeNull();
+    expect(evaluation.checks.filter((entry) => entry.reason === 'homepage-blocked')).toEqual([]);
+    const report = scoreChecks(evaluation);
+    expect(report.score).toBe(reference.score);
+    expect(report.checks.map((entry) => entry.status)).toEqual(reference.checks.map((entry) => entry.status));
+  });
+
+  it('a homepage that answered 511, 405, 503 or 429 without markers keeps its 1.0.0 outcome, named by the status it answered', () => {
+    const plain511 = run({ homepage: status(HOME, 511, { body: '<html><body>Network Authentication Required</body></html>' }) });
+    expect(plain511.evaluation.blockedKind).toBe('unverified');
+    expect(plain511.evaluation.blockedReason).toBe('homepage answered HTTP 511 without a usable page');
+    expect(plain511.get('reach.bot-detection').evidence).toBe('homepage answered HTTP 511 without a usable page');
+    for (const code of [503, 429]) {
+      expect(run({ homepage: status(HOME, code) }).evaluation.blockedReason, String(code)).toBe(
+        `homepage answered HTTP ${code} without a usable page`
+      );
+    }
+    const plain405 = run({ homepage: status(HOME, 405, { body: 'Method Not Allowed' }) });
+    expect(plain405.evaluation.blockedKind).toBe('http-status');
+    expect(plain405.evaluation.blockedReason).toBe('homepage answered HTTP 405');
+    expect(run({ homepage: resource(HOME, { status: 200, body: null }) }).evaluation.blockedReason).toBe(
+      'homepage HTTP 200 with no readable body'
+    );
+  });
+
+  it('the client summary names the status an unverified homepage answered and keeps the timeout sentence for timeouts', () => {
+    const summary = (home: RemoteResource) => renderClientSummary(scoreChecks(run({ homepage: home }).evaluation), { siteName: 'www.example.com' });
+    expect(summary(status(HOME, 511))).toBe(
+      'www.example.com: the homepage answered HTTP 511 instead of a page, so there is no score yet.\nPlease re-run the check in a few minutes; a server error or a rate limit is never counted against the site.'
+    );
+    expect(summary(resource(HOME, { status: 200, body: null }))).toBe(
+      'www.example.com: the homepage answered HTTP 200 without a readable page, so there is no score yet.\nPlease re-run the check in a few minutes; this is never counted against the site.'
+    );
+    for (const home of [timedOut(HOME), resource(HOME, { status: 200, body: 'x', error: 'Request timed out.' }), resource(HOME, { skipped: true })]) {
+      const text = summary(home);
+      expect(text).toBe(
+        'www.example.com: we could not reach the site in time, so there is no score yet.\nPlease re-run the check; a timed-out fetch is never counted against you.'
+      );
+      expect(text).not.toMatch(/answered HTTP/);
+    }
+  });
+
   it('a 429 or 5xx homepage without markers is unverified, never a finding', () => {
     const { evaluation } = run({ homepage: status(HOME, 429) });
     expect(evaluation.blocked).toBe(true);

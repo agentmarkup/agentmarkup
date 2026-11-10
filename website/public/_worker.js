@@ -72,11 +72,14 @@ const CHECK_RESOURCE_KEYS = [
 // Response headers copied onto each checker resource. An allowlist, never the
 // whole header map: set-cookie must not enter the payload or the D1 cache.
 // `location` only ever appears on a 3xx that the probe reports as its final
-// answer (it follows no redirects).
+// answer (it follows no redirects). `cf-mitigated` and `x-amzn-waf-action` are
+// the challenge headers (CHALLENGE_HEADERS below). Same list as
+// DISCOVERY_HEADER_NAMES in @agentmarkup/audit's collector.
 const DISCOVERY_HEADER_NAMES = [
   'link',
   'vary',
   'cf-mitigated',
+  'x-amzn-waf-action',
   'content-signal',
   'x-robots-tag',
   'last-modified',
@@ -85,12 +88,22 @@ const DISCOVERY_HEADER_NAMES = [
   'location',
 ];
 const DISCOVERY_HEADER_VALUE_MAX_CHARS = 512;
-// Bot-challenge detection, identical to classifyResource in @agentmarkup/core:
-// a `cf-mitigated` header containing "challenge", or one of these markers in
-// the first 20 KB of a 401/403/429/503 body. The list is published; additions
-// bump the score catalog's MINOR version.
-const CHALLENGE_STATUSES = [401, 403, 429, 503];
+// Bot-challenge detection, identical to findChallengeMarker and
+// classifyResource in @agentmarkup/core (catalog 1.1.0): a response with one of
+// CHALLENGE_STATUSES is a `challenge` when it carries a marker. A marker is a
+// CHALLENGE_HEADERS header containing one of its words (any status), one of
+// CHALLENGE_MARKERS in the first 20 KB of the body (any status), or one of
+// CHALLENGE_MARKERS_NON_2XX there on a challenge status only: AWS tells sites
+// to load its WAF SDK on normal pages, so those strings on a 2xx mean
+// integration, not a block. The lists are published; additions bump the score
+// catalog's MINOR version.
+const CHALLENGE_STATUSES = [401, 403, 405, 429, 503, 511];
 const CHALLENGE_SCAN_CHARS = 20 * 1024;
+const CHALLENGE_HEADERS = [
+  { name: 'cf-mitigated', values: ['challenge'] },
+  { name: 'x-amzn-waf-action', values: ['captcha', 'challenge'] },
+];
+const CHALLENGE_MARKERS_NON_2XX = ['awswaf.com', 'AwsWafIntegration'];
 const CHALLENGE_MARKERS = [
   '__cf_chl',
   'challenge-platform',
@@ -448,8 +461,8 @@ async function fetchCheckEvidence(normalized, checkStartTime, budget) {
  */
 // Same rule as the score engine, so fetchSummary.analysisStatus always equals
 // score.analysisStatus. Outcome `unverified` counts. A challenged resource is a
-// measured answer, except a not-found probe that answers 429/503 with challenge
-// markers: core leaves nav.not-found unverified for it ('probe-challenged'). A
+// measured answer, except a not-found probe that answers 405/429/503/511 with
+// challenge markers: core leaves nav.not-found unverified for it ('probe-challenged'). A
 // 401/403 challenged probe scores nav.not-found as a measured fail and does not
 // count. classifyResource itself stays unchanged for parity with core.
 function isUnverifiedForSummary(key, resource) {
@@ -466,14 +479,23 @@ function isUnverifiedForSummary(key, resource) {
 
 // A challenge answer is often per-IP and transient, so a run in which any
 // resource answered one is never cached, whatever its fetch-summary status.
+// That includes a 2xx homepage carrying a challenge marker (an AWS WAF 202
+// with `x-amzn-waf-action: challenge`, say), which core gates exactly like a
+// challenge page (homepageBlockedReason in evaluate.ts).
 function hasChallengedResource(record) {
-  return CHECK_RESOURCE_KEYS.some((key) => record[key]?.outcome === 'challenge');
+  if (CHECK_RESOURCE_KEYS.some((key) => record[key]?.outcome === 'challenge')) {
+    return true;
+  }
+  const homepage = record.homepage;
+  return homepage?.outcome === 'ok' && findChallengeMarker(homepage) !== null;
 }
 
 // `blocked` exactly when the score engine blocks the run: the homepage is
-// unverified (a re-run may succeed), or its final answer is a non-2xx other
-// than 401/403 (404, 410, 400, ...: nothing to score). A 401, a 403 or a
-// challenge page is scored, so it does not block.
+// unverified (a re-run may succeed: status 0, an error, a 2xx without a body,
+// or a 429/5xx without challenge markers, 511 included), or its final answer
+// is a non-2xx other than 401/403 (404, 410, 400, a 405 without markers, ...:
+// nothing to score). A 401, a 403 or a challenge page (a challenge status with
+// a marker) is scored, so it does not block.
 function isBlockedHomepage(homepage) {
   return (
     homepage.outcome === 'unverified' ||
@@ -1716,16 +1738,34 @@ function captureDiscoveryHeaders(headers) {
   return captured;
 }
 
-function hasChallengeMarkers(resource) {
-  const mitigated = resource.headers?.['cf-mitigated'];
-  if (typeof mitigated === 'string' && mitigated.toLowerCase().includes('challenge')) {
-    return true;
+/**
+ * The challenge marker on a response, or null; identical to findChallengeMarker
+ * in @agentmarkup/core (same order, same status gate on the non-2xx list).
+ * Captured header names are lowercase (captureDiscoveryHeaders).
+ */
+function findChallengeMarker(resource) {
+  for (const header of CHALLENGE_HEADERS) {
+    const value = resource.headers?.[header.name];
+    if (
+      typeof value === 'string' &&
+      value !== '' &&
+      header.values.some((word) => value.toLowerCase().includes(word))
+    ) {
+      return `${header.name}: ${value}`;
+    }
   }
-  if (typeof resource.body !== 'string') {
-    return false;
+  if (typeof resource.body !== 'string' || resource.body === '') {
+    return null;
   }
   const head = resource.body.slice(0, CHALLENGE_SCAN_CHARS);
-  return CHALLENGE_MARKERS.some((marker) => head.includes(marker));
+  const marker = CHALLENGE_MARKERS.find((candidate) => head.includes(candidate));
+  if (marker) {
+    return marker;
+  }
+  if (!CHALLENGE_STATUSES.includes(resource.status)) {
+    return null;
+  }
+  return CHALLENGE_MARKERS_NON_2XX.find((candidate) => head.includes(candidate)) ?? null;
 }
 
 /**
@@ -1733,7 +1773,9 @@ function hasChallengeMarkers(resource) {
  * classifyResource in @agentmarkup/core so the browser and the worker agree:
  * - `unverified`: skipped, status 0, an error, a 2xx without a body, or a
  *   429/5xx without challenge markers (transport noise, never a finding)
- * - `challenge`: 401/403/429/503 carrying a bot-challenge marker
+ * - `challenge`: a CHALLENGE_STATUSES status (401/403/405/429/503/511)
+ *   carrying a bot-challenge marker; without one a 405 is an `http-error` and
+ *   a 511 is `unverified`
  * - `not-found`: 404 or 410
  * - `http-error`: any other completed non-2xx (including a 3xx on the probe)
  * - `ok`: 2xx with a body
@@ -1750,7 +1792,7 @@ function classifyResource(resource) {
   if (status >= 200 && status < 300) {
     return resource.body === null ? 'unverified' : 'ok';
   }
-  if (CHALLENGE_STATUSES.includes(status) && hasChallengeMarkers(resource)) {
+  if (CHALLENGE_STATUSES.includes(status) && findChallengeMarker(resource) !== null) {
     return 'challenge';
   }
   if (status === 429 || status >= 500) {

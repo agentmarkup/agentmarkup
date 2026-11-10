@@ -1,0 +1,122 @@
+{
+  "site": "emag.ro",
+  "source": "live Pages worker answer of 2026-11-09T21:25:18Z for https://emag.ro (cache, protection and storage removed; recorded outcome and fetchSummary fields are the catalog 1.0.0 worker's, the engine reclassifies every resource): every resource except robots.txt answered HTTP 511 with the AWS WAF eMAG Captcha page; catalog 1.0.0 classified that as unverified and blocked the run, catalog 1.1.0 reads it as a challenge (511 is a challenge status, awswaf.com a non-2xx marker), so the run is gated and partial (the challenged probe leaves nav.not-found unverified)",
+  "fetchedAt": "2026-11-09T21:25:18.894Z",
+  "catalogVersion": "1.1.0",
+  "formulaVersion": "1.0.0",
+  "score": 7,
+  "grade": "F",
+  "raw": 6.67,
+  "analysisStatus": "partial",
+  "range": {
+    "pessimistic": 7,
+    "optimistic": 47
+  },
+  "samplePageUrl": null,
+  "platform": null,
+  "required": {
+    "earned": 0,
+    "available": 80,
+    "passing": 0,
+    "total": 1
+  },
+  "recommended": {
+    "earned": 6.67,
+    "available": 20,
+    "passing": 1,
+    "total": 3
+  },
+  "bonus": {
+    "points": 0,
+    "signals": 0,
+    "cap": 5
+  },
+  "nonPass": {
+    "reach.bot-detection": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "homepage https://emag.ro/ redirected once to https://www.emag.ro/ and answered HTTP 511 text/html, 3,015 bytes: title \"eMAG Captcha\", a script from https://b69364f89bbe.eu-central-1.captcha-sdk.awswaf.com/b69364f89bbe/jsapi.js, AwsWafIntegration.fetch and AwsWafCaptcha.renderCaptcha calls, text \"Am detectat trafic neobișnuit de mare din rețeaua de internet în care te afli\"; no x-amzn-waf-action header was captured because this capture predates that allowlist entry (headers: content-length only); captured body read 2026-11-10"
+    },
+    "sitemap.valid": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "robots.txt (HTTP 200) declares eleven Sitemap lines; the first, https://www.emag.ro/sitemaps/category-filters-index.xml, answered HTTP 511 with the same 3,015-byte eMAG Captcha page (awswaf.com script); captured body read 2026-11-10"
+    },
+    "llms.agent-instruction": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "https://www.emag.ro/llms.txt answered HTTP 511 text/html with the same 3,015-byte eMAG Captcha page (awswaf.com script), so no llms.txt was readable; captured body read 2026-11-10"
+    },
+    "llms.exists": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "https://www.emag.ro/llms.txt answered HTTP 511 text/html with the same 3,015-byte eMAG Captcha page (awswaf.com script), so no llms.txt was readable; captured body read 2026-11-10"
+    },
+    "markdown.url-fallback": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "https://www.emag.ro/index.md answered HTTP 511 text/html with the same 3,015-byte eMAG Captcha page; no sample page was found (the homepage is a captcha page), so no sample mirror was requested; captured body read 2026-11-10"
+    },
+    "link.headers-discovery": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "the captured homepage headers are content-length only; no Link header (the 511 captcha answer); captured body read 2026-11-10"
+    },
+    "robots.content-signal": {
+      "status": "fail",
+      "fraction": 0,
+      "verified": "robots.txt has User-agent: * with Disallow/Allow path rules, Disallow: / for 008, Yandex, Baiduspider, AhrefsBot and Synthesio, and eleven Sitemap lines; no Content-Signal line; captured body read 2026-11-10"
+    }
+  },
+  "unverified": [
+    "nav.not-found"
+  ],
+  "na": [
+    "content.no-js",
+    "content.auth-gate",
+    "nav.redirect-hygiene",
+    "ax.document-structure",
+    "ax.native-controls",
+    "ax.accessible-names",
+    "ax.form-labeling",
+    "api.required-group",
+    "mcp.required-group",
+    "meta.completeness",
+    "meta.noindex",
+    "jsonld.identity",
+    "jsonld.org-completeness",
+    "trust.anchors",
+    "content.token-budget",
+    "markdown.code-fences",
+    "search.developer-resources",
+    "commerce.pricing-info",
+    "api.recommended-group",
+    "mcp.recommended-group",
+    "llms.formatting",
+    "llms.modular",
+    "llms.discovery-link",
+    "markdown.alternate-link",
+    "markdown.frontmatter",
+    "jsonld.same-as",
+    "jsonld.type-breadth",
+    "jsonld.syntax",
+    "sitemap.lastmod",
+    "ax.injection-safe",
+    "nav.not-found-markdown"
+  ],
+  "notMeasured": [
+    "reach.agent-ua",
+    "content.markdown-negotiation",
+    "search.brand-accuracy",
+    "markdown.agent-ua",
+    "a2a.agent-card",
+    "agent.discovery-file",
+    "mcp.well-known",
+    "llms.links-resolve"
+  ],
+  "topFixes": [
+    "reach.bot-detection",
+    "sitemap.valid",
+    "llms.agent-instruction"
+  ]
+}

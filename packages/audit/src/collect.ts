@@ -39,11 +39,16 @@ export const HOMEPAGE_MAX_REDIRECTS = 5;
 export const SAMPLE_PAGE_MAX_REDIRECTS = 3;
 export const SECONDARY_MAX_REDIRECTS = 2;
 
-/** Response headers copied onto each resource: an allowlist, never set-cookie. */
+/**
+ * Response headers copied onto each resource: an allowlist, never set-cookie.
+ * `cf-mitigated` and `x-amzn-waf-action` are the challenge headers core's
+ * `findChallengeMarker` reads (`CHALLENGE_HEADERS`); the same list as the worker's.
+ */
 export const DISCOVERY_HEADER_NAMES = [
   'link',
   'vary',
   'cf-mitigated',
+  'x-amzn-waf-action',
   'content-signal',
   'x-robots-tag',
   'last-modified',
@@ -609,7 +614,7 @@ export async function fetchResource(
  * Whether a resource counts as unverified for the fetch summary, so the summary
  * status always equals the score engine's analysisStatus. Outcome `unverified`
  * counts. A challenged resource is a measured answer, with one exception the
- * engine makes too: a not-found probe that answers 429/503 with challenge
+ * engine makes too: a not-found probe that answers 405/429/503/511 with challenge
  * markers leaves nav.not-found unverified ('probe-challenged'), so it counts
  * and refetchUnverified retries it. A 401/403 challenged probe scores
  * nav.not-found as a measured fail and does not count. classifyResource stays
@@ -809,7 +814,7 @@ function redirectCapFor(key: EvidenceResourceKey): { maxRedirects: number; accep
 /**
  * Retries the resources that did not complete, `attempts` times with `waitMs`
  * between passes, before a partial reading is accepted (the summary's
- * `unverified` list, so a 429/503 challenged not-found probe is retried too). A retried
+ * `unverified` list, so a 405/429/503/511 challenged not-found probe is retried too). A retried
  * resource replaces the recorded one only when it completed by the same rule. An unverified homepage re-collects the whole site, because the
  * other resources depend on its final URL. A recovered robots.txt re-derives
  * the sitemap URL and a recovered sample page its markdown URL, exactly as a
