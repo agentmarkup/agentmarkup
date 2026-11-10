@@ -49,6 +49,7 @@ const WORKER_CLASSIFIER = runInNewContext(
     'CHALLENGE_MARKERS',
     'statusOf',
     'isChallengeStatus',
+    'challengeHeaderValue',
     'findChallengeHeader',
     'findChallengeMarker',
     'classifyResource',
@@ -103,6 +104,7 @@ const CLASSIFY_PARITY_CASES = [
   { name: '302 + cf-mitigated: challenge', resource: answer(302, '', { 'cf-mitigated': 'challenge' }), outcome: 'challenge', marker: 'cf-mitigated: challenge' },
   { name: '500 + x-amzn-waf-action: captcha', resource: answer(500, '', { 'x-amzn-waf-action': 'captcha' }), outcome: 'challenge', marker: 'x-amzn-waf-action: captcha' },
   { name: '202 + x-amzn-waf-action: allow', resource: answer(202, '', { 'x-amzn-waf-action': 'allow' }), outcome: 'ok', marker: null },
+  { name: '202 + a mixed-case X-Amzn-Waf-Action: Challenge', resource: answer(202, '', { 'X-Amzn-Waf-Action': 'Challenge' }), outcome: 'challenge', marker: 'x-amzn-waf-action: Challenge' },
   // Finding B: the edge guards and the 404/410 order.
   { name: 'a negative status', resource: answer(-1, 'x'), outcome: 'unverified', marker: null },
   { name: 'a NaN status', resource: answer(Number.NaN, 'x'), outcome: 'unverified', marker: null },

@@ -1767,13 +1767,29 @@ function isChallengeStatus(status) {
  */
 function findChallengeHeader(resource) {
   for (const header of CHALLENGE_HEADERS) {
-    const value = resource.headers?.[header.name];
-    if (
-      typeof value === 'string' &&
-      value !== '' &&
-      header.values.some((word) => value.toLowerCase().includes(word))
-    ) {
+    const value = challengeHeaderValue(resource, header.name);
+    if (value && header.values.some((word) => value.toLowerCase().includes(word))) {
       return `${header.name}: ${value}`;
+    }
+  }
+  return null;
+}
+
+// Same lookup as headerValue in @agentmarkup/core: the exact name first, then a
+// case-insensitive match. Captured names are lowercase, so the second pass only
+// matters for a payload built elsewhere.
+function challengeHeaderValue(resource, name) {
+  const headers = resource.headers;
+  if (!headers) {
+    return null;
+  }
+  const direct = headers[name];
+  if (typeof direct === 'string') {
+    return direct;
+  }
+  for (const [key, value] of Object.entries(headers)) {
+    if (key.toLowerCase() === name && typeof value === 'string') {
+      return value;
     }
   }
   return null;
