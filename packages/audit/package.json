@@ -1,6 +1,6 @@
 {
   "name": "@agentmarkup/audit",
-  "version": "0.2.5",
+  "version": "0.3.0",
   "description": "Audit a live URL the way AI crawlers see it: fetch as GPTBot, ClaudeBot, PerplexityBot and more, diff against a browser to catch accidental CDN blocks and JS-gated content, plus llms.txt, JSON-LD, robots.txt intent, Content-Signal, markdown mirror, sitemap, and page-metadata checks, with an optional deterministic 0-100 agent-readiness score from a published formula (--score)",
   "type": "module",
   "license": "MIT",
@@ -48,6 +48,9 @@
   "files": [
     "dist"
   ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "prebuild": "pnpm -C ../core build",
     "build": "tsup",
@@ -64,10 +67,10 @@
     "@agentmarkup/core": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^24.12.0",
-    "eslint": "^9.0.0",
-    "tsup": "^8.4.0",
-    "typescript": "^5.7.0",
-    "vitest": "^3.2.6"
+    "@types/node": "^24.19.2",
+    "eslint": "^9.39.5",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.7"
   }
 }

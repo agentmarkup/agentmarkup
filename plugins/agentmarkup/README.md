@@ -30,7 +30,7 @@ If you deploy and want to check the live site, `@agentmarkup/audit` fetches it u
 
 ## What it will not do
 
-- Invent a readiness score, letter grade, or percentage. Validation is deterministic: a missing required field is an error, a missing recommended field is a warning, and that is the whole scale.
+- Invent a readiness score, letter grade, or percentage. Build-time validation is deterministic: a missing required field is an error, a missing recommended field is a warning, and that is the whole scale. The 0-100 agent-readiness score comes only from `@agentmarkup/audit --score` or the website checker, and is quoted, never estimated.
 - Claim a site "blocks AI" because a crawler user agent got a 403. WAF and bot-management rules produce the same response, so that is reported as something to investigate.
 - Overwrite a curated `llms.txt`, `robots.txt`, `_headers`, or existing JSON-LD. Existing work is preserved unless you explicitly opt into replacement.
 - Present markdown mirrors as mandatory. They help when HTML is thin, noisy, or client-rendered, and are optional when it is not.

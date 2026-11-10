@@ -19,26 +19,26 @@
   },
   "dependencies": {
     "ogl": "^1.0.11",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   },
   "devDependencies": {
     "@agentmarkup/core": "workspace:*",
     "@agentmarkup/vite": "workspace:*",
-    "@eslint/js": "^9.39.4",
-    "@types/node": "^24.12.0",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
-    "eslint": "^9.39.4",
+    "@eslint/js": "^9.39.5",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "eslint": "^9.39.5",
     "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.5.2",
-    "globals": "^17.4.0",
-    "happy-dom": "^20.11.2",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "globals": "^17.14.0",
+    "happy-dom": "^20.14.6",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.57.0",
-    "vite": "^8.0.16",
-    "vite-prerender-plugin": "^0.5.11",
-    "vitest": "^3.2.6"
+    "typescript-eslint": "^8.72.2",
+    "vite": "^8.3.7",
+    "vite-prerender-plugin": "^0.5.14",
+    "vitest": "^3.2.7"
   }
 }

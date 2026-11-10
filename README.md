@@ -127,6 +127,7 @@ If your site already has a custom prerender or post-build step, `@agentmarkup/co
 - AI crawler `robots.txt` management
 - `Content-Signal` policy generation in `robots.txt` and the `_headers` header
 - deterministic validation checks
+- a deterministic 0-100 agent-readiness score from a published formula (`@agentmarkup/core/score`, `npx @agentmarkup/audit <url> --score`, and the website checker)
 - reusable generation and validation helpers for custom prerender pipelines
 
 ## Local Development

@@ -6,13 +6,13 @@ Security fixes are applied to the latest published release line of each package.
 
 | Package | Supported line |
 | --- | --- |
-| `@agentmarkup/core` | 0.7.x |
-| `@agentmarkup/vite` | 0.7.x |
-| `@agentmarkup/astro` | 0.7.x |
-| `@agentmarkup/next` | 0.7.x |
-| `@agentmarkup/nuxt` | 0.7.x |
-| `@agentmarkup/cli` | 0.7.x |
-| `@agentmarkup/audit` | 0.2.x |
+| `@agentmarkup/core` | 0.8.x |
+| `@agentmarkup/vite` | 0.8.x |
+| `@agentmarkup/astro` | 0.8.x |
+| `@agentmarkup/next` | 0.8.x |
+| `@agentmarkup/nuxt` | 0.8.x |
+| `@agentmarkup/cli` | 0.8.x |
+| `@agentmarkup/audit` | 0.3.x |
 
 Any line older than the one listed for a package is not supported.
 

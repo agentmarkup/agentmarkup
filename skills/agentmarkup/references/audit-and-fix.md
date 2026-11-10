@@ -16,7 +16,7 @@ Rules that hold for all three:
 
 - Only run a live audit against an origin the user owns or operates, and only after they approved it.
 - A 403 or a block against a spoofed crawler user agent is a **warning to investigate**, never proof that a site "blocks AI". WAF rules, bot management, and IP reputation produce the same response.
-- Report deterministic pass / warn / error findings. There is no score, grade, or percentage, and inventing one misrepresents what the tool measured.
+- Report deterministic pass / warn / error findings. Build-time validation has no score, grade, or percentage. The 0-100 agent-readiness score exists only as output of `@agentmarkup/audit --score` or the website checker: quote it when one of them printed it, and never estimate or invent one, which would misrepresent what the tool measured.
 - Missing markdown mirrors are only a real finding when the paired HTML is genuinely thin. If the HTML is substantial, mirrors are optional extra coverage. If the paired HTML fetch failed or was rate limited, that is an unknown state, not evidence the HTML is fine.
 
 ## Homepage HTML

@@ -69,7 +69,7 @@ Best used in JavaScript or TypeScript web repositories where you can inspect sou
 - Enable `agentCard` only when the site already has a real A2A-compatible agent service to advertise. AgentMarkup emits discovery metadata; it does not implement an A2A runtime.
 - Keep changes scoped to AgentMarkup setup and metadata fixes. Do not refactor unrelated app code to satisfy the audit unless the issue cannot be fixed otherwise.
 - For Next.js and Nuxt, fully dynamic SSR routes that do not emit build-time HTML need route-level `@agentmarkup/core` helpers for JSON-LD rather than static output patching.
-- Report findings as concrete pass/warn/error facts. Do not invent readiness scores, letter grades, or percentage ratings; AgentMarkup's validation is deterministic and deliberately has none.
+- Report findings as concrete pass/warn/error facts. Do not invent readiness scores, letter grades, or percentage ratings. Build-time validation has none. The only score is the deterministic 0-100 agent-readiness score that `npx @agentmarkup/audit <url> --score` and the website checker print from a published formula (https://agentmarkup.dev/score/): quote it only when one of them printed it, and never estimate one yourself.
 - Do not claim a site "blocks AI" based on a crawler-user-agent response. A 403 to a spoofed user agent can be a WAF rule rather than an intentional policy, so report it as a warning to investigate.
 
 ## Expected Output

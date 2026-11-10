@@ -4,7 +4,7 @@ Audit any live URL the way AI crawlers actually see it.
 
 Most SEO tools fetch a page once, as a browser, and grade the HTML. `@agentmarkup/audit` fetches the **same URL as GPTBot, ClaudeBot, PerplexityBot, OAI-SearchBot, and Google-Extended**, diffs each response against a normal browser, and reports where AI systems get a different - often worse - view than your human visitors. It also checks the machine-readable surface: `robots.txt` intent, Content-Signal, `llms.txt`, JSON-LD, and JavaScript-dependence.
 
-It is deterministic (pass / warn / error) and CI-friendly. With `--score` it also prints the agentmarkup agent-readiness score: a deterministic 0-100 number from a published formula (catalog v1.0.0), where every point is traceable to a check you can see; no LLM, no heuristics, no off-site search. The `--score` flag ships with the next release of this package; until then it is available from the repository build (see below).
+It is deterministic (pass / warn / error) and CI-friendly. With `--score` it also prints the agentmarkup agent-readiness score: a deterministic 0-100 number from a published formula (catalog v1.1.0), where every point is traceable to a check you can see; no LLM, no heuristics, no off-site search.
 
 ## Usage
 
@@ -18,15 +18,18 @@ npx @agentmarkup/audit https://example.com --json
 
 # custom per-request timeout
 npx @agentmarkup/audit example.com --timeout 15000
+
+# add the 0-100 agent-readiness score
+npx @agentmarkup/audit https://example.com --score
 ```
 
-The 0-100 agent-readiness score (`--score`) is not in a published release yet. It ships with the next release; today, run it from a clone of the repository:
-
-```bash
-pnpm install
-pnpm -C packages/audit build
-node packages/audit/dist/bin.js example.com --score
-```
+| Option | What it does |
+| --- | --- |
+| `--json` | Output the full report as JSON (for CI / league tables) |
+| `--score` | Add the deterministic 0-100 agent-readiness score ([published formula](https://agentmarkup.dev/score/)) |
+| `--timeout <ms>` | Per-request timeout in milliseconds (default `10000`) |
+| `--version` | Print the version |
+| `--help` | Show the help text |
 
 Bare domains are normalized to `https://`. Exit code is `1` when any **error**-level finding is present (a CI gate), `0` otherwise, `2` on a usage error.
 
@@ -44,8 +47,6 @@ Bare domains are normalized to `https://`. Exit code is `1` when any **error**-l
 | **Page metadata** | Checks for a title, meta description, and canonical link. |
 
 ## The agent-readiness score (`--score`)
-
-Available from the repository build today (`pnpm -C packages/audit build && node packages/audit/dist/bin.js <url> --score`); it ships to npm with the next release, after which `npx @agentmarkup/audit <url> --score` works too.
 
 `--score` runs a second, checker-shaped pass over the site (the same eight fetches the hosted checker at [agentmarkup.dev](https://agentmarkup.dev) makes: homepage, one sample page, their markdown mirrors, `llms.txt`, `robots.txt`, the sitemap and a not-found probe) and scores the recorded evidence with `@agentmarkup/core/score`. The report is the same one the website computes, from the same code:
 
@@ -82,7 +83,7 @@ process.stdout.write(renderText(report));
 
 The exported analyzers (`analyzeCrawlerAccess`, `analyzeRobots`, `analyzeJsDependence`, `analyzeMachineReadable`) and the SSRF-safe `safeFetch` are available for building custom pipelines.
 
-For the score (these exports, like `--score`, ship with the next release and are in the repository build today), `collectSiteEvidence(url, options)` records the checker-shaped `SiteEvidence` (bodies included) that `evaluateSiteChecks` and `scoreChecks` from `@agentmarkup/core/score` consume; `refetchUnverified` retries the resources that did not complete, and `stripEvidenceBodies` removes bodies before the evidence is written to disk:
+For the score, `collectSiteEvidence(url, options)` records the checker-shaped `SiteEvidence` (bodies included) that `evaluateSiteChecks` and `scoreChecks` from `@agentmarkup/core/score` consume; `refetchUnverified` retries the resources that did not complete, and `stripEvidenceBodies` removes bodies before the evidence is written to disk:
 
 ```ts
 import { collectSiteEvidence, refetchUnverified } from '@agentmarkup/audit';
