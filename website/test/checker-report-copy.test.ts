@@ -227,7 +227,7 @@ describe('verdictSentence (6.6)', () => {
     // The AWS WAF captcha served with HTTP 511 (catalog 1.1.0): gated, provisional because
     // the challenged probe leaves nav.not-found unverified.
     'emag.ro':
-      'Provisional: emag.ro turns AI assistants away at the door (HTTP 511 bot check), so 19 checks that need the homepage could not run and are left out of the score. 1 check could not be checked in time.',
+      'Provisional: emag.ro turns AI assistants away at the door (HTTP 511 bot check), so 19 checks that need the homepage could not run and are left out of the score. 1 check could not be checked on this run.',
   };
 
   it.each(Object.entries(EXPECTED))('says exactly the 6.6 sentence for %s', (host, sentence) => {
@@ -246,7 +246,7 @@ describe('verdictSentence (6.6)', () => {
     expect(report.analysisStatus).toBe('partial');
     expect(sentence.startsWith('Provisional: ')).toBe(true);
     const count = report.unverifiedChecks.length;
-    expect(sentence.endsWith(` ${count} check${count === 1 ? '' : 's'} could not be checked in time.`)).toBe(true);
+    expect(sentence.endsWith(` ${count} check${count === 1 ? '' : 's'} could not be checked on this run.`)).toBe(true);
   });
 
   it('H13: a partial run uses the band of the pessimistic end, not the score', () => {
@@ -263,7 +263,7 @@ describe('verdictSentence (6.6)', () => {
     expect(report.unverifiedChecks).toEqual([]);
     const sentence = verdictSentence(report, groupReport(report), HOST) ?? '';
     expect(sentence.startsWith('Provisional: ')).toBe(true);
-    expect(sentence.endsWith(' Some files could not be fetched in time.')).toBe(true);
+    expect(sentence.endsWith(' Some files could not be fetched on this run.')).toBe(true);
   });
 
   it('names the counted homepage-blocked checks on a gated run', () => {
@@ -331,7 +331,7 @@ describe('copy tables', () => {
       'fail-attention': 'Needs fixing',
       partial: 'Partly in place',
       pass: 'In place',
-      unverified: 'Not checked in time',
+      unverified: 'Not checked on this run',
       na: "Doesn't apply",
       'not-measured': 'Not measured yet',
     });
@@ -404,7 +404,7 @@ describe('copy tables', () => {
       'no-robots': 'No robots.txt to judge',
       'probe-not-run': 'The missing-page probe was not run',
       'sitemap-absent': 'No sitemap to judge',
-      'sitemap-unverified': 'The sitemap could not be checked in time',
+      'sitemap-unverified': 'The sitemap could not be checked on this run',
       'headers-not-captured': 'Response headers were not recorded',
       'homepage-blocked': 'Needs the homepage, which showed a bot check',
     };
@@ -561,14 +561,14 @@ describe('partial, blocked and gated copy (5.8, 5.9, 5.10, H2, H4)', () => {
     const count = report.unverifiedChecks.length;
     expect(count).toBeGreaterThan(1);
     expect(partialLine(info!, report)).toBe(
-      `${report.score} with what answered. ${count} checks could not be checked in time and are left out until a rescan.`
+      `${report.score} with what answered. ${count} checks could not be checked on this run and are left out until a rescan.`
     );
   });
 
   it('names the unread sample page when no check waited on it', () => {
     const report = SYNTHETIC.sampleTimedOut;
     expect(partialLine(partialInfo(report)!, report)).toBe(
-      'Sample page could not be fetched in time, so the checks that read it were judged without it.'
+      'Sample page could not be fetched on this run, so the checks that read it were judged without it.'
     );
   });
 

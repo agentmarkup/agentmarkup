@@ -138,8 +138,8 @@ describe('--score on the audit CLI', () => {
     const lines = renderScoreLines(partial).join('\n');
     expect(lines).toContain('83/100');
     expect(lines).toContain('between 81 and 83');
-    expect(lines).toContain('1 check(s) could not be verified in time (sitemap.valid)');
-    expect(lines).toContain('1 resource(s) did not complete in time (sitemap)');
+    expect(lines).toContain('1 check(s) could not be verified on this run (sitemap.valid)');
+    expect(lines).toContain('1 resource(s) could not be fetched on this run (sitemap)');
 
     // A timed-out sample page: partial with no unverified check, so the line
     // names the resource instead of "0 check(s)".
@@ -150,7 +150,7 @@ describe('--score on the audit CLI', () => {
       range: { pessimistic: 83, optimistic: 83 },
     }).join('\n');
     expect(sampleOnly).toContain('provisional');
-    expect(sampleOnly).toContain('1 resource(s) did not complete in time (samplePage)');
+    expect(sampleOnly).toContain('1 resource(s) could not be fetched on this run (samplePage)');
     expect(sampleOnly).toContain('the score is 83 either way');
     expect(sampleOnly).not.toContain('0 check(s)');
     expect(sampleOnly).not.toContain('status: complete');

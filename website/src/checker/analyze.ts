@@ -237,7 +237,7 @@ function buildFetchFailureDetail(resource: RemoteResource, label: string): strin
         : resource.status
           ? `HTTP ${resource.status} without a readable body`
           : 'no response';
-    return `${capitalize(label)} could not be verified in time (${reason}). A fetch that did not complete is never counted against the site; re-run the check.`;
+    return `${capitalize(label)} could not be verified on this run (${reason}). A fetch that did not complete, a rate limit or a server error is never counted against the site; re-run the check.`;
   }
 
   if (resource.status) {

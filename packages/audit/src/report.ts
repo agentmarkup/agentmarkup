@@ -83,13 +83,13 @@ export function renderScoreLines(score: ScoreReport): string[] {
     // timed-out sample page can leave zero unverified checks, so both count.
     const reasons: string[] = [];
     if (score.unverifiedChecks.length > 0) {
-      reasons.push(`${score.unverifiedChecks.length} check(s) could not be verified in time (${score.unverifiedChecks.join(', ')})`);
+      reasons.push(`${score.unverifiedChecks.length} check(s) could not be verified on this run (${score.unverifiedChecks.join(', ')})`);
     }
     const resources = score.unverifiedResources ?? [];
     if (resources.length > 0) {
-      reasons.push(`${resources.length} resource(s) did not complete in time (${resources.join(', ')})`);
+      reasons.push(`${resources.length} resource(s) could not be fetched on this run (${resources.join(', ')})`);
     }
-    const reason = reasons.length > 0 ? reasons.join('; ') : 'a resource could not be verified in time';
+    const reason = reasons.length > 0 ? reasons.join('; ') : 'a resource could not be verified on this run';
     const range = !score.range
       ? ''
       : score.range.pessimistic === score.range.optimistic

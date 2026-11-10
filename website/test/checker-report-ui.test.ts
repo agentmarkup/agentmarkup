@@ -276,7 +276,7 @@ describe('score block, areas and disclosures (ported from ScorePanel)', () => {
     expect(textOf(container, '.report-provisional-text')).toContain('with what answered');
     expect(textOf(container, '.report-provisional-text').startsWith(`${provisional.score} with what answered`)).toBe(true);
     const notScored = container.querySelector('details.not-scored') as HTMLDetailsElement | null;
-    expect(notScored?.textContent).toContain('Not checked in time');
+    expect(notScored?.textContent).toContain('Not checked on this run');
     expect(notScored?.open).toBe(true);
     // The old "This run was not cached" and "left the denominator" lines are retired (11.5).
     expect(container.textContent).not.toContain('cached');
@@ -319,12 +319,12 @@ describe('score block, areas and disclosures (ported from ScorePanel)', () => {
     expect(textOf(container, '.report-score-number')).toBe(String(sampleTimedOut.score));
     expect(container.querySelector('.report-score-range')).toBeNull();
     expect(textOf(container, '.score-badge')).toBe('Provisional');
-    expect(sentence).toContain('Sample page could not be fetched in time, so the checks that read it were judged without it.');
+    expect(sentence).toContain('Sample page could not be fetched on this run, so the checks that read it were judged without it.');
     expect(sentence).not.toContain('0 checks');
     expect(textOf(container, '.not-scored')).toContain('Sample page (the checks that read it were judged without it)');
 
     const summary = renderClientSummary(sampleTimedOut, { siteName: SITE_NAME });
-    expect(summary).toContain('This reading is provisional: the sample page could not be fetched in time, so the checks that read it were judged without it.');
+    expect(summary).toContain('This reading is provisional: the sample page could not be fetched on this run, so the checks that read it were judged without it.');
     expect(summary).toContain('the sample page fetch (the checks that read it were judged without it)');
     expect(summary).not.toContain('0 checks could not be verified');
   });
@@ -332,7 +332,7 @@ describe('score block, areas and disclosures (ported from ScorePanel)', () => {
   it('a provisional run with unverified checks counts them and lists no resource line', async () => {
     const { container } = await mountCase('provisional');
     expect(textOf(container, '.report-provisional-text')).toMatch(
-      /^\d+ with what answered\. \d+ checks? could not be checked in time and (is|are) left out until a rescan\./
+      /^\d+ with what answered\. \d+ checks? could not be checked on this run and (is|are) left out until a rescan\./
     );
     expect(container.textContent).not.toContain('judged without it');
   });
@@ -802,7 +802,7 @@ describe('groups, chips and statuses (7.4, 7.5, 7.10, H5)', () => {
     for (const row of rows) {
       const summary = row.querySelector('summary');
       const spoken = Array.from(summary?.querySelectorAll('.sr-only') ?? []).map((node) => node.textContent ?? '');
-      expect(spoken.some((line) => /(needs fixing|partly in place|in place|not checked in time)/i.test(line)), row.id).toBe(true);
+      expect(spoken.some((line) => /(needs fixing|partly in place|in place|not checked on this run)/i.test(line)), row.id).toBe(true);
     }
   });
 

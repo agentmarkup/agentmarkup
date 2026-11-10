@@ -29,7 +29,7 @@ function isScored(check: ScoredCheck): boolean {
 }
 
 function titleFor(check: ScoredCheck, name: string): string {
-  if (check.status === 'unverified') return `${name}: could not be checked in time`;
+  if (check.status === 'unverified') return `${name}: could not be checked on this run`;
   if (check.status === 'na' || check.status === 'not-measured') return name;
   return titleForCheck(check);
 }

@@ -179,7 +179,7 @@ export function auditItemForUnverified(
   return {
     id: `unverified-${resource}`,
     level: 'warning',
-    title: `${label} could not be verified in time`,
+    title: `${label} could not be verified on this run`,
     detail: `${evidence ? `${evidence}. ` : ''}${names.length === 1 ? 'The check waiting on it' : `The ${names.length} checks waiting on it`} (${names.join(', ')}) ${names.length === 1 ? 'is' : 'are'} left out of the score until a rescan.`,
     action: `Re-run the check. If it repeats, confirm by hand that ${label.toLowerCase()} answers within a few seconds.`,
     docUrl: `${SCORE_METHODOLOGY_PATH}#statuses`,
@@ -206,7 +206,7 @@ export function auditItemForUnverifiedResource(
   return {
     id: `unverified-${resource}`,
     level: 'warning',
-    title: `${label} could not be verified in time`,
+    title: `${label} could not be verified on this run`,
     detail: `${judged}, so this reading is provisional.`,
     action: `Re-run the check. If it repeats, confirm by hand that ${label.toLowerCase()} answers within a few seconds.`,
     docUrl: `${SCORE_METHODOLOGY_PATH}#statuses`,

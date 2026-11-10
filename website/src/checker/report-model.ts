@@ -73,7 +73,7 @@ export interface GroupSummary {
    * `homepage-blocked`.
    */
   allHomepageBlocked: boolean;
-  /** A required or recommended check in the bucket could not be checked in time. */
+  /** A required or recommended check in the bucket could not be checked on this run. */
   hasUnverified: boolean;
 }
 
@@ -599,7 +599,7 @@ export interface PartialInfo {
   high: number;
   gradeLow: Grade;
   gradeHigh: Grade;
-  /** Checks that could not be checked in time. */
+  /** Checks that could not be checked on this run. */
   unverified: number;
   /** Labels of resources that did not answer although no check waited on them. */
   resourceLabels: string[];

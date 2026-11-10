@@ -90,7 +90,7 @@ export const STATUS_WORDS: Readonly<Record<CheckDisplayStatus, string>> = {
   'fail-attention': 'Needs fixing',
   partial: 'Partly in place',
   pass: 'In place',
-  unverified: 'Not checked in time',
+  unverified: 'Not checked on this run',
   na: "Doesn't apply",
   'not-measured': 'Not measured yet',
 };
@@ -169,7 +169,7 @@ export const NA_REASON_COPY: Readonly<Record<string, string>> = {
   'no-robots': 'No robots.txt to judge',
   'probe-not-run': 'The missing-page probe was not run',
   'sitemap-absent': 'No sitemap to judge',
-  'sitemap-unverified': 'The sitemap could not be checked in time',
+  'sitemap-unverified': 'The sitemap could not be checked on this run',
   'headers-not-captured': 'Response headers were not recorded',
   'homepage-blocked': 'Needs the homepage, which showed a bot check',
   // Codes the engine also emits (verified in packages/core/src/score/evaluators).
@@ -302,8 +302,8 @@ export function verdictSentence(
     const unverified = report.unverifiedChecks.length;
     const tail =
       unverified > 0
-        ? ` ${unverified} ${plural(unverified, 'check', 'checks')} could not be checked in time.`
-        : ' Some files could not be fetched in time.';
+        ? ` ${unverified} ${plural(unverified, 'check', 'checks')} could not be checked on this run.`
+        : ' Some files could not be fetched on this run.';
     sentence = `Provisional: ${sentence}${tail}`;
   }
   return sentence;
@@ -314,7 +314,7 @@ export function verdictSentence(
 
 /**
  * The line under a provisional score. With unverified checks: `74 with what
- * answered. 2 checks could not be checked in time and are left out until a
+ * answered. 2 checks could not be checked on this run and are left out until a
  * rescan.` Resource-only (range collapses to one number): `Sample page could not
  * be fetched in time, so the checks that read it were judged without it.`
  */
@@ -322,17 +322,17 @@ export function partialLine(info: PartialInfo, report: ScoreReport): string {
   if (info.low === info.high && info.unverified === 0) {
     const labels = info.resourceLabels;
     if (labels.length === 0) {
-      return 'Some files could not be fetched in time, so the checks that read them were judged without them.';
+      return 'Some files could not be fetched on this run, so the checks that read them were judged without them.';
     }
     const pronoun = labels.length === 1 ? 'it' : 'them';
-    return `${joinWithAnd(labels)} could not be fetched in time, so the checks that read ${pronoun} were judged without ${pronoun}.`;
+    return `${joinWithAnd(labels)} could not be fetched on this run, so the checks that read ${pronoun} were judged without ${pronoun}.`;
   }
   const answered = report.score !== null ? `${report.score} with what answered. ` : '';
   const count = info.unverified;
   if (count === 0) {
-    return `${answered}Some files could not be fetched in time and the score is provisional until a rescan.`;
+    return `${answered}Some files could not be fetched on this run and the score is provisional until a rescan.`;
   }
-  return `${answered}${count} ${plural(count, 'check', 'checks')} could not be checked in time and ${plural(count, 'is', 'are')} left out until a rescan.`;
+  return `${answered}${count} ${plural(count, 'check', 'checks')} could not be checked on this run and ${plural(count, 'is', 'are')} left out until a rescan.`;
 }
 
 // ---------------------------------------------------------------------------
@@ -459,7 +459,7 @@ export function optionalExtrasLine(plan: FixPlan): string {
 /** The Points fact of a check line: its published worth and the credit it earned. */
 export function creditLine(check: ScoredCheck, report: ScoreReport): string {
   if (check.status === 'unverified') {
-    return 'Not checked in time · left out of the score until a rescan';
+    return 'Not checked on this run · left out of the score until a rescan';
   }
   if (check.status === 'na') {
     return "Doesn't apply to this site · left out of the score";
@@ -571,10 +571,10 @@ export function renderDeveloperBrief(report: ScoreReport, options: DeveloperBrie
     const unverified = report.unverifiedChecks.length;
     if (report.range && unverified > 0) {
       lines.push(
-        `Provisional: between ${report.range.pessimistic} and ${report.range.optimistic}; ${unverified} ${plural(unverified, 'check', 'checks')} could not be checked in time.`
+        `Provisional: between ${report.range.pessimistic} and ${report.range.optimistic}; ${unverified} ${plural(unverified, 'check', 'checks')} could not be checked on this run.`
       );
     } else {
-      lines.push('Provisional: some files could not be fetched in time; the checks that read them were judged without them.');
+      lines.push('Provisional: some files could not be fetched on this run; the checks that read them were judged without them.');
     }
   }
 
@@ -608,12 +608,12 @@ export function renderDeveloperBrief(report: ScoreReport, options: DeveloperBrie
   const unverifiedChecks = report.checks.filter((check) => check.status === 'unverified');
   const unverifiedResources = unverifiedResourcesWithoutChecks(report);
   if (unverifiedChecks.length > 0 || unverifiedResources.length > 0) {
-    lines.push('', '## Could not be checked in time');
+    lines.push('', '## Could not be checked on this run');
     for (const check of unverifiedChecks) {
       lines.push(`- ${checkName(check.id)} (${check.id}): ${check.evidence}`);
     }
     for (const resource of unverifiedResources) {
-      lines.push(`- ${RESOURCE_LABELS[resource]}: did not answer in time; the checks that read it were judged without it`);
+      lines.push(`- ${RESOURCE_LABELS[resource]}: gave no usable answer on this run; the checks that read it were judged without it`);
     }
   }
 

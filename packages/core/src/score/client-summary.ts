@@ -89,7 +89,7 @@ export function renderClientSummary(report: ScoreReport, options: ClientSummaryO
     const checks = report.unverifiedChecks.length;
     if (checks > 0) {
       lines.push(
-        `This reading is provisional: ${checks} check${checks === 1 ? '' : 's'} could not be verified in time, so the score is between ${report.range.pessimistic} and ${report.range.optimistic}. Re-run to confirm.`
+        `This reading is provisional: ${checks} check${checks === 1 ? '' : 's'} could not be verified on this run, so the score is between ${report.range.pessimistic} and ${report.range.optimistic}. Re-run to confirm.`
       );
     }
     if (resourcesOnly.length > 0) {
@@ -97,8 +97,8 @@ export function renderClientSummary(report: ScoreReport, options: ClientSummaryO
       const pronoun = resourcesOnly.length === 1 ? 'it' : 'them';
       lines.push(
         checks > 0
-          ? `${what.charAt(0).toUpperCase()}${what.slice(1)} could not be fetched in time either; the checks that read ${pronoun} were judged without ${pronoun}.`
-          : `This reading is provisional: ${what} could not be fetched in time, so the checks that read ${pronoun} were judged without ${pronoun}. Re-run to confirm.`
+          ? `${what.charAt(0).toUpperCase()}${what.slice(1)} could not be fetched on this run either; the checks that read ${pronoun} were judged without ${pronoun}.`
+          : `This reading is provisional: ${what} could not be fetched on this run, so the checks that read ${pronoun} were judged without ${pronoun}. Re-run to confirm.`
       );
     }
   }
@@ -138,7 +138,7 @@ export function renderClientSummary(report: ScoreReport, options: ClientSummaryO
 
   if (report.unverifiedChecks.length > 0 || resourcesOnly.length > 0) {
     lines.push('');
-    lines.push('Could not be verified in time, re-run:');
+    lines.push('Could not be verified on this run, re-run:');
     for (const id of report.unverifiedChecks) {
       lines.push(`   ${nameOf(id)}`);
     }

@@ -40,7 +40,7 @@ export function ScoreBlock({ report, tone, blocked, host, onRescan, rescanning }
 
   const info = report.analysisStatus === 'partial' ? partialInfo(report) : null;
   // Spec 5.8: a range when the two ends differ; equal ends show one number plus the Provisional badge
-  // (partialLine still says how many checks could not be checked in time).
+  // (partialLine still says how many checks could not be checked on this run).
   const ranged = info !== null && info.low !== info.high;
   const title = rawTitle(report);
 

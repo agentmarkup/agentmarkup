@@ -901,6 +901,20 @@ describe('worker check chain', () => {
     expect(payload.cache).toEqual({ hit: false, cachedAt: null, expiresAt: null })
   })
 
+  it('a 202 with x-amzn-waf-action: challenge on a secondary file keeps the run out of the cache', async () => {
+    const routes = healthySite()
+    routes['/llms.txt'] = () => ({ status: 202, body: '', headers: { 'x-amzn-waf-action': 'challenge' } })
+    installFetch(routes)
+    const db = fakeD1()
+
+    const { payload } = await runCheck({ CHECKS_DB: db })
+
+    expect(payload.homepage).toMatchObject({ status: 200, outcome: 'ok' })
+    expect(payload.llmsTxt).toMatchObject({ status: 202, outcome: 'ok', headers: { 'x-amzn-waf-action': 'challenge' } })
+    expect(db.statements.filter(isCacheWrite)).toEqual([])
+    expect(payload.cache).toEqual({ hit: false, cachedAt: null, expiresAt: null })
+  })
+
   it('C18: d1Statements counts the cache write, in the live response and in the cached copy', async () => {
     installFetch(healthySite())
     const db = fakeD1()

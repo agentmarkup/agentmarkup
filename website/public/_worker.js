@@ -479,15 +479,21 @@ function isUnverifiedForSummary(key, resource) {
 
 // A challenge answer is often per-IP and transient, so a run in which any
 // resource answered one is never cached, whatever its fetch-summary status.
-// That includes a 2xx homepage carrying a challenge marker (an AWS WAF 202
-// with `x-amzn-waf-action: challenge`, say), which core gates exactly like a
-// challenge page (homepageBlockedReason in evaluate.ts).
+// That includes a 2xx answer carrying a challenge marker on any resource (an
+// AWS WAF 202 with `x-amzn-waf-action: challenge`, say): core gates such a
+// homepage exactly like a challenge page (homepageBlockedReason in
+// evaluate.ts), and on a secondary file it is the same per-IP answer.
 function hasChallengedResource(record) {
-  if (CHECK_RESOURCE_KEYS.some((key) => record[key]?.outcome === 'challenge')) {
-    return true;
-  }
-  const homepage = record.homepage;
-  return homepage?.outcome === 'ok' && findChallengeMarker(homepage) !== null;
+  return CHECK_RESOURCE_KEYS.some((key) => {
+    const resource = record[key];
+    if (!resource) {
+      return false;
+    }
+    return (
+      resource.outcome === 'challenge' ||
+      (resource.outcome === 'ok' && findChallengeMarker(resource) !== null)
+    );
+  });
 }
 
 // `blocked` exactly when the score engine blocks the run: the homepage is

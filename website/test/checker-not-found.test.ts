@@ -60,7 +60,7 @@ describe('checker soft-404 detection', () => {
 
     expect(item).toBeUndefined();
     expect(unverified?.level).toBe('warning');
-    expect(unverified?.title).toBe('Missing-path probe could not be verified in time');
+    expect(unverified?.title).toBe('Missing-path probe could not be verified on this run');
     expect(unverified?.detail).toContain('Missing paths return a real 404');
   });
 

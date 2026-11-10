@@ -100,11 +100,11 @@ describe('analyzeSiteCheck', () => {
 
     const llms = itemById(analysis, 'unverified-llmsTxt');
     expect(llms.level).toBe('warning');
-    expect(llms.title).toBe('llms.txt could not be verified in time');
+    expect(llms.title).toBe('llms.txt could not be verified on this run');
     expect(llms.detail).toContain('Request timed out');
 
     const sitemap = itemById(analysis, 'unverified-sitemap');
-    expect(sitemap.title).toBe('Sitemap could not be verified in time');
+    expect(sitemap.title).toBe('Sitemap could not be verified on this run');
     expect(sitemap.detail).toContain('declared in robots.txt');
 
     for (const id of analysis.report.unverifiedChecks) {
@@ -136,7 +136,7 @@ describe('analyzeSiteCheck', () => {
     expect(analysis.items).toHaveLength(1);
     expect(analysis.items[0].id).toBe('unverified-homepage');
     expect(analysis.items[0].level).toBe('warning');
-    expect(analysis.items[0].title).toBe('Homepage could not be verified in time');
+    expect(analysis.items[0].title).toBe('Homepage could not be verified on this run');
     expect(analysis.report.blockedKind).toBe('unverified');
     expect(analysis.counts).toEqual({ error: 0, warning: 1, pass: 0 });
   });
@@ -159,6 +159,7 @@ describe('analyzeSiteCheck', () => {
     for (const finding of analysis.items) {
       const text = `${finding.title} ${finding.detail} ${finding.action} ${finding.agentmarkupHelp ?? ''}`;
       expect(text).not.toContain('verified in time');
+      expect(text).not.toContain('verified on this run');
       expect(text.toLowerCase()).not.toContain('re-run');
     }
   });
@@ -241,7 +242,7 @@ describe('analyzeSiteCheck', () => {
 
     expect(robots?.level).toBe('warning');
     expect(robots?.status).toBe('Request failed');
-    expect(robots?.detail).toMatch(/robots\.txt could not be verified in time \(Request timed out\)/i);
+    expect(robots?.detail).toMatch(/robots\.txt could not be verified on this run \(Request timed out\)/i);
     expect(robots?.detail).toContain('never counted against the site');
   });
 
@@ -258,7 +259,7 @@ describe('analyzeSiteCheck', () => {
     expect(llms?.level).toBe('warning');
     expect(llms?.ok).toBe(false);
     expect(llms?.status).toBe('HTTP 200');
-    expect(llms?.detail).toContain('llms.txt could not be verified in time (Response exceeded the checker size limit)');
+    expect(llms?.detail).toContain('llms.txt could not be verified on this run (Response exceeded the checker size limit)');
     expect(llms?.detail).not.toContain('Fetched');
   });
 
@@ -269,7 +270,7 @@ describe('analyzeSiteCheck', () => {
     expect(analysis.report.unverifiedChecks).toEqual([]);
     expect(analysis.report.analysisStatus).toBe('partial');
     expect(item.level).toBe('warning');
-    expect(item.title).toBe('Sample page could not be verified in time');
+    expect(item.title).toBe('Sample page could not be verified on this run');
     expect(item.detail).toMatch(/^The \d+ checks that read it \(.*Public content not behind a login.*\) were judged without it, so this reading is provisional\.$/);
     expect(analysis.items.filter((candidate) => candidate.id === 'unverified-samplePage')).toHaveLength(1);
     const waiting = itemById(analyzeSiteCheck(siteCheck({ llms: timedOut(`${ORIGIN}/llms.txt`) })), 'unverified-llmsTxt').detail;
