@@ -56,9 +56,7 @@
       "Check your website before AI crawlers and search engines do"
     ],
     "h2": [
-      "Can AI find your site?",
-      "Can AI understand your pages?",
-      "Are your access rules clear?",
+      "What the report answers",
       "What this website checker checks",
       "Frequently asked questions"
     ],
@@ -96,6 +94,7 @@
       "Status semantics",
       "The catalog",
       "Formula v1.0.0 and grade bands",
+      "How the report groups checks",
       "Estimated gain and top fixes",
       "Divergences from Ora",
       "Sampling, caps and published lists",
@@ -109,6 +108,7 @@
       "statuses",
       "catalog",
       "formula",
+      "groups",
       "gain",
       "divergences",
       "sampling",

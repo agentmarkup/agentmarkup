@@ -1150,6 +1150,10 @@ describe('platform and surfaces', () => {
 });
 
 describe('adversarial workload', () => {
+  // Wall-clock ceiling for one linear pass over a body at the evaluation cap. A laptop
+  // takes about 0.5 s and a shared CI runner 1.1 to 1.4 s (the 1 s bound failed there on
+  // every run); the quadratic scanners these tests guard against took about 180 s.
+  const LINEAR_BUDGET_MS = 5000;
   // A body just under the evaluation cap made of thousands of tiny repeated units. The
   // lazy block regexes once rescanned the rest of the body for every unclosed opener:
   // the unclosed-script body took about 180 s before the linear scanners.
@@ -1167,11 +1171,11 @@ describe('adversarial workload', () => {
     return elapsed;
   }
 
-  it('a homepage of thousands of small unclosed <script> tags evaluates in well under a second', () => {
+  it('a homepage of thousands of small unclosed <script> tags evaluates in linear time', () => {
     const body = underCap(PREFIX, '<script>a');
     expect(body.length).toBeLessThan(MAX_EVALUATED_BODY_CHARS);
     expect(body.length).toBeGreaterThan(MAX_EVALUATED_BODY_CHARS - 20);
-    expect(timed({ homepage: html(HOME, body) })).toBeLessThan(1000);
+    expect(timed({ homepage: html(HOME, body) })).toBeLessThan(LINEAR_BUDGET_MS);
   });
 
   const homepageShapes: Array<[string, string]> = [
@@ -1183,59 +1187,59 @@ describe('adversarial workload', () => {
     ['lone < characters', '<a'],
   ];
   for (const [label, unit] of homepageShapes) {
-    it(`a homepage of ${label} evaluates in well under a second`, () => {
-      expect(timed({ homepage: html(HOME, underCap(PREFIX, unit)) })).toBeLessThan(1000);
+    it(`a homepage of ${label} evaluates in linear time`, () => {
+      expect(timed({ homepage: html(HOME, underCap(PREFIX, unit)) })).toBeLessThan(LINEAR_BUDGET_MS);
     });
   }
 
-  it('an llms.txt of unclosed markdown links and a robots.txt of blank lines evaluate in well under a second', () => {
-    expect(timed({ llms: text(`${ORIGIN}/llms.txt`, underCap('# Example Co\n', '[a](')) })).toBeLessThan(1000);
-    expect(timed({ robots: text(`${ORIGIN}/robots.txt`, underCap('User-agent: *\n', '\n')) })).toBeLessThan(1000);
+  it('an llms.txt of unclosed markdown links and a robots.txt of blank lines evaluate in linear time', () => {
+    expect(timed({ llms: text(`${ORIGIN}/llms.txt`, underCap('# Example Co\n', '[a](')) })).toBeLessThan(LINEAR_BUDGET_MS);
+    expect(timed({ robots: text(`${ORIGIN}/robots.txt`, underCap('User-agent: *\n', '\n')) })).toBeLessThan(LINEAR_BUDGET_MS);
   });
 
   // Round-4 review: each shape below took seconds to minutes before its linear scan
   // (quadratic growth measured at 2k to 80k units).
   const sitemapOf = (body: string) => text(`${ORIGIN}/sitemap.xml`, body, 'application/xml');
 
-  it('M1: a urlset of repeated <url> openers without closers evaluates in well under a second', () => {
+  it('M1: a urlset of repeated <url> openers without closers evaluates in linear time', () => {
     const body = underCap('<?xml version="1.0"?><urlset>', '<url>');
     expect(body.length).toBeGreaterThan(MAX_EVALUATED_BODY_CHARS - 20);
-    expect(timed({ sitemap: sitemapOf(body) })).toBeLessThan(1000);
+    expect(timed({ sitemap: sitemapOf(body) })).toBeLessThan(LINEAR_BUDGET_MS);
     expect(check({ sitemap: sitemapOf(body) }, 'sitemap.lastmod').evidence).toContain('urlset with 0 url entries');
   });
 
-  it('M1 sweep: one url entry of repeated unclosed <lastmod openers evaluates in well under a second', () => {
+  it('M1 sweep: one url entry of repeated unclosed <lastmod openers evaluates in linear time', () => {
     const body = `${underCap('<?xml version="1.0"?><urlset><url>', '<lastmod')}</url></urlset>`;
-    expect(timed({ sitemap: sitemapOf(body) })).toBeLessThan(1000);
+    expect(timed({ sitemap: sitemapOf(body) })).toBeLessThan(LINEAR_BUDGET_MS);
     expect(check({ sitemap: sitemapOf(body) }, 'sitemap.lastmod').evidence).toContain('0/1 url entries carry a parseable lastmod');
   });
 
-  it('M1: an llms.txt of repeated [ with no ] evaluates in well under a second', () => {
+  it('M1: an llms.txt of repeated [ with no ] evaluates in linear time', () => {
     const body = underCap('# Example Co\n\n## Pages\n', '[');
-    expect(timed({ llms: text(`${ORIGIN}/llms.txt`, body) })).toBeLessThan(1000);
+    expect(timed({ llms: text(`${ORIGIN}/llms.txt`, body) })).toBeLessThan(LINEAR_BUDGET_MS);
     expect(check({ llms: text(`${ORIGIN}/llms.txt`, body) }, 'llms.formatting').evidence).toContain('no markdown link to http(s)');
   });
 
-  it('M1 sweep: a homepage mirror whose frontmatter is blank lines evaluates in well under a second', () => {
+  it('M1 sweep: a homepage mirror whose frontmatter is blank lines evaluates in linear time', () => {
     const body = `${underCap('---\n', '\n')}---\n# Example Co\n`.slice(-MAX_EVALUATED_BODY_CHARS);
     const homeMd = markdown(`${ORIGIN}/index.md`, `---\n${body.slice(4)}`);
-    expect(timed({ homeMd })).toBeLessThan(1000);
+    expect(timed({ homeMd })).toBeLessThan(LINEAR_BUDGET_MS);
     expect(check({ homeMd }, 'markdown.frontmatter').evidence).toContain('homepage mirror no');
   });
 
-  it('M2: a homepage of closed labels followed by as many inputs evaluates in well under a second', () => {
+  it('M2: a homepage of closed labels followed by as many inputs evaluates in linear time', () => {
     const pairs = Math.floor((MAX_EVALUATED_BODY_CHARS - PREFIX.length - 1) / '<label>x</label><input>'.length);
     const body = PREFIX + '<label>x</label>'.repeat(pairs) + '<input>'.repeat(pairs);
     expect(body.length).toBeLessThan(MAX_EVALUATED_BODY_CHARS);
-    expect(timed({ homepage: html(HOME, body) })).toBeLessThan(1000);
+    expect(timed({ homepage: html(HOME, body) })).toBeLessThan(LINEAR_BUDGET_MS);
     expect(check({ homepage: html(HOME, body) }, 'ax.form-labeling').evidence).toContain(`0/${pairs} fields labelled`);
   });
 
-  it('M2: collectFields answers 60,000 closed labels then 60,000 inputs in well under a second', () => {
+  it('M2: collectFields answers 60,000 closed labels then 60,000 inputs in linear time', () => {
     const body = `<body>${'<label>x</label>'.repeat(60_000)}${'<input>'.repeat(60_000)}</body>`;
     const started = performance.now();
     const fields = collectFields(body);
-    expect(performance.now() - started).toBeLessThan(1000);
+    expect(performance.now() - started).toBeLessThan(LINEAR_BUDGET_MS);
     expect(fields).toMatchObject({ total: 60_000, labelled: 0 });
   });
 
@@ -1245,20 +1249,20 @@ describe('adversarial workload', () => {
     ['repeated <title openers inside one svg inside one link', '<a href="/x"><svg>', '<title'],
   ];
   for (const [label, open, unit] of controlShapes) {
-    it(`M1 sweep: a homepage of ${label} evaluates in well under a second`, () => {
+    it(`M1 sweep: a homepage of ${label} evaluates in linear time`, () => {
       const body = `${underCap(PREFIX + open, unit).slice(0, MAX_EVALUATED_BODY_CHARS - 20)}></a>`;
-      expect(timed({ homepage: html(HOME, body) })).toBeLessThan(1000);
+      expect(timed({ homepage: html(HOME, body) })).toBeLessThan(LINEAR_BUDGET_MS);
     });
   }
 
-  it('M1 sweep: a homepage of one div whose class value of mount keywords never closes evaluates in well under a second', () => {
+  it('M1 sweep: a homepage of one div whose class value of mount keywords never closes evaluates in linear time', () => {
     const body = `${underCap(`${PREFIX.replace('<main><h1>Example Co</h1>', '')}<div class="`, 'root')}</body>`;
-    expect(timed({ homepage: html(HOME, body) })).toBeLessThan(1000);
+    expect(timed({ homepage: html(HOME, body) })).toBeLessThan(LINEAR_BUDGET_MS);
   });
 
-  it('M1 sweep: a homepage of repeated <html openers that never reach a > evaluates in well under a second', () => {
+  it('M1 sweep: a homepage of repeated <html openers that never reach a > evaluates in linear time', () => {
     const body = underCap('<!doctype html>', '<html');
-    expect(timed({ homepage: html(HOME, body) })).toBeLessThan(1000);
+    expect(timed({ homepage: html(HOME, body) })).toBeLessThan(LINEAR_BUDGET_MS);
     expect(check({ homepage: html(HOME, body) }, 'meta.completeness').evidence).toContain('no html lang');
   });
 });
