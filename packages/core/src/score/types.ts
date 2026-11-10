@@ -38,10 +38,12 @@ export type SurfaceId = 'api' | 'mcp' | 'commerce' | 'forms' | 'markdown';
 /**
  * Outcome of one fetched resource, decided in one place (`classifyResource`):
  * - `absent`: the resource was never requested (no sample link, no markdown URL)
- * - `unverified`: status 0, error set, 2xx with a null body, skipped, or 429/5xx
- *   without challenge markers (transport noise, never a finding)
- * - `challenge`: 401/403/405/429/503/511 (`CHALLENGE_STATUSES`) carrying a
- *   bot-challenge marker (`findChallengeMarker`)
+ * - `unverified`: status 0, error set, 2xx with a null body and no challenge
+ *   header, skipped, or 429/5xx without challenge markers (transport noise, never
+ *   a finding)
+ * - `challenge`: any status carrying a published challenge header
+ *   (`findChallengeHeader`), a 2xx included; or 401/403/405/429/503/511
+ *   (`CHALLENGE_STATUSES`) carrying a body marker (`findChallengeMarker`)
  * - `not-found`: 404 or 410
  * - `http-error`: any other completed non-2xx (including 3xx on the probe)
  * - `ok`: 2xx with a body
@@ -138,8 +140,9 @@ export interface CheckClientSentence {
 }
 
 /**
- * A secondary resource that answered a bot-challenge page (a 401, 403, 405, 429, 503
- * or 511 with the marker reach.bot-detection reads) and so decided a check: the fix is to
+ * A secondary resource that answered a bot-challenge page (a challenge header on any
+ * status, or a 401, 403, 405, 429, 503 or 511 with a body marker, as
+ * reach.bot-detection reads them) and so decided a check: the fix is to
  * let agents through on that path, not to publish the resource.
  */
 export interface CheckChallenge {

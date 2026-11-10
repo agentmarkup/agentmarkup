@@ -1,5 +1,12 @@
+import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { SCORE_CATALOG_VERSION, type ScoreReport } from '@agentmarkup/core/score';
+import {
+  SCORE_CATALOG_VERSION,
+  evaluateSiteChecks,
+  scoreChecks,
+  type ScoreReport,
+  type SiteEvidence,
+} from '@agentmarkup/core/score';
 import { run } from '../src/cli.js';
 import { renderScoreLines } from '../src/report.js';
 import { createFetchStub, healthySite, settleWithFakeTimers } from './helpers/fetch-stub.js';
@@ -154,5 +161,21 @@ describe('--score on the audit CLI', () => {
     expect(sampleOnly).toContain('the score is 83 either way');
     expect(sampleOnly).not.toContain('0 check(s)');
     expect(sampleOnly).not.toContain('status: complete');
+  });
+
+  it('never reaches the blocked branch for a gated (scored) run: its report carries no blockedReason', () => {
+    // emag.ro: a 511 AWS WAF captcha homepage. The evaluation names the gate, but the
+    // report copies blockedReason only for a blocked run, so the answered-status copy
+    // can never read the challenge reason.
+    const fixture = new URL('../../core/test/fixtures/score/emag.ro.json', import.meta.url);
+    const evidence = JSON.parse(readFileSync(fixture, 'utf8')) as SiteEvidence;
+    const evaluation = evaluateSiteChecks(evidence);
+    expect(evaluation.blockedReason).toBe('Agents cannot reach this site: HTTP 511 challenge page (awswaf.com)');
+    const report = scoreChecks(evaluation);
+    expect(report.analysisStatus).not.toBe('blocked');
+    expect(report.blockedReason).toBeNull();
+    const lines = renderScoreLines(report).join('\n');
+    expect(lines).toContain(`${report.score}/100`);
+    expect(lines).not.toMatch(/not available|instead of a page|without a readable page/);
   });
 });

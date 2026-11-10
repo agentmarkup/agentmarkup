@@ -172,12 +172,15 @@ describe('collector and worker parity', () => {
 
   // The fetch summary and the score engine must name the same run status. A
   // 401/403 challenged probe is a measured nav.not-found fail (complete); a
-  // 429/503 challenged probe leaves nav.not-found unverified (partial).
+  // 429/503 challenged probe, or a 2xx/404 one carrying the challenge header,
+  // leaves nav.not-found unverified (partial).
   it.each([
     { status: 401, expected: 'complete' },
     { status: 403, expected: 'complete' },
     { status: 429, expected: 'partial' },
     { status: 503, expected: 'partial' },
+    { status: 202, expected: 'partial' },
+    { status: 404, expected: 'partial' },
   ])('a challenged probe answering $status gives the same status in both summaries and the engine', async ({ status, expected }) => {
     const origin = (): Record<string, Route> => ({
       ...parityOrigin(),
@@ -264,9 +267,26 @@ describe('collector and worker parity', () => {
     {
       name: 'a 202 homepage with x-amzn-waf-action: challenge',
       routes: { '/': { status: 202, body: '', headers: { 'x-amzn-waf-action': 'challenge' } } },
-      outcomes: { homepage: 'ok' },
+      outcomes: { homepage: 'challenge' },
       status: 'complete',
-      bot: 'HTTP 202 with challenge marker "x-amzn-waf-action: challenge"',
+      bot: 'HTTP 202, challenge marker "x-amzn-waf-action: challenge"',
+    },
+    {
+      name: 'a 200 homepage with cf-mitigated: challenge',
+      routes: { '/': { status: 200, body: '<html><body>Checking your browser</body></html>', headers: { 'content-type': 'text/html', 'cf-mitigated': 'challenge' } } },
+      outcomes: { homepage: 'challenge' },
+      status: 'complete',
+      bot: 'HTTP 200, challenge marker "cf-mitigated: challenge"',
+    },
+    {
+      name: 'an AWS WAF Challenge (202) on llms.txt and the not-found probe',
+      routes: {
+        '/llms.txt': { status: 202, body: '<html><body>Verifying</body></html>', headers: { 'content-type': 'text/html', 'x-amzn-waf-action': 'challenge' } },
+        [PROBE_PATH]: { status: 202, body: '', headers: { 'x-amzn-waf-action': 'challenge' } },
+      },
+      outcomes: { llmsTxt: 'challenge', notFoundProbe: 'challenge' },
+      status: 'partial',
+      bot: 'HTTP 200, HTML, no challenge markers',
     },
     {
       name: 'a 200 homepage that loads the AWS WAF SDK',

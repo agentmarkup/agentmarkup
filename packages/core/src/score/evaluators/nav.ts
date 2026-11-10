@@ -77,6 +77,19 @@ export const navEvaluators: Record<string, EvaluatorEntry> = {
           ['notFoundProbe', 'homepage']
         );
       }
+      if (status === 401 || status === 403) {
+        return scored(0, `probe ${url} answered ${probe.challengeState() ?? `HTTP ${status}`}`, ['notFoundProbe'], {
+          challenge: probe.challengeNote('notFoundProbe'),
+        });
+      }
+      // Any other challenge (a challenge header on a 2xx, 3xx or 404, or a 405, 429,
+      // 503 or 511 with a marker) says nothing about how missing paths answer. The
+      // worker's isUnverifiedForSummary counts exactly these.
+      if (probe.outcome === 'challenge') {
+        return unverified('probe-challenged', `probe answered HTTP ${status} with a challenge page`, [
+          'notFoundProbe',
+        ]);
+      }
       if (status >= 300 && status < 400) {
         const location = probe.header('location');
         return scored(
@@ -84,16 +97,6 @@ export const navEvaluators: Record<string, EvaluatorEntry> = {
           `missing paths redirect: probe ${url} answered HTTP ${status}${location ? ` to ${location}` : ''}`,
           ['notFoundProbe']
         );
-      }
-      if (status === 401 || status === 403) {
-        return scored(0, `probe ${url} answered ${probe.challengeState() ?? `HTTP ${status}`}`, ['notFoundProbe'], {
-          challenge: probe.challengeNote('notFoundProbe'),
-        });
-      }
-      if (probe.outcome === 'challenge') {
-        return unverified('probe-challenged', `probe answered HTTP ${status} with a challenge page`, [
-          'notFoundProbe',
-        ]);
       }
       return scored(0, `probe ${url} answered HTTP ${status} ${probe.mediaType}`, ['notFoundProbe']);
     },

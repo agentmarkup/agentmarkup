@@ -8,6 +8,8 @@
 // 1.1.0: challenge detection also reads HTTP 405 and 511, the AWS WAF
 // `x-amzn-waf-action` header, and two AWS WAF body markers that count only on a
 // challenge status (never on a 2xx page, where the AWS SDK is normal integration).
+// A published challenge header makes any response a challenge on every resource,
+// a 2xx included (an AWS WAF Challenge is HTTP 202).
 import type { CheckDefinition, CheckTier } from './types.js';
 
 export const SCORE_CATALOG_VERSION = '1.1.0';
@@ -131,17 +133,19 @@ export const BASELINE_JSONLD_TYPES = [
 ] as const;
 
 /**
- * HTTP statuses on which a challenge marker makes a response a bot challenge
- * (`challenge`); without a marker they keep their plain meaning (401/403/405 a
- * completed error, 429/503/511 unverified). Additions bump MINOR.
+ * HTTP statuses on which a body challenge marker makes a response a bot challenge
+ * (`challenge`); a challenge header does so on any status. Without a marker they
+ * keep their plain meaning (401/403/405 a completed error, 429/503/511
+ * unverified). Additions bump MINOR.
  */
 export const CHALLENGE_STATUSES = [401, 403, 405, 429, 503, 511] as const;
 
 /**
  * Published challenge headers: a response header whose value contains one of the
- * listed words (case-insensitive) is a challenge marker on any status, reported as
- * `name: value`. AWS WAF sends `x-amzn-waf-action: captcha` with HTTP 405 and
- * `x-amzn-waf-action: challenge` with HTTP 202. Additions bump MINOR.
+ * listed words (case-insensitive) makes the response a challenge on any status and
+ * on every resource, a 2xx included, reported as `name: value`. AWS WAF sends
+ * `x-amzn-waf-action: captcha` with HTTP 405 and `x-amzn-waf-action: challenge`
+ * with HTTP 202. Additions bump MINOR.
  */
 export const CHALLENGE_HEADERS: ReadonlyArray<{ readonly name: string; readonly values: ReadonlyArray<string> }> = [
   { name: 'cf-mitigated', values: ['challenge'] },
@@ -206,7 +210,7 @@ export const SCORE_CATALOG: ReadonlyArray<CheckDefinition> = [
     bucket: 'reachability',
     applicability: 'Always.',
     evidence: 'Homepage status, the cf-mitigated and x-amzn-waf-action headers and the first 20,480 characters of the body.',
-    rule: 'A 2xx HTML homepage with no challenge marker scores 1. Challenge markers: a cf-mitigated header containing "challenge" or an x-amzn-waf-action header containing "captcha" or "challenge" (any status), a published challenge-page string (any status), or awswaf.com or AwsWafIntegration on a 401, 403, 405, 429, 503 or 511 only (on a 2xx page they are the AWS WAF SDK, not a block). A 2xx with a marker, a 401, 403, 405, 429, 503 or 511 with a marker, or a 401/403 without one scores 0 and the evidence quotes the status and the marker. Status 0, 429 or 5xx without markers, or a 2xx with a null body, is unverified and the whole run is blocked.',
+    rule: 'A 2xx HTML homepage with no challenge marker scores 1. Challenge header: a cf-mitigated header containing "challenge" or an x-amzn-waf-action header containing "captcha" or "challenge" makes the answer a challenge page on any status, a 2xx with or without a body and a 404 included, on every fetched resource (homepage, llms.txt, robots.txt, sitemap, markdown mirrors, sample page and the missing-path probe). Body markers, read in the first 20,480 characters: a published challenge-page string (any status), or awswaf.com or AwsWafIntegration on a 401, 403, 405, 429, 503 or 511 only (on a 2xx page they are the AWS WAF SDK, not a block). A body marker makes a 401, 403, 405, 429, 503 or 511 a challenge page on every resource; on a 2xx it gates the homepage only and leaves any other resource an ordinary answer. A homepage challenge page, a 2xx homepage with a body marker, or a 401/403 without a marker scores 0 and the evidence quotes the status and the marker. Status 0, 429 or 5xx without a marker, or a 2xx with a null body and no challenge header, is unverified and the whole run is blocked.',
     availability: 'now',
     oraCounterpart: 'bot-detection',
     clientSentence: {
@@ -302,7 +306,7 @@ export const SCORE_CATALOG: ReadonlyArray<CheckDefinition> = [
     bucket: 'navigation',
     applicability: 'Always.',
     evidence: `A probe of ${NOT_FOUND_PROBE_PATH} at the final-URL origin, no redirects followed, Accept: ${NOT_FOUND_PROBE_ACCEPT}.`,
-    rule: 'A 404 or 410 scores 1 (divergence from Ora, which gives 0.5 and requires a markdown body; the body is scored by the bonus nav.not-found-markdown). A 2xx scores 0, named "soft-404" when the probe body equals the homepage after normalisation, otherwise "missing paths answer 200". A 3xx scores 0 ("missing paths redirect", the evidence quotes the Location). A 401/403 scores 0. A 429, 5xx or status 0 is unverified.',
+    rule: 'A 404 or 410 scores 1 (divergence from Ora, which gives 0.5 and requires a markdown body; the body is scored by the bonus nav.not-found-markdown). A 2xx scores 0, named "soft-404" when the probe body equals the homepage after normalisation, otherwise "missing paths answer 200". A 3xx scores 0 ("missing paths redirect", the evidence quotes the Location). A 401/403 scores 0. Any other challenge page (a challenge header on any status, a 2xx included, or a 405, 429, 503 or 511 with a body marker; see reach.bot-detection) is unverified ("probe-challenged"): it says nothing about how missing paths answer. A 429, 5xx or status 0 is unverified.',
     availability: 'now',
     oraCounterpart: 'agent-friendly-404',
     clientSentence: {

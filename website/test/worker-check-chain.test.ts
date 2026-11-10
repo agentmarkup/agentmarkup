@@ -10,6 +10,8 @@ import {
   CHALLENGE_STATUSES,
   classifyResource,
   evaluateSiteChecks,
+  findChallengeHeader,
+  findChallengeMarker,
   scoreChecks,
   type SiteEvidence,
 } from '@agentmarkup/core/score'
@@ -25,6 +27,36 @@ function workerConstant(name: string): unknown {
   if (!match) throw new Error(`no top-level array const ${name} in public/_worker.js`)
   return runInNewContext(`(${match[1]})`)
 }
+
+/** A top-level `const NAME = ...;` or `function name(...) {...}` of the worker, as source text. */
+function workerDeclaration(name: string): string {
+  const pattern = new RegExp(`^(?:const ${name} = [\\s\\S]*?;|function ${name}\\([^)]*\\) \\{[\\s\\S]*?^\\})$`, 'm')
+  const match = WORKER_SOURCE.match(pattern)
+  if (!match) throw new Error(`no top-level declaration ${name} in public/_worker.js`)
+  return match[0]
+}
+
+type Classify = (resource: unknown) => string
+type Marker = (resource: unknown) => string | null
+
+/** The worker's own classifier, run from its source with its own constants. */
+const WORKER_CLASSIFIER = runInNewContext(
+  [
+    'CHALLENGE_STATUSES',
+    'CHALLENGE_SCAN_CHARS',
+    'CHALLENGE_HEADERS',
+    'CHALLENGE_MARKERS_NON_2XX',
+    'CHALLENGE_MARKERS',
+    'statusOf',
+    'isChallengeStatus',
+    'findChallengeHeader',
+    'findChallengeMarker',
+    'classifyResource',
+  ]
+    .map(workerDeclaration)
+    .join('\n') + '\n({ classifyResource, findChallengeHeader, findChallengeMarker })'
+) as { classifyResource: Classify; findChallengeHeader: Marker; findChallengeMarker: Marker }
+
 
 // AWS WAF answers (catalog 1.1.0): the Captcha action is 405 with x-amzn-waf-action:
 // captcha, the Challenge action 202 with x-amzn-waf-action: challenge; emag.ro served
@@ -49,6 +81,44 @@ const AWS_SDK_HOMEPAGE = HOMEPAGE_HTML.replace(
   '</head>',
   '<script src="https://x.token.awswaf.com/x/challenge.js" defer></script><script>AwsWafIntegration.getToken()</script></head>'
 )
+
+const SDK_BODY =
+  '<html><head><script src="https://x.token.awswaf.com/x/challenge.js" defer></script></head><body><main><h1>Shop</h1><script>AwsWafIntegration.getToken()</script></main></body></html>'
+const AWS_HEADER = { 'x-amzn-waf-action': 'challenge' }
+
+function answer(status: number, body: string | null | undefined, headers: Record<string, string> = {}) {
+  return { requestedUrl: 'https://example.com/x', finalUrl: 'https://example.com/x', status, ok: status >= 200 && status < 300, contentType: 'text/html', body, headers }
+}
+
+/** Shared inputs for the classifier parity test: outcome and marker are core's answers. */
+const CLASSIFY_PARITY_CASES = [
+  // Finding A: a challenge header on a 2xx is a challenge, whatever the body.
+  { name: '202 + x-amzn-waf-action: challenge, HTML body', resource: answer(202, '<html><body>Verifying</body></html>', AWS_HEADER), outcome: 'challenge', marker: 'x-amzn-waf-action: challenge' },
+  { name: '202 + x-amzn-waf-action: challenge, empty body', resource: answer(202, '', AWS_HEADER), outcome: 'challenge', marker: 'x-amzn-waf-action: challenge' },
+  { name: '202 + x-amzn-waf-action: challenge, null body', resource: answer(202, null, AWS_HEADER), outcome: 'challenge', marker: 'x-amzn-waf-action: challenge' },
+  { name: '200 + cf-mitigated: challenge', resource: answer(200, '<html><body>Checking</body></html>', { 'cf-mitigated': 'challenge' }), outcome: 'challenge', marker: 'cf-mitigated: challenge' },
+  { name: '200 with the AWS SDK strings and no header', resource: answer(200, SDK_BODY), outcome: 'ok', marker: null },
+  { name: '200 with a Cloudflare body marker and no header', resource: answer(200, '<title>Just a moment...</title>'), outcome: 'ok', marker: 'Just a moment...' },
+  { name: '404 + cf-mitigated: challenge', resource: answer(404, '', { 'cf-mitigated': 'challenge' }), outcome: 'challenge', marker: 'cf-mitigated: challenge' },
+  { name: '302 + cf-mitigated: challenge', resource: answer(302, '', { 'cf-mitigated': 'challenge' }), outcome: 'challenge', marker: 'cf-mitigated: challenge' },
+  { name: '500 + x-amzn-waf-action: captcha', resource: answer(500, '', { 'x-amzn-waf-action': 'captcha' }), outcome: 'challenge', marker: 'x-amzn-waf-action: captcha' },
+  { name: '202 + x-amzn-waf-action: allow', resource: answer(202, '', { 'x-amzn-waf-action': 'allow' }), outcome: 'ok', marker: null },
+  // Finding B: the edge guards and the 404/410 order.
+  { name: 'a negative status', resource: answer(-1, 'x'), outcome: 'unverified', marker: null },
+  { name: 'a NaN status', resource: answer(Number.NaN, 'x'), outcome: 'unverified', marker: null },
+  { name: 'a NaN status with a challenge header', resource: answer(Number.NaN, '', AWS_HEADER), outcome: 'unverified', marker: 'x-amzn-waf-action: challenge' },
+  { name: 'an undefined body on a 2xx', resource: answer(200, undefined), outcome: 'unverified', marker: null },
+  { name: 'a null body on a 2xx', resource: answer(200, null), outcome: 'unverified', marker: null },
+  { name: '404 with a challenge body marker', resource: answer(404, '<title>Just a moment...</title>'), outcome: 'not-found', marker: 'Just a moment...' },
+  { name: '410', resource: answer(410, ''), outcome: 'not-found', marker: null },
+  { name: '405 with a marker', resource: answer(405, AWS_CAPTCHA_PAGE), outcome: 'challenge', marker: 'awswaf.com' },
+  { name: '405 without a marker', resource: answer(405, 'Method Not Allowed'), outcome: 'http-error', marker: null },
+  { name: '511 with a marker', resource: answer(511, AWS_CAPTCHA_PAGE), outcome: 'challenge', marker: 'awswaf.com' },
+  { name: '511 without a marker', resource: answer(511, '<html><body>Network Authentication Required</body></html>'), outcome: 'unverified', marker: null },
+  { name: '429 with a marker', resource: answer(429, 'px-captcha'), outcome: 'challenge', marker: 'px-captcha' },
+  { name: '503 with a marker', resource: answer(503, '<title>Just a moment...</title>'), outcome: 'challenge', marker: 'Just a moment...' },
+  { name: '500 with a body marker (not a challenge status)', resource: answer(500, '<title>Just a moment...</title>'), outcome: 'unverified', marker: 'Just a moment...' },
+]
 
 interface Reply {
   status: number
@@ -888,12 +958,12 @@ describe('worker check chain', () => {
 
     const { payload } = await runCheck({ CHECKS_DB: db })
 
-    expect(payload.homepage).toMatchObject({ status: 202, outcome: 'ok', headers: { 'x-amzn-waf-action': 'challenge' } })
+    expect(payload.homepage).toMatchObject({ status: 202, outcome: 'challenge', headers: { 'x-amzn-waf-action': 'challenge' } })
     const engine = scoreChecks(evaluateSiteChecks(payload as unknown as SiteEvidence))
     expect(engine.analysisStatus).toBe('complete')
     expect(payload.fetchSummary.analysisStatus).toBe(engine.analysisStatus)
     expect(engine.checks.find((check) => check.id === 'reach.bot-detection')?.evidence).toBe(
-      'HTTP 202 with challenge marker "x-amzn-waf-action: challenge"'
+      'HTTP 202, challenge marker "x-amzn-waf-action: challenge"'
     )
     expect(engine.naChecks.some((entry) => entry.reason === 'homepage-blocked')).toBe(true)
     // A challenge is per-IP and transient: the gated run is not pinned for three minutes.
@@ -910,9 +980,65 @@ describe('worker check chain', () => {
     const { payload } = await runCheck({ CHECKS_DB: db })
 
     expect(payload.homepage).toMatchObject({ status: 200, outcome: 'ok' })
-    expect(payload.llmsTxt).toMatchObject({ status: 202, outcome: 'ok', headers: { 'x-amzn-waf-action': 'challenge' } })
+    expect(payload.llmsTxt).toMatchObject({ status: 202, outcome: 'challenge', headers: { 'x-amzn-waf-action': 'challenge' } })
     expect(db.statements.filter(isCacheWrite)).toEqual([])
     expect(payload.cache).toEqual({ hit: false, cachedAt: null, expiresAt: null })
+  })
+
+  it('a clean homepage with a 202-challenged llms.txt and not-found probe: same outcomes and run status as core, probe unverified, never cached', async () => {
+    const routes = healthySite()
+    const awsChallenge = (body: string) => () => ({
+      status: 202,
+      body,
+      headers: { 'content-type': 'text/html; charset=utf-8', 'x-amzn-waf-action': 'challenge' },
+    })
+    routes['/llms.txt'] = awsChallenge('<html><body>Verifying that you are human</body></html>')
+    routes[PROBE_PATH] = awsChallenge('')
+    installFetch(routes)
+    const db = fakeD1()
+
+    const { payload } = await runCheck({ CHECKS_DB: db })
+
+    expect(payload.homepage).toMatchObject({ status: 200, outcome: 'ok' })
+    expect(payload.llmsTxt).toMatchObject({ status: 202, outcome: 'challenge' })
+    expect(payload.notFoundProbe).toMatchObject({ status: 202, outcome: 'challenge' })
+    for (const key of RESOURCE_KEYS) {
+      const recorded = payload[key]
+      if (recorded) {
+        expect(recorded.outcome, key).toBe(classifyResource(recorded as unknown as SiteEvidence['homepage']))
+      }
+    }
+    const engine = scoreChecks(evaluateSiteChecks(payload as unknown as SiteEvidence))
+    expect(engine.analysisStatus).toBe('partial')
+    expect(payload.fetchSummary.analysisStatus).toBe(engine.analysisStatus)
+    expect(payload.fetchSummary.unverified).toEqual(['notFoundProbe'])
+    expect(engine.unverifiedChecks).toEqual(['nav.not-found'])
+    expect(engine.checks.find((check) => check.id === 'nav.not-found')).toMatchObject({
+      status: 'unverified',
+      reason: 'probe-challenged',
+    })
+    // llms.txt reads like a 403 Cloudflare challenge does: a challenge, never "absent".
+    const llms = engine.checks.find((check) => check.id === 'llms.exists')
+    expect(llms).toMatchObject({
+      status: 'fail',
+      evidence: 'llms.txt answered HTTP 202 with a bot challenge (x-amzn-waf-action: challenge)',
+      challenge: { resource: 'llmsTxt', status: 202, marker: 'x-amzn-waf-action: challenge' },
+    })
+    expect(engine.checks.find((check) => check.id === 'reach.bot-detection')?.status).toBe('pass')
+    expect(db.statements.filter(isCacheWrite)).toEqual([])
+    expect(payload.cache).toEqual({ hit: false, cachedAt: null, expiresAt: null })
+  })
+
+  // The worker's classifyResource, findChallengeHeader and findChallengeMarker are
+  // structurally identical to core's: run straight from the worker source over shared
+  // inputs, edge cases included, each answer checked against core and against the
+  // expected outcome.
+  it.each(CLASSIFY_PARITY_CASES)('classifies $name exactly as core ($outcome)', ({ resource, outcome, marker }) => {
+    expect(classifyResource(resource as unknown as SiteEvidence['homepage'])).toBe(outcome)
+    expect(WORKER_CLASSIFIER.classifyResource(resource)).toBe(outcome)
+    expect(WORKER_CLASSIFIER.findChallengeMarker(resource)).toBe(findChallengeMarker(resource as unknown as SiteEvidence['homepage']))
+    expect(WORKER_CLASSIFIER.findChallengeMarker(resource)).toBe(marker)
+    expect(WORKER_CLASSIFIER.findChallengeHeader(resource)).toBe(findChallengeHeader(resource as unknown as SiteEvidence['homepage']))
   })
 
   it('C18: d1Statements counts the cache write, in the live response and in the cached copy', async () => {

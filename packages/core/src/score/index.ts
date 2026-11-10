@@ -79,6 +79,7 @@ export {
   MAX_EVALUATED_BODY_CHARS,
   WORKER_ERROR_MESSAGES,
   classifyResource,
+  findChallengeHeader,
   findChallengeMarker,
   isChallengeStatus,
   isHtmlBody,

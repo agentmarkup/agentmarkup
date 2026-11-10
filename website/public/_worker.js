@@ -88,10 +88,11 @@ const DISCOVERY_HEADER_NAMES = [
   'location',
 ];
 const DISCOVERY_HEADER_VALUE_MAX_CHARS = 512;
-// Bot-challenge detection, identical to findChallengeMarker and
-// classifyResource in @agentmarkup/core (catalog 1.1.0): a response with one of
-// CHALLENGE_STATUSES is a `challenge` when it carries a marker. A marker is a
-// CHALLENGE_HEADERS header containing one of its words (any status), one of
+// Bot-challenge detection, identical to findChallengeHeader,
+// findChallengeMarker and classifyResource in @agentmarkup/core (catalog
+// 1.1.0): a response carrying a CHALLENGE_HEADERS header containing one of its
+// words is a `challenge` on any status, a 2xx included. A response with one of
+// CHALLENGE_STATUSES is a `challenge` when it carries a body marker: one of
 // CHALLENGE_MARKERS in the first 20 KB of the body (any status), or one of
 // CHALLENGE_MARKERS_NON_2XX there on a challenge status only: AWS tells sites
 // to load its WAF SDK on normal pages, so those strings on a 2xx mean
@@ -461,10 +462,12 @@ async function fetchCheckEvidence(normalized, checkStartTime, budget) {
  */
 // Same rule as the score engine, so fetchSummary.analysisStatus always equals
 // score.analysisStatus. Outcome `unverified` counts. A challenged resource is a
-// measured answer, except a not-found probe that answers 405/429/503/511 with
-// challenge markers: core leaves nav.not-found unverified for it ('probe-challenged'). A
-// 401/403 challenged probe scores nav.not-found as a measured fail and does not
-// count. classifyResource itself stays unchanged for parity with core.
+// measured answer, except a not-found probe challenged on any status other than
+// 401/403 (a challenge header on a 2xx such as an AWS WAF 202, a 3xx or a 404,
+// or a 405/429/503/511 with a body marker): core leaves nav.not-found
+// unverified for it ('probe-challenged'). A 401/403 challenged probe scores
+// nav.not-found as a measured fail and does not count. classifyResource itself
+// stays identical to core's.
 function isUnverifiedForSummary(key, resource) {
   if (resource.outcome === 'unverified') {
     return true;
@@ -479,10 +482,11 @@ function isUnverifiedForSummary(key, resource) {
 
 // A challenge answer is often per-IP and transient, so a run in which any
 // resource answered one is never cached, whatever its fetch-summary status.
-// That includes a 2xx answer carrying a challenge marker on any resource (an
-// AWS WAF 202 with `x-amzn-waf-action: challenge`, say): core gates such a
-// homepage exactly like a challenge page (homepageBlockedReason in
-// evaluate.ts), and on a secondary file it is the same per-IP answer.
+// A challenge header (an AWS WAF 202 with `x-amzn-waf-action: challenge`, say)
+// already makes the outcome `challenge` on any status. A 2xx answer carrying a
+// body marker stays `ok` but is skipped too: core gates such a homepage like a
+// challenge page (homepageBlockedReason in evaluate.ts), and on a secondary
+// file it is the same per-IP answer.
 function hasChallengedResource(record) {
   return CHECK_RESOURCE_KEYS.some((key) => {
     const resource = record[key];
@@ -500,8 +504,9 @@ function hasChallengedResource(record) {
 // unverified (a re-run may succeed: status 0, an error, a 2xx without a body,
 // or a 429/5xx without challenge markers, 511 included), or its final answer
 // is a non-2xx other than 401/403 (404, 410, 400, a 405 without markers, ...:
-// nothing to score). A 401, a 403 or a challenge page (a challenge status with
-// a marker) is scored, so it does not block.
+// nothing to score). A 401, a 403 or a challenge page (a challenge header on
+// any status, a 2xx included, or a challenge status with a body marker) is
+// scored, so it does not block.
 function isBlockedHomepage(homepage) {
   return (
     homepage.outcome === 'unverified' ||
@@ -1744,12 +1749,23 @@ function captureDiscoveryHeaders(headers) {
   return captured;
 }
 
+/** The recorded status, 0 when it is not a finite number (statusOf in @agentmarkup/core). */
+function statusOf(resource) {
+  return Number.isFinite(resource.status) ? resource.status : 0;
+}
+
+/** One of CHALLENGE_STATUSES (isChallengeStatus in @agentmarkup/core). */
+function isChallengeStatus(status) {
+  return CHALLENGE_STATUSES.includes(status);
+}
+
 /**
- * The challenge marker on a response, or null; identical to findChallengeMarker
- * in @agentmarkup/core (same order, same status gate on the non-2xx list).
- * Captured header names are lowercase (captureDiscoveryHeaders).
+ * The published challenge header on a response as `name: value`, or null;
+ * identical to findChallengeHeader in @agentmarkup/core. Captured header names
+ * are lowercase (captureDiscoveryHeaders). The header makes a response a
+ * challenge on any status and on every resource (classifyResource).
  */
-function findChallengeMarker(resource) {
+function findChallengeHeader(resource) {
   for (const header of CHALLENGE_HEADERS) {
     const value = resource.headers?.[header.name];
     if (
@@ -1760,6 +1776,19 @@ function findChallengeMarker(resource) {
       return `${header.name}: ${value}`;
     }
   }
+  return null;
+}
+
+/**
+ * The challenge marker on a response, or null; identical to findChallengeMarker
+ * in @agentmarkup/core (same order, same status gate on the non-2xx list): the
+ * challenge header, else a body marker.
+ */
+function findChallengeMarker(resource) {
+  const header = findChallengeHeader(resource);
+  if (header !== null) {
+    return header;
+  }
   if (typeof resource.body !== 'string' || resource.body === '') {
     return null;
   }
@@ -1768,44 +1797,51 @@ function findChallengeMarker(resource) {
   if (marker) {
     return marker;
   }
-  if (!CHALLENGE_STATUSES.includes(resource.status)) {
+  if (!isChallengeStatus(statusOf(resource))) {
     return null;
   }
   return CHALLENGE_MARKERS_NON_2XX.find((candidate) => head.includes(candidate)) ?? null;
 }
 
 /**
- * The single place that decides what a fetched resource is, identical to
- * classifyResource in @agentmarkup/core so the browser and the worker agree:
- * - `unverified`: skipped, status 0, an error, a 2xx without a body, or a
- *   429/5xx without challenge markers (transport noise, never a finding)
- * - `challenge`: a CHALLENGE_STATUSES status (401/403/405/429/503/511)
- *   carrying a bot-challenge marker; without one a 405 is an `http-error` and
- *   a 511 is `unverified`
+ * The single place that decides what a fetched resource is, structurally
+ * identical to classifyResource in @agentmarkup/core (same order, same guards)
+ * so the browser and the worker agree:
+ * - `unverified`: skipped, status 0 (or not a finite number), or an error
+ * - `challenge`: any status carrying a challenge header, a 2xx (with or
+ *   without a body) and a 404/410 included
+ * - `unverified` / `ok`: a 2xx without / with a body (a body marker on a 2xx
+ *   leaves it `ok`; only the engine's homepage rule gates such a page)
  * - `not-found`: 404 or 410
- * - `http-error`: any other completed non-2xx (including a 3xx on the probe)
- * - `ok`: 2xx with a body
+ * - `challenge`: a CHALLENGE_STATUSES status (401/403/405/429/503/511)
+ *   carrying a body marker; without one a 405 is an `http-error` and a 511 is
+ *   `unverified`
+ * - `unverified`: a 429/5xx without a marker (transport noise, never a finding)
+ * - `http-error`: any other completed answer (including a 3xx on the probe)
  * A null resource (no sample link) is `absent`, which is never serialized.
  */
 function classifyResource(resource) {
   if (!resource) {
     return 'absent';
   }
-  const status = resource.status;
-  if (resource.skipped || status === 0 || resource.error) {
+  const status = statusOf(resource);
+  if (resource.skipped || status <= 0 || resource.error) {
     return 'unverified';
   }
-  if (status >= 200 && status < 300) {
-    return resource.body === null ? 'unverified' : 'ok';
+  if (findChallengeHeader(resource) !== null) {
+    return 'challenge';
   }
-  if (CHALLENGE_STATUSES.includes(status) && findChallengeMarker(resource) !== null) {
+  if (status >= 200 && status < 300) {
+    return resource.body === null || resource.body === undefined ? 'unverified' : 'ok';
+  }
+  if (status === 404 || status === 410) {
+    return 'not-found';
+  }
+  if (isChallengeStatus(status) && findChallengeMarker(resource) !== null) {
     return 'challenge';
   }
   if (status === 429 || status >= 500) {
     return 'unverified';
-  }
-  if (status === 404 || status === 410) {
-    return 'not-found';
   }
   return 'http-error';
 }

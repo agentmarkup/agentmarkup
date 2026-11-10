@@ -60,7 +60,7 @@ import {
   type FixPlan,
 } from '../src/checker/report-model';
 import type { SiteCheckResponse } from '../src/checker/types';
-import { blockedExplanation } from '../src/ui/status-model';
+import { blockedExplanation, verdictExplanationForGrade } from '../src/ui/status-model';
 import {
   DEFAULT_BODY,
   HOME,
@@ -676,6 +676,30 @@ describe('partial, blocked and gated copy (5.8, 5.9, 5.10, H2, H4)', () => {
       'The site could not be reached in time, so there is no score yet. Re-run the check; a timed-out fetch is never counted against a site.'
     );
     expect(blockedExplanation(null, null)).toContain('could not be reached in time');
+  });
+
+  it('never gives a gated (scored) run the answered-status copy: its report carries no blockedReason', () => {
+    // emag.ro and a 202 AWS WAF Challenge homepage: the evaluation names the gate
+    // ("Agents cannot reach this site: HTTP 511 challenge page ..."), but the report
+    // copies blockedReason only for a blocked run, and every caller of the blocked copy
+    // (verdictExplanationForGrade -> blockedExplanation, renderDeveloperBrief and
+    // announceReport -> fallbackBlockedCase) is reached only for a blocked run.
+    const aws202 = siteCheck({ homepage: resource(HOME, { status: 202, body: '', headers: { 'x-amzn-waf-action': 'challenge' } }) });
+    for (const [name, result] of [['emag.ro', fixtureResult('emag.ro')], ['aws 202', aws202]] as const) {
+      const evaluation = evaluateSiteChecks(result);
+      expect(evaluation.blockedReason, name).toMatch(/^Agents cannot reach this site: HTTP \d{3} challenge page/);
+      const report = scoreChecks(evaluation);
+      expect(report.analysisStatus, name).not.toBe('blocked');
+      expect(report.blockedKind, name).toBeNull();
+      expect(report.blockedReason, name).toBeNull();
+      expect(report.grade, name).not.toBeNull();
+      expect(blockedCase(report, result), name).toBeNull();
+      const explanation = verdictExplanationForGrade(report.grade, report.analysisStatus, report.blockedKind, report.blockedReason);
+      expect(explanation, name).toBe(verdictExplanationForGrade(report.grade, report.analysisStatus));
+      expect(explanation, name).not.toMatch(/instead of a page|without a readable page|no score yet/);
+      expect(announceReport(report, HOST, null), name).not.toMatch(/^No score/);
+      expect(renderDeveloperBrief(report, { host: HOST, origin: BRIEF_ORIGIN }), name).not.toMatch(/No score yet|instead of a page/);
+    }
   });
 
   it('counts the checks a bot wall kept out (5.10)', () => {

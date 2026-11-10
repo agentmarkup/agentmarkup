@@ -318,9 +318,9 @@ function ScoreMethodology() {
             <li><strong>Same origin</strong> is judged against the origin of the final homepage URL, never the requested one, so an apex-to-www redirect does not fail trust.anchors.</li>
             <li><strong>Evaluation cap</strong>: checks read at most the first {MAX_EVALUATED_BODY_CHARS.toLocaleString('en-US')} characters of any body; a truncated body is flagged in the evidence.</li>
             <li><strong>Missing-path probe</strong>: <code>{NOT_FOUND_PROBE_PATH}</code> at the final-URL origin, following no redirects, with <code>Accept: {NOT_FOUND_PROBE_ACCEPT}</code> so a compliant negotiator can answer markdown or JSON.</li>
-            <li><strong>Challenge statuses</strong>: {CHALLENGE_STATUSES.join(', ')}. A response with one of these statuses and a challenge marker is a challenge page. Without a marker the status keeps its plain meaning: 401 and 403 still fail reach.bot-detection, 405 is a final error status, 429, 503 and 511 are unverified.</li>
-            <li><strong>Challenge headers</strong>, a marker on any status: {CHALLENGE_HEADERS.map((header, index) => (<span key={header.name}>{index > 0 ? '; ' : ''}<code>{header.name}</code> containing {header.values.map((value, valueIndex) => (<span key={value}>{valueIndex > 0 ? ' or ' : ''}<code>{value}</code></span>))}</span>))}.</li>
-            <li><strong>Challenge markers</strong> (any of these strings in the first {challengeWindow} of the body, on any status): {CHALLENGE_MARKERS.map((marker, index) => (<span key={marker}>{index > 0 ? ', ' : ''}<code>{marker}</code></span>))}.</li>
+            <li><strong>Challenge statuses</strong>: {CHALLENGE_STATUSES.join(', ')}. A response with one of these statuses and a body marker below is a challenge page. Without a marker the status keeps its plain meaning: 401 and 403 still fail reach.bot-detection, 405 is a final error status, 429, 503 and 511 are unverified.</li>
+            <li><strong>Challenge headers</strong>, a challenge page on any status (a 2xx with or without a body and a 404 included) and on every fetched file, not only the homepage: {CHALLENGE_HEADERS.map((header, index) => (<span key={header.name}>{index > 0 ? '; ' : ''}<code>{header.name}</code> containing {header.values.map((value, valueIndex) => (<span key={value}>{valueIndex > 0 ? ' or ' : ''}<code>{value}</code></span>))}</span>))}.</li>
+            <li><strong>Challenge markers</strong> (any of these strings in the first {challengeWindow} of the body, on any status; on a 2xx they gate the homepage only and leave any other file an ordinary answer): {CHALLENGE_MARKERS.map((marker, index) => (<span key={marker}>{index > 0 ? ', ' : ''}<code>{marker}</code></span>))}.</li>
             <li><strong>Challenge markers on a challenge status only</strong> (the same window, never on a 2xx answer, because AWS tells sites to load its WAF SDK on normal pages): {CHALLENGE_MARKERS_NON_2XX.map((marker, index) => (<span key={marker}>{index > 0 ? ', ' : ''}<code>{marker}</code></span>))}. Additions to any challenge list bump the catalog minor version.</li>
             <li><strong>AI search and agent user agents</strong> scored by robots.ai-search-access: {AI_SEARCH_AGENTS.join(', ')}.</li>
             <li><strong>Training crawlers</strong> reported as a policy note, never scored: {TRAINING_CRAWLERS.join(', ')}.</li>
@@ -361,8 +361,9 @@ function ScoreMethodology() {
               Catalog {SCORE_CATALOG_VERSION} (November 2026): bot-challenge detection also reads HTTP{' '}
               405 and 511, the AWS WAF <code>x-amzn-waf-action</code> header, and the AWS WAF strings{' '}
               <code>awswaf.com</code> and <code>AwsWafIntegration</code> on a challenge status only. A captcha
-              page served with HTTP 511 now fails reach.bot-detection instead of leaving the run unscored. No
-              check changed tier, so scores stay comparable across 1.x.
+              page served with HTTP 511 now fails reach.bot-detection instead of leaving the run unscored. A
+              challenge header makes any answer a challenge page on every fetched file, an AWS WAF Challenge
+              (HTTP 202) included. No check changed tier, so scores stay comparable across 1.x.
             </li>
             <li>
               Catalog 1.0.0 and formula 1.0.0 (November 2026): first public version.{' '}

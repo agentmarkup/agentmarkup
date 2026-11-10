@@ -13,7 +13,9 @@ export const reachEvaluators: Record<string, EvaluatorEntry> = {
       }
       const marker = findChallengeMarker(resource);
       const status = resource.status;
-      if (homepage.outcome === 'challenge' || (marker && status === 429) || (marker && status >= 500)) {
+      // A 429 or 5xx with a marker is always `challenge` or `unverified` (pinned in
+      // classify.test.ts), so the challenge outcome covers every marked answer here.
+      if (homepage.outcome === 'challenge') {
         return scored(0, `HTTP ${status}, challenge marker "${marker}"`, ['homepage']);
       }
       if (status === 401 || status === 403) {

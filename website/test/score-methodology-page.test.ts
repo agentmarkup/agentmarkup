@@ -84,7 +84,10 @@ describe('ScoreMethodology catalog table', () => {
     for (const header of CHALLENGE_HEADERS) {
       expect(headers).toContain(`${header.name} containing ${header.values.join(' or ')}`);
     }
+    // A header is a challenge on any status and every file, a 2xx included (catalog 1.1.0).
+    expect(headers).toContain('a challenge page on any status (a 2xx with or without a body and a 404 included) and on every fetched file');
     const anyStatus = item('Challenge markers (');
+    expect(anyStatus).toContain('on a 2xx they gate the homepage only and leave any other file an ordinary answer');
     for (const marker of CHALLENGE_MARKERS) {
       expect(anyStatus, marker).toContain(marker);
     }

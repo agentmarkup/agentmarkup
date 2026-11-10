@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   WORKER_ERROR_MESSAGES,
   classifyResource,
+  findChallengeHeader,
   findChallengeMarker,
   isChallengeStatus,
   isHtmlBody,
@@ -110,11 +111,12 @@ describe('classifyResource', () => {
     const captcha = resource({ status: 405, ok: false, body: '', headers: { 'x-amzn-waf-action': 'captcha' } });
     expect(classifyResource(captcha)).toBe('challenge');
     expect(findChallengeMarker(captcha)).toBe('x-amzn-waf-action: captcha');
-    // A 202 with the header: classified ok (2xx), the marker still found, so the
-    // engine gates the homepage like a challenge page (evaluate.test.ts).
+    // A 202 with the header (the AWS WAF Challenge action) is a challenge like any
+    // other: the header is the bot manager's own statement, so a 2xx is no exception.
     const challenge = resource({ status: 202, body: '', headers: { 'X-Amzn-Waf-Action': 'Challenge' } });
-    expect(classifyResource(challenge)).toBe('ok');
+    expect(classifyResource(challenge)).toBe('challenge');
     expect(findChallengeMarker(challenge)).toBe('x-amzn-waf-action: Challenge');
+    expect(findChallengeHeader(challenge)).toBe('x-amzn-waf-action: Challenge');
     expect(findChallengeMarker(resource({ headers: { 'x-amzn-waf-action': 'allow' } }))).toBeNull();
     expect(findChallengeMarker(resource({ headers: { 'x-amzn-waf-action': '' } }))).toBeNull();
     // Headers come first, in published order, then the body lists.
@@ -124,8 +126,73 @@ describe('classifyResource', () => {
     expect(
       findChallengeMarker(resource({ status: 403, ok: false, headers: { 'x-amzn-waf-action': 'captcha', 'cf-mitigated': 'challenge' } }))
     ).toBe('cf-mitigated: challenge');
-    // A non-challenge status with the header stays what its status says.
-    expect(classifyResource(resource({ status: 500, ok: false, headers: { 'x-amzn-waf-action': 'captcha' } }))).toBe('unverified');
+    // The header makes any status a challenge, a non-challenge status included.
+    expect(classifyResource(resource({ status: 500, ok: false, headers: { 'x-amzn-waf-action': 'captcha' } }))).toBe('challenge');
+  });
+
+  // The worker's copy of this rule runs over the same kinds of input against core in
+  // website/test/worker-check-chain.test.ts (CLASSIFY_PARITY_CASES).
+  it('a challenge header makes any status a challenge, a 2xx with an HTML, empty or null body included', () => {
+    const header = { 'x-amzn-waf-action': 'challenge' };
+    expect(classifyResource(resource({ status: 202, body: '<html><body>Verifying</body></html>', headers: header }))).toBe('challenge');
+    expect(classifyResource(resource({ status: 202, body: '', headers: header }))).toBe('challenge');
+    expect(classifyResource(resource({ status: 202, body: null, headers: header }))).toBe('challenge');
+    expect(classifyResource(resource({ status: 202, body: undefined, headers: header }))).toBe('challenge');
+    const cloudflare = resource({ status: 200, headers: { 'cf-mitigated': 'challenge' } });
+    expect(classifyResource(cloudflare)).toBe('challenge');
+    expect(findChallengeHeader(cloudflare)).toBe('cf-mitigated: challenge');
+    // 3xx, 404 and 410 with the header: the header outranks the status.
+    for (const status of [302, 404, 410, 400, 500]) {
+      expect(classifyResource(resource({ status, ok: false, body: '', headers: header })), String(status)).toBe('challenge');
+    }
+    // A transport failure stays unverified even with the header.
+    expect(classifyResource(resource({ status: 0, ok: false, body: null, headers: header }))).toBe('unverified');
+    expect(classifyResource(resource({ status: 202, error: 'Request timed out.', headers: header }))).toBe('unverified');
+    expect(classifyResource(resource({ status: 202, skipped: true, headers: header }))).toBe('unverified');
+    // A header value without a published word is no marker.
+    expect(classifyResource(resource({ status: 202, body: '', headers: { 'x-amzn-waf-action': 'allow' } }))).toBe('ok');
+    expect(findChallengeHeader(resource({ headers: { 'cf-mitigated': '' } }))).toBeNull();
+  });
+
+  it('body markers on a 2xx leave it ok (no header): the AWS SDK and Cloudflare strings alike', () => {
+    const sdk = resource({ status: 200, body: AWS_SDK_PAGE });
+    expect(classifyResource(sdk)).toBe('ok');
+    expect(findChallengeHeader(sdk)).toBeNull();
+    expect(findChallengeMarker(sdk)).toBeNull();
+    // A CHALLENGE_MARKERS string on a 2xx: still ok here; only the homepage rule gates it.
+    const marked = resource({ status: 200, body: '<title>Just a moment...</title>' });
+    expect(classifyResource(marked)).toBe('ok');
+    expect(findChallengeHeader(marked)).toBeNull();
+    expect(findChallengeMarker(marked)).toBe('Just a moment...');
+  });
+
+  it('404/410 with a body marker stay not-found (body markers never outrank 404/410)', () => {
+    expect(classifyResource(resource({ status: 404, ok: false, body: '<title>Just a moment...</title>' }))).toBe('not-found');
+    expect(classifyResource(resource({ status: 410, ok: false, body: 'challenge-platform' }))).toBe('not-found');
+  });
+
+  // reach.bot-detection used to carry `(marker && status === 429) || (marker && status >= 500)`
+  // next to `outcome === 'challenge'`. It returns early for `unverified`, so that branch
+  // could only fire for an outcome other than challenge and unverified; this sweep shows
+  // there is none for any 429 or 5xx with any kind of marker, so the branch was removed.
+  it('a 429 or 5xx with any marker is always challenge or unverified (no third outcome)', () => {
+    const bodies = [null, '', 'plain', 'Just a moment...', 'awswaf.com', 'AwsWafIntegration', AWS_SDK_PAGE];
+    const headerSets = [undefined, { 'cf-mitigated': 'challenge' }, { 'x-amzn-waf-action': 'captcha' }, { 'x-amzn-waf-action': 'allow' }];
+    const statuses = [429];
+    for (let status = 500; status <= 599; status += 1) statuses.push(status);
+    statuses.push(600, 999);
+    for (const status of statuses) {
+      for (const body of bodies) {
+        for (const headers of headerSets) {
+          const answer = resource({ status, ok: false, body, headers });
+          const outcome = classifyResource(answer);
+          expect(['challenge', 'unverified'], `${status} ${String(body).slice(0, 20)} ${JSON.stringify(headers)}`).toContain(outcome);
+          if (findChallengeMarker(answer) !== null && isChallengeStatus(status)) {
+            expect(outcome, `${status} marked`).toBe('challenge');
+          }
+        }
+      }
+    }
   });
 
   it('classifies 404/410 as not-found, other completed non-2xx as http-error, 2xx with a body as ok', () => {

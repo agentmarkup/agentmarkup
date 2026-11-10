@@ -3,7 +3,8 @@
 // `classifyResource` is the single place that decides what a fetched resource is.
 // A transport failure (status 0, an error, a 2xx with no body, a skipped fetch, a
 // 429 or a 5xx without challenge markers) is `unverified` and can never become a
-// finding; only completed responses are judged.
+// finding; a published challenge header makes any response a `challenge`; only
+// completed responses are judged.
 import {
   CHALLENGE_HEADERS,
   CHALLENGE_MARKERS,
@@ -65,20 +66,34 @@ export function isChallengeStatus(status: number): boolean {
 }
 
 /**
- * Returns the challenge marker found on a response, in this order: a published
- * challenge header (`cf-mitigated` containing `challenge`, `x-amzn-waf-action`
- * containing `captcha` or `challenge`) on any status; one of `CHALLENGE_MARKERS` in
- * the first 20,480 characters of the body on any status; one of
- * `CHALLENGE_MARKERS_NON_2XX` there, only when the status is a challenge status.
- * The status gate lives here so no caller can read the AWS SDK strings of a normal
- * 2xx page as a block.
+ * The published challenge header on a response (`cf-mitigated` containing
+ * `challenge`, `x-amzn-waf-action` containing `captcha` or `challenge`,
+ * case-insensitive), reported as `name: value`, or null. The header is the bot
+ * manager's own statement that it answered instead of the site, so it makes a
+ * response a challenge on any status and on every resource (`classifyResource`).
  */
-export function findChallengeMarker(resource: RemoteResource): string | null {
+export function findChallengeHeader(resource: RemoteResource): string | null {
   for (const header of CHALLENGE_HEADERS) {
     const value = headerValue(resource, header.name);
     if (value && header.values.some((word) => value.toLowerCase().includes(word))) {
       return `${header.name}: ${value}`;
     }
+  }
+  return null;
+}
+
+/**
+ * Returns the challenge marker found on a response, in this order: a published
+ * challenge header (`findChallengeHeader`) on any status; one of `CHALLENGE_MARKERS`
+ * in the first 20,480 characters of the body on any status; one of
+ * `CHALLENGE_MARKERS_NON_2XX` there, only when the status is a challenge status.
+ * The status gate lives here so no caller can read the AWS SDK strings of a normal
+ * 2xx page as a block.
+ */
+export function findChallengeMarker(resource: RemoteResource): string | null {
+  const header = findChallengeHeader(resource);
+  if (header) {
+    return header;
   }
   const body = resource.body;
   if (!body) {
@@ -101,6 +116,19 @@ export function findChallengeMarker(resource: RemoteResource): string | null {
   return null;
 }
 
+/**
+ * The single place that decides what a fetched resource is, in this order:
+ * - `absent`: no resource recorded
+ * - `unverified`: skipped, status 0 (or not a finite number), or an error
+ * - `challenge`: any status carrying a published challenge header, a 2xx (with or
+ *   without a body) and a 404/410 included
+ * - `unverified` / `ok`: a 2xx without / with a body (body markers on a 2xx leave it
+ *   `ok`; only the homepage rule gates such a page)
+ * - `not-found`: 404 or 410
+ * - `challenge`: a `CHALLENGE_STATUSES` status carrying a body marker
+ * - `unverified`: 429 or 5xx without a marker (transport noise, never a finding)
+ * - `http-error`: any other completed answer
+ */
 export function classifyResource(
   resource: RemoteResource | null | undefined
 ): ResourceOutcome {
@@ -110,6 +138,9 @@ export function classifyResource(
   const status = statusOf(resource);
   if (resource.skipped || status <= 0 || resource.error) {
     return 'unverified';
+  }
+  if (findChallengeHeader(resource)) {
+    return 'challenge';
   }
   if (status >= 200 && status < 300) {
     return resource.body === null || resource.body === undefined ? 'unverified' : 'ok';

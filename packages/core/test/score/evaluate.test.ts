@@ -367,8 +367,26 @@ describe('homepage states', () => {
     {
       name: 'a 202 with x-amzn-waf-action: challenge',
       home: resource(HOME, { status: 202, body: '', headers: { 'x-amzn-waf-action': 'challenge' } }),
-      evidence: 'HTTP 202 with challenge marker "x-amzn-waf-action: challenge"',
-      reason: 'HTTP 202 with challenge marker "x-amzn-waf-action: challenge"',
+      evidence: 'HTTP 202, challenge marker "x-amzn-waf-action: challenge"',
+      reason: 'HTTP 202 challenge page (x-amzn-waf-action: challenge)',
+    },
+    {
+      name: 'a 202 with x-amzn-waf-action: challenge and no body',
+      home: resource(HOME, { status: 202, body: null, headers: { 'x-amzn-waf-action': 'challenge' } }),
+      evidence: 'HTTP 202, challenge marker "x-amzn-waf-action: challenge"',
+      reason: 'HTTP 202 challenge page (x-amzn-waf-action: challenge)',
+    },
+    {
+      name: 'a 200 with cf-mitigated: challenge',
+      home: html(HOME, '<html><body>Checking your browser</body></html>', { headers: { 'cf-mitigated': 'challenge' } }),
+      evidence: 'HTTP 200, challenge marker "cf-mitigated: challenge"',
+      reason: 'HTTP 200 challenge page (cf-mitigated: challenge)',
+    },
+    {
+      name: 'a 500 with cf-mitigated: challenge',
+      home: resource(HOME, { status: 500, ok: false, body: '', headers: { 'cf-mitigated': 'challenge' } }),
+      evidence: 'HTTP 500, challenge marker "cf-mitigated: challenge"',
+      reason: 'HTTP 500 challenge page (cf-mitigated: challenge)',
     },
     {
       name: 'a 405 with x-amzn-waf-action: captcha',
@@ -398,6 +416,32 @@ describe('homepage states', () => {
     const report = scoreChecks(evaluation);
     expect(report.analysisStatus).toBe('complete');
     expect(report.score).not.toBeNull();
+  });
+
+  it('a 5xx homepage with a body marker on a non-challenge status is unverified before bot-detection reads a marker', () => {
+    // The removed `(marker && status >= 500)` branch: such a homepage is unverified,
+    // so reach.bot-detection returns early and the run is blocked; nothing is scored.
+    for (const code of [500, 502, 504]) {
+      const marked = run({ homepage: status(HOME, code, { body: '<title>Just a moment...</title>' }) });
+      expect(marked.evaluation.blockedKind, String(code)).toBe('unverified');
+      expect(marked.get('reach.bot-detection').status, String(code)).toBe('unverified');
+    }
+  });
+
+  it('a gated report carries no blockedReason, so no blocked copy can read its challenge reason', () => {
+    // The evaluation names the gate; formula.ts copies blockedReason to the report only
+    // when the run is blocked, and every blocked-copy helper (renderClientSummary, the
+    // audit CLI, the website's blockedExplanation) is reached only for a blocked run.
+    const { evaluation } = run({ homepage: status(HOME, 511, { body: '<script src="https://x.awswaf.com/x/jsapi.js"></script>' }) });
+    expect(evaluation.blockedReason).toBe('Agents cannot reach this site: HTTP 511 challenge page (awswaf.com)');
+    const report = scoreChecks(evaluation);
+    expect(report.analysisStatus).not.toBe('blocked');
+    expect(report.blockedKind).toBeNull();
+    expect(report.blockedReason).toBeNull();
+    expect(report.score).not.toBeNull();
+    const summary = renderClientSummary(report, { siteName: 'www.example.com' });
+    expect(summary.split('\n')[0]).toMatch(/^www\.example\.com: agent-readiness score \d+ of 100, grade /);
+    expect(summary).not.toMatch(/instead of a page|without a readable page|no score yet/);
   });
 
   it('a 2xx homepage that loads the AWS WAF SDK is integration, not a block, and scores as a normal page', () => {
@@ -1420,6 +1464,60 @@ describe('pilot false findings, D2', () => {
     expect(summary).not.toContain('Publish /llms.txt');
     expect(summary).not.toContain('Publish an XML sitemap');
     expect(summary).not.toContain('ask for a login');
+  });
+
+  it('catalog 1.1.0: a 2xx secondary answer with a challenge header is a challenge like a 403 one, and a challenged probe is unverified', () => {
+    // AWS WAF Challenge: HTTP 202 with x-amzn-waf-action: challenge; the HTML interstitial
+    // comes only for Accept: text/html, so a text fetch may get an empty body.
+    const aws = (url: string, body: string | null = '') =>
+      status(url, 202, { contentType: 'text/html; charset=UTF-8', body, headers: { 'x-amzn-waf-action': 'challenge' } });
+    const AWS_STATE = 'HTTP 202 with a bot challenge (x-amzn-waf-action: challenge)';
+    const { evaluation, get } = run({
+      llms: aws(`${ORIGIN}/llms.txt`),
+      probe: aws(PROBE_URL, null),
+      sitemap: aws(`${ORIGIN}/sitemap.xml`, '<html><body>Verifying</body></html>'),
+    });
+    expect(evaluation.blockedReason).toBeNull();
+    expect(get('reach.bot-detection').status).toBe('pass');
+    const probe = get('nav.not-found');
+    expect(probe).toMatchObject({ status: 'unverified', reason: 'probe-challenged' });
+    expect(probe.evidence).toBe('probe answered HTTP 202 with a challenge page');
+    for (const [id, evidence, path] of [
+      ['llms.exists', `llms.txt answered ${AWS_STATE}`, '/llms.txt'],
+      ['llms.agent-instruction', `llms.txt answered ${AWS_STATE}`, '/llms.txt'],
+      ['sitemap.valid', `answered ${AWS_STATE}`, '/sitemap.xml'],
+    ] as const) {
+      const outcome = get(id);
+      expect(outcome.status, id).toBe('fail');
+      expect(outcome.evidence, id).toContain(evidence);
+      expect(outcome.evidence, id).not.toMatch(/no llms\.txt|treated as absent|without a urlset/);
+      expect(outcome.challenge, id).toMatchObject({ status: 202, marker: 'x-amzn-waf-action: challenge' });
+      expect(clientSentenceFor(outcome), id).toBe(`Your bot protection shows AI assistants a challenge page instead of ${path} (HTTP 202).`);
+    }
+    expect(get('llms.formatting')).toMatchObject({ status: 'na', reason: 'no-llms' });
+    const report = scoreChecks(evaluation);
+    expect(report.analysisStatus).toBe('partial');
+    expect(report.unverifiedChecks).toEqual(['nav.not-found']);
+    expect(report.unverifiedResources).toEqual([]);
+    // Same verdicts a 403 Cloudflare challenge on the same files gets (item 4 above),
+    // apart from the probe: a 401/403 challenge is a measured fail, any other one unverified.
+    const cloudflare = run({ llms: challenged(`${ORIGIN}/llms.txt`) });
+    expect(cloudflare.get('llms.exists').status).toBe(get('llms.exists').status);
+    expect(cloudflare.get('llms.exists').reason).toBe(get('llms.exists').reason);
+  });
+
+  it('catalog 1.1.0: a challenge header outranks 404/410 and 3xx on the probe, so no challenged answer passes or fails nav.not-found', () => {
+    for (const code of [404, 410, 302]) {
+      const probe = status(PROBE_URL, code, { body: '', headers: { 'cf-mitigated': 'challenge', location: HOME } });
+      expect(check({ probe }, 'nav.not-found'), String(code)).toMatchObject({ status: 'unverified', reason: 'probe-challenged' });
+    }
+    // A 404 llms.txt with the header reads as a challenge, not as "no llms.txt".
+    const llms = check({ llms: status(`${ORIGIN}/llms.txt`, 404, { headers: { 'cf-mitigated': 'challenge' } }) }, 'llms.exists');
+    expect(llms.status).toBe('fail');
+    expect(llms.evidence).toBe('llms.txt answered HTTP 404 with a bot challenge (cf-mitigated: challenge)');
+    expect(llms.challenge).toMatchObject({ status: 404, marker: 'cf-mitigated: challenge' });
+    // A 404 with only a body marker stays a plain 404 (body markers never outrank it).
+    expect(check({ probe: status(PROBE_URL, 404, { body: '<title>Just a moment...</title>' }) }, 'nav.not-found').status).toBe('pass');
   });
 
   it('item 4: a 403 without a challenge marker keeps the catalog copy, and a homepage login gate keeps the auth-gate action', () => {
