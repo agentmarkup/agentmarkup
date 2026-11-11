@@ -349,8 +349,8 @@ function ScoreMethodology() {
             <a href="https://github.com/agentmarkup/agentmarkup" target="_blank" rel="noopener noreferrer">agentmarkup repository</a>{' '}
             under <code>packages/core/src/score/</code> as the <code>score</code> entry of{' '}
             <code>@agentmarkup/core</code> (<code>evaluateSiteChecks</code> and <code>scoreChecks</code>).
-            From Node, <code>npx @agentmarkup/audit &lt;url&gt; --score</code> prints the same report once
-            the audit release that carries the flag is on npm.
+            From Node, <code>npx @agentmarkup/audit &lt;url&gt; --score</code> prints the same report
+            (<code>@agentmarkup/audit</code> 0.3.0 or later).
           </p>
         </section>
 
