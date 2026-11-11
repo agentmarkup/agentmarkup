@@ -26,7 +26,7 @@ Then, in the repo you want to set up, just say what you want, for example "set u
 
 Inspecting your repo is read-only and happens without prompting. Everything else stops for approval first, as a single plan: the package to install, the files that would change, the commands to run, and the URL of any live audit. Approval covers that plan, not the rest of the session.
 
-If you deploy and want to check the live site, `@agentmarkup/audit` fetches it under AI-crawler user agents and diffs against a normal browser request. Only point it at a site you own or operate.
+If you deploy and want to check the live site, `@agentmarkup/audit` fetches it under AI-crawler user agents and diffs against a normal browser request. Add `--score` (0.3.0 or later) for the deterministic 0-100 agent-readiness score, computed from a [published formula](https://agentmarkup.dev/score/); the plugin reports it as printed. Only point it at a site you own or operate.
 
 ## What it will not do
 

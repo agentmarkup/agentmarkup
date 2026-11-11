@@ -1,7 +1,7 @@
 {
   "name": "agentmarkup",
   "description": "Make a JavaScript web repo readable by LLMs and AI agents at build time: generate llms.txt, JSON-LD, markdown mirrors, AI-crawler robots.txt rules and Content-Signal headers, then validate the built output. Picks the right @agentmarkup adapter for whichever layer owns your final HTML (Vite, Astro, Next, Nuxt, or any static build via the CLI) and asks before changing anything.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": {
     "name": "Sebastian Cochinescu",
     "email": "hello@animafelix.com",

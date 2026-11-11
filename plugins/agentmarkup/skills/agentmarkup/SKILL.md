@@ -80,5 +80,6 @@ When reporting results, include:
 - package installed and config files changed
 - preferences used and defaults assumed
 - audit findings by severity
+- the agent-readiness score exactly as printed, when `@agentmarkup/audit --score` or the website checker produced one
 - build/deployed-site checks run
 - remaining issues that require non-AgentMarkup site or hosting changes

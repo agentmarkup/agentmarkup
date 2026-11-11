@@ -9,8 +9,8 @@ Three different things audit, and they are not interchangeable:
 | Tool | What it does | Uses crawler user agents? |
 |---|---|---|
 | `agentmarkup check <outDir>` (`@agentmarkup/cli`) | Validates files already on disk. Never writes. The CI gate. | No, it is local |
-| `@agentmarkup/audit <url>` | Fetches a live origin as a browser and as several AI crawler user agents, then diffs | Yes |
-| The agentmarkup.dev website checker | Fetches a public site and reports what a plain request sees | **No.** It identifies itself honestly |
+| `@agentmarkup/audit <url>` | Fetches a live origin as a browser and as several AI crawler user agents, then diffs. With `--score` (0.3.0 or later) it also prints the deterministic 0-100 agent-readiness score | Yes |
+| The agentmarkup.dev website checker | Fetches a public site, reports what a plain request sees and shows the same agent-readiness score | **No.** It identifies itself honestly |
 
 Rules that hold for all three:
 
@@ -18,6 +18,16 @@ Rules that hold for all three:
 - A 403 or a block against a spoofed crawler user agent is a **warning to investigate**, never proof that a site "blocks AI". WAF rules, bot management, and IP reputation produce the same response.
 - Report deterministic pass / warn / error findings. Build-time validation has no score, grade, or percentage. The 0-100 agent-readiness score exists only as output of `@agentmarkup/audit --score` or the website checker: quote it when one of them printed it, and never estimate or invent one, which would misrepresent what the tool measured.
 - Missing markdown mirrors are only a real finding when the paired HTML is genuinely thin. If the HTML is substantial, mirrors are optional extra coverage. If the paired HTML fetch failed or was rate limited, that is an unknown state, not evidence the HTML is fine.
+
+## The agent-readiness score
+
+`npx @agentmarkup/audit <url> --score` (0.3.0 or later) and the website checker compute one number from a published formula: required checks share 80 points, recommended checks share 20, bonus signals add up to 5 and never subtract. The catalog, the formula and every rule are at https://agentmarkup.dev/score/.
+
+- Run it only against an origin the user owns or operates, inside the approved plan, like any other live audit.
+- Report exactly what was printed: the number, the grade, the status line, the top fixes with their estimated gain, and the catalog and formula versions. Do not round, restate as a percentage, or compare with other sites.
+- `provisional` means a check or a file could not be verified on that run. Report the printed range and re-run before drawing conclusions. `not available` means the homepage could not be scored at all; it is not a low score.
+- A failed `reach.bot-detection` means the homepage answered a bot challenge (a firewall or bot-protection page). The fix is in the firewall or bot-protection settings, not in AgentMarkup config, and checks that need the homepage are left out until it is fixed.
+- A top fix that AgentMarkup cannot make (canonical URL, form labels, document structure, hosting behavior) is reported as a site change, not attempted through config.
 
 ## Homepage HTML
 
@@ -36,7 +46,7 @@ Fix with AgentMarkup when possible: discovery link, JSON-LD, markdown alternate 
 
 ## Missing-path behavior (soft-404)
 
-No AgentMarkup package checks this yet, so check it by hand. Request a path that certainly does not exist and read the status code:
+`agentmarkup check` cannot see this, because it reads files on disk. `@agentmarkup/audit` (0.2.5 or later) and the website checker request a path that should not exist and compare the answer with the homepage. To confirm by hand, request such a path and read the status code:
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" https://example.com/a-path-that-does-not-exist
