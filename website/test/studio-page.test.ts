@@ -149,6 +149,7 @@ describe('AgentMarkup Studio page', () => {
   let container: HTMLDivElement;
   let root: Root | null;
   let modelContext: MockModelContext;
+  let addedConfirm: boolean;
 
   beforeEach(() => {
     container = document.createElement('div');
@@ -161,6 +162,13 @@ describe('AgentMarkup Studio page', () => {
       value: modelContext,
     });
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network disabled')));
+    // happy-dom has no window.confirm, and vitest 4 refuses to spy on a missing
+    // method. Give each test a real one (declining by default) to spy on, and
+    // take it away again in afterEach.
+    addedConfirm = typeof window.confirm !== 'function';
+    if (addedConfirm) {
+      Object.defineProperty(window, 'confirm', { configurable: true, writable: true, value: () => false });
+    }
   });
 
   afterEach(async () => {
@@ -175,6 +183,9 @@ describe('AgentMarkup Studio page', () => {
     });
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+    if (addedConfirm) {
+      Reflect.deleteProperty(window, 'confirm');
+    }
   });
 
   async function renderStudio(): Promise<void> {
