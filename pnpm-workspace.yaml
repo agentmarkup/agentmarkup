@@ -12,3 +12,12 @@ allowBuilds:
   esbuild: true
   sharp: false
   workerd: false
+# Advisories accepted for now. Remove an entry as soon as a fixed release exists.
+auditConfig:
+  ignoreGhsas:
+    # picomatch ReDoS through repeated extglobs: no fixed release as of 2026-11-18
+    # (every version up to 4.0.7 is affected). Reached only through build, lint and
+    # test tooling (@nuxt/kit, astro, vite, vitest, typescript-eslint and their glob
+    # helpers tinyglobby, fdir and anymatch), where glob patterns come from the
+    # developer's own config, never from site visitors.
+    - GHSA-fc5q-39xc-vjpf
